@@ -1,0 +1,49 @@
+name: ruralcare_flutter
+description: RuralCare - Smart Healthcare for Rural Communities
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Icons
+  font_awesome_flutter: ^10.7.0
+
+  # Images
+  cached_network_image: ^3.3.1
+
+  # Maps
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # URL Launcher (for tel: links)
+  url_launcher: ^6.2.5
+
+  # Shimmer loading effect
+  shimmer: ^3.0.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
