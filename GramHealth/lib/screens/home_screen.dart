@@ -55,6 +55,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'icon': Icons.emergency_outlined,
       'color': const Color(0xFFFFEBEE)
     },
+    {
+      'id': '6',
+      'titleKey': 'Prescriptions',
+      'icon': Icons.article_outlined,
+      'color': const Color(0xFFD1C4E9)
+    },
   ];
 
   void _handleCategoryTap(String id) {
@@ -66,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
         context.go('/main/symptoms');
         break;
       case '3':
-        context.push('/medicine');
+        context.go('/medicine');
+        break;
+      case '6':
+        context.go('/prescriptions');
         break;
       case '4':
         context.go('/main/records');
@@ -224,18 +233,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .withValues(alpha: 0.8)),
                             ),
                             const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                  color: AppColors.textDark,
-                                  borderRadius: BorderRadius.circular(8)),
-                              child: Text(
-                                context.tr('learn_more'),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12),
+                            GestureDetector(
+                              onTap: () => context.push('/notifications'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                    color: AppColors.textDark,
+                                    borderRadius: BorderRadius.circular(8)),
+                                child: Text(
+                                  context.tr('learn_more'),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12),
+                                ),
                               ),
                             ),
                           ],
@@ -281,12 +293,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.w600,
                             color: AppColors.textDark),
                       ),
-                      Text(
-                        context.tr('explore_all'),
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w600),
+                      GestureDetector(
+                        onTap: () => context.go('/main/doctors'),
+                        child: Text(
+                          context.tr('explore_all'),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),

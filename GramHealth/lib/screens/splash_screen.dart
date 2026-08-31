@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
+import '../widgets/primary_button.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,10 +44,6 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _textCtrl.forward();
     });
-
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) context.go('/onboarding');
-    });
   }
 
   @override
@@ -68,90 +65,110 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Glow + Logo
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Glow ring
-                    ScaleTransition(
-                      scale: _logoScale,
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primaryAccent.withOpacity(0.3),
-                        ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              // Glow + Logo
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Glow ring
+                  ScaleTransition(
+                    scale: _logoScale,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primaryAccent.withOpacity(0.3),
                       ),
                     ),
-                    // Logo circle
-                    ScaleTransition(
-                      scale: _logoScale,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.textDark,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryAccent.withOpacity(0.5),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.favorite,
-                          size: 60,
-                          color: AppColors.primaryAccent,
-                        ),
+                  ),
+                  // Logo circle
+                  ScaleTransition(
+                    scale: _logoScale,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.textDark,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryAccent.withOpacity(0.5),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
+                      child: const Icon(
+                        Icons.favorite,
+                        size: 60,
+                        color: AppColors.primaryAccent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // Title + tagline
+              AnimatedBuilder(
+                animation: _textCtrl,
+                builder: (_, child) => Opacity(
+                  opacity: _textOpacity.value,
+                  child: Transform.translate(
+                    offset: Offset(0, _textSlide.value),
+                    child: child,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'RuralCare',
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Smart Healthcare for Rural Communities',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textDark.withOpacity(0.8),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
-
-                // Title + tagline
-                AnimatedBuilder(
-                  animation: _textCtrl,
-                  builder: (_, child) => Opacity(
-                    opacity: _textOpacity.value,
-                    child: Transform.translate(
-                      offset: Offset(0, _textSlide.value),
-                      child: child,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'RuralCare',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Smart Healthcare for Rural Communities',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textDark.withOpacity(0.8),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+              ),
+              const Spacer(),
+              
+              // Get Started Button
+              AnimatedBuilder(
+                animation: _textCtrl,
+                builder: (_, child) => Opacity(
+                  opacity: _textOpacity.value,
+                  child: Transform.translate(
+                    offset: Offset(0, _textSlide.value),
+                    child: child,
                   ),
                 ),
-              ],
-            ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: PrimaryButton(
+                    title: 'Get Started',
+                    onPress: () => context.go('/onboarding'),
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

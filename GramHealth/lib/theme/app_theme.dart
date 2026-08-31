@@ -9,16 +9,21 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primaryAccent,
-        primary: AppColors.primaryAccent,
+        seedColor: AppColors.leafGreenPrimary,
+        primary: AppColors.leafGreenPrimary,
+        secondary: AppColors.leafGreenLight,
         surface: AppColors.primaryBg,
+        surfaceContainerLowest: AppColors.primaryBg,
+        surfaceContainerLow: AppColors.secondaryBg,
+        surfaceContainer: AppColors.leafBg,
       ),
       scaffoldBackgroundColor: AppColors.secondaryBg,
       textTheme: _textTheme,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primaryBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: AppColors.textDark,
+        surfaceTintColor: Colors.transparent,
       ),
     );
   }

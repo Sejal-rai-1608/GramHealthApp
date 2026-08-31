@@ -4,6 +4,7 @@ import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/language_selector_modal.dart';
+import '../utils/auth_guard.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -297,7 +298,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingRow(
                     Icons.logout,
                     context.tr('logout'),
-                    () => context.go('/login'),
+                    () {
+                      AuthService.currentUserRole = null;
+                      context.go('/onboarding');
+                    },
                     textColor: const Color(0xFFFF4D4D),
                     iconColor: const Color(0xFFFF4D4D),
                   ),

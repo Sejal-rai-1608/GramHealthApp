@@ -6,6 +6,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/custom_input.dart';
 import '../widgets/language_selector_modal.dart';
 import '../widgets/primary_button.dart';
+import '../utils/auth_guard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _isRegistering = false;
+  String _selectedRole = 'patient';
 
   @override
   void dispose() {
@@ -29,7 +31,53 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleContinue() {
-    context.go('/main');
+    AuthService.currentUserRole = _selectedRole;
+    if (_selectedRole == 'admin') {
+      context.go('/admin/dashboard');
+    } else if (_selectedRole == 'doctor') {
+      context.go('/doctor/dashboard');
+    } else {
+      context.go('/main/home');
+    }
+  }
+
+  Widget _buildRoleCard(String role, IconData icon, String title) {
+    final isSelected = _selectedRole == role;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedRole = role),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryAccent : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.primaryAccent : Colors.grey[300]!,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : AppColors.textDark,
+                size: 24,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -127,6 +175,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
+                        // Role Selection
+                        Text(
+                          'Select your role:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildRoleCard('patient', Icons.person_outline, 'User'),
+                            _buildRoleCard('doctor', Icons.local_hospital_outlined, 'Doctor'),
+                            _buildRoleCard('admin', Icons.admin_panel_settings_outlined, 'Admin'),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
                         CustomInput(
                           label: context.tr('username'),
                           placeholder: context.tr('enter_username'),
