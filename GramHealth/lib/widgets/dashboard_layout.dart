@@ -17,7 +17,6 @@ class DashboardLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 900;
-    final isTablet = width >= 600 && width < 900;
 
     final sidebar = Sidebar();
 

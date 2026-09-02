@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/mock_api.dart';
+import '../services/medical_record_service.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
@@ -13,7 +13,7 @@ class HealthRecordsScreen extends StatefulWidget {
 }
 
 class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
-  List<HealthRecord> _records = [];
+  List<MedicalRecordModel> _records = [];
   bool _isAdmin = false;
   bool _showAddModal = false;
   final _doctorCtrl = TextEditingController();
@@ -28,12 +28,13 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   }
 
   Future<void> _loadRecords() async {
-    final records = await RecordsService.getHealthRecords();
+    final records = await MedicalRecordService.getRecords();
     if (mounted) setState(() => _records = records);
   }
 
   void _addRecord() {
-    final newRecord = HealthRecord(
+    // Local-only placeholder — real creation via medical-records API can be wired here later
+    final newRecord = MedicalRecordModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       date: _dateCtrl.text.isEmpty ? 'Today' : _dateCtrl.text,
       doctor: _doctorCtrl.text,

@@ -1,11 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/doctors_data.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/language_selector_modal.dart';
+import '../services/auth_service.dart';
+import '../services/doctor_service.dart';
+import '../services/consultation_service.dart';
+import '../services/call_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +19,67 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedSpecialistKey = 'spec_all';
+  String _userName = '';
+  List<DoctorModel> _doctors = [];
+  bool _doctorsLoading = true;
+  List<ConsultationModel> _activeConsultations = [];
+  bool _loadingConsultations = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+    _loadDoctors();
+    _loadConsultations();
+  }
+
+  Future<void> _loadConsultations() async {
+    setState(() => _loadingConsultations = true);
+    try {
+      final activeList = await ConsultationService.listConsultations(status: 'ACTIVE');
+      if (mounted) {
+        setState(() {
+          _activeConsultations = activeList;
+          _loadingConsultations = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingConsultations = false);
+    }
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getUser();
+    if (user != null && mounted) {
+      setState(() {
+        _userName = (user['name'] as String? ?? '').toUpperCase();
+      });
+    }
+  }
+
+  Future<void> _loadDoctors() async {
+    setState(() => _doctorsLoading = true);
+    try {
+      final result = await DoctorService.getDoctors();
+      if (mounted) setState(() { _doctors = result; _doctorsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _doctorsLoading = false);
+    }
+  }
+
+  /// Returns doctors filtered by the selected specialization chip.
+  List<DoctorModel> get _filteredDoctors {
+    if (_selectedSpecialistKey == 'spec_all') return _doctors;
+    final Map<String, String> keyToSpec = {
+      'spec_gp':    'general',
+      'spec_cardio':'cardio',
+      'spec_neuro': 'neuro',
+      'spec_pedia': 'pedia',
+    };
+    final keyword = (keyToSpec[_selectedSpecialistKey] ?? '').toLowerCase();
+    return _doctors.where((d) => d.specialization.toLowerCase().contains(keyword)).toList();
+  }
+
   final _specialistKeys = [
     'spec_all',
     'spec_gp',
@@ -115,10 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: AppColors.textDark.withValues(alpha: 0.6),
                             ),
                           ),
-                          const Text(
-                            'SEJAL 👋',
-                            style: TextStyle(
-                              fontSize: 32,
+                          Text(
+                            '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
+                            style: const TextStyle(
+                              fontSize: 28,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textDark,
                             ),
@@ -163,18 +227,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () => context.go('/main/profile'),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(22),
-                              child: CachedNetworkImage(
-                                imageUrl:
-                                    'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100',
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(
-                                    color: AppColors.primaryAccent,
-                                    child: const Icon(Icons.person,
-                                        color: Colors.white)),
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: AppColors.primaryAccent,
+                              child: Text(
+                                _userName.isNotEmpty
+                                    ? _userName[0]
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
                               ),
                             ),
                           ),
@@ -256,6 +320,71 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+
+                // Active Consultations
+                if (!_loadingConsultations && _activeConsultations.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Text(
+                      'Your Active Consultations',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    ),
+                  ),
+                  ..._activeConsultations.map((c) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryAccent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, color: AppColors.primaryAccent),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.reason.isNotEmpty ? c.reason : 'Consultation',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Ready to join',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => CallService.startCall(
+                              consultationId: c.id,
+                              audioOnly: c.type.toUpperCase() == 'AUDIO',
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )),
+                  const SizedBox(height: 24),
+                ],
 
                 // Services grid
                 Padding(
@@ -352,15 +481,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Doctor carousel
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 170,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: kDoctors.length,
-                    itemBuilder: (_, i) => _buildDoctorCard(kDoctors[i], w),
+                if (_doctorsLoading)
+                  const SizedBox(
+                    height: 170,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_filteredDoctors.isEmpty)
+                  SizedBox(
+                    height: 170,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person_off_outlined, size: 36, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text('No doctors found', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 170,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _filteredDoctors.length,
+                      itemBuilder: (_, i) => _buildDoctorCard(_filteredDoctors[i], w),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -450,110 +599,84 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDoctorCard(Doctor doc, double screenW) {
-    return Container(
-      width: screenW * 0.75,
-      margin: const EdgeInsets.only(right: 16),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: CachedNetworkImage(
-                    imageUrl: doc.image,
-                    width: 90,
-                    height: 90,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                        Container(color: AppColors.secondaryBg),
-                  ),
-                ),
-                Positioned(
-                  bottom: -5,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFEEEEEE)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star,
-                              size: 10, color: Color(0xFFFFB000)),
-                          const SizedBox(width: 2),
-                          Text('${doc.rating}',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF333333))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildDoctorCard(DoctorModel doc, double screenW) {
+    return GestureDetector(
+      onTap: () => context.push('/doctor-details/${doc.id}'),
+      child: Container(
+        width: screenW * 0.75,
+        margin: const EdgeInsets.only(right: 16),
+        child: GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Text(doc.name,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textDark),
-                      maxLines: 1),
-                  Text(doc.spec,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      maxLines: 1),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time,
-                          size: 12, color: AppColors.primaryAccent),
-                      const SizedBox(width: 4),
-                      const Text('8:00 am - 5:00 pm',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF444444))),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () => context.push('/teleconsultation-request'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.textDark,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        context.tr('book_now'),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: CachedNetworkImage(
+                      imageUrl: doc.image,
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 90, height: 90,
+                        decoration: BoxDecoration(
+                          color: AppColors.leafGreenPale,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          doc.name.isNotEmpty ? doc.name[0].toUpperCase() : '?',
+                          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.leafGreenPrimary),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Dr. ${doc.name}',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(doc.specialization,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        maxLines: 1),
+                    if (doc.hospital != null && doc.hospital!.isNotEmpty) ...[  
+                      const SizedBox(height: 2),
+                      Text(doc.hospital!,
+                        style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () => context.push(
+                        '/teleconsultation-request',
+                        extra: {'doctorId': doc.id, 'doctorName': doc.name},
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.textDark,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          context.tr('book_now'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/doctors_data.dart';
 import '../l10n/app_language.dart';
+import '../services/doctor_service.dart';
+import '../services/api_client.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
@@ -17,13 +18,40 @@ class DoctorDetailsScreen extends StatefulWidget {
 
 class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
   bool _showSuccess = false;
+  DoctorModel? _doctor;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctor();
+  }
+
+  Future<void> _loadDoctor() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final doc = await DoctorService.getDoctorById(widget.doctorId);
+      if (mounted) setState(() { _doctor = doc; _isLoading = false; });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _error = 'Failed to load doctor.'; _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final doctor = kDoctors.firstWhere(
-      (d) => d.id == widget.doctorId,
-      orElse: () => kDoctors.first,
-    );
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null || _doctor == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Doctor Details')),
+        body: Center(child: Text(_error ?? 'Doctor not found.')),
+      );
+    }
+    final doctor = _doctor!;
     final w = MediaQuery.of(context).size.width;
 
     return Scaffold(
@@ -233,7 +261,10 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                   Expanded(
                     child: PrimaryButton(
                       title: context.tr('book_appointment'),
-                      onPress: () => context.push('/teleconsultation-request'),
+                      onPress: () => context.push(
+                        '/teleconsultation-request',
+                        extra: {'doctorId': doctor.id, 'doctorName': doctor.name},
+                      ),
                     ),
                   ),
                 ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 
 class MedicationScheduleCard extends StatelessWidget {
   final Map<String, dynamic> medication;

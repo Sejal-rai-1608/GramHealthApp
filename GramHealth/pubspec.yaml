@@ -36,7 +36,17 @@ dependencies:
   # Shimmer loading effect
   shimmer: ^3.0.0
 
+  # HTTP client for backend API calls
+  http: ^1.2.2
+
+  # Secure token storage (JWT)
+  flutter_secure_storage: ^9.2.2
+
+  # Session data (role, name, etc.)
+  shared_preferences: ^2.3.3
+
   cupertino_icons: ^1.0.8
+  jitsi_meet_wrapper: ^0.2.0+1
 
 dev_dependencies:
   flutter_test:

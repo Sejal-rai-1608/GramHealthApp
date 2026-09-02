@@ -147,7 +147,7 @@ class _DoctorCompleteConsultationScreenState
               const SizedBox(height: 24),
               PrimaryButton(
                 title: 'SUBMIT PRESCRIPTION ',
-                onPress: () {},
+                onPress: _submit,
               ),
             ],
           ),

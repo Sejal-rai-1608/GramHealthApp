@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../utils/auth_guard.dart';
-import '../l10n/app_language.dart';
 
 /// Top navigation bar used across dashboards.
 /// Shows a title, optional notification icon, and a hamburger button on small screens.
@@ -13,7 +12,7 @@ class TopNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = AuthService.currentUserRole ?? 'patient';
+    final role = AuthGuard.currentUserRole ?? 'patient';
     return AppBar(
       backgroundColor: AppColors.primaryAccent,
       leading: showDrawerButton
