@@ -5,6 +5,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/glass_card.dart';
 import '../l10n/app_language.dart';
+import '../services/call_service.dart';
 import '../services/consultation_service.dart';
 import '../services/auth_service.dart';
 
@@ -48,6 +49,19 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Future<void> _accept(String id) async {
     try {
       await ConsultationService.acceptConsultation(id);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _complete(String id) async {
+    try {
+      await ConsultationService.completeConsultation(id);
       _load();
     } catch (e) {
       if (mounted) {
@@ -114,6 +128,19 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ),
 
               const SizedBox(height: 32),
+
+              if (accepted.isNotEmpty) ...[
+                const Text(
+                  'Active Consultations',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                ...accepted.map((c) => _ActiveCard(
+                  consultation: c,
+                  onComplete: () => _complete(c.id),
+                )),
+                const SizedBox(height: 24),
+              ],
 
               // Pending requests
               Text(
@@ -193,6 +220,87 @@ class _PendingCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveCard extends StatelessWidget {
+  final ConsultationModel consultation;
+  final VoidCallback onComplete;
+  const _ActiveCard({required this.consultation, required this.onComplete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    consultation.reason.isNotEmpty ? consultation.reason : 'General Consultation',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark),
+                  ),
+                ),
+                StatusBadge(status: consultation.status),
+              ],
+            ),
+            if (consultation.symptoms != null && consultation.symptoms!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Symptoms: ${consultation.symptoms}',
+                style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+              ),
+            ],
+            if (consultation.scheduledTime != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.access_time, size: 14, color: AppColors.leafGreenPrimary),
+                const SizedBox(width: 4),
+                Text(consultation.scheduledTime!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ]),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => CallService.startCall(
+                      consultationId: consultation.id,
+                      audioOnly: consultation.type.toUpperCase() == 'AUDIO',
+                    ),
+                    icon: Icon(consultation.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 14),
+                    label: Text(consultation.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onComplete,
+                    icon: const Icon(Icons.done_all, size: 14),
+                    label: const Text('Complete'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryAccent,
+                      foregroundColor: AppColors.textDark,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
