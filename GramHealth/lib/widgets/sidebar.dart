@@ -6,11 +6,41 @@ import '../utils/auth_guard.dart';
 
 /// Sidebar navigation used by Doctor and Admin dashboards.
 /// The list of items is built based on the current user role.
-class Sidebar extends StatelessWidget {
+class Sidebar extends StatefulWidget {
   const Sidebar({super.key});
 
+  @override
+  State<Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<Sidebar> {
+  String _name = '';
+  String _subtitle = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getUser();
+    if (user != null && mounted) {
+      final role = AuthGuard.currentUserRole ?? '';
+      final name = user['name'] as String? ?? '';
+      setState(() {
+        _name = role == 'doctor' ? 'Dr. $name' : name;
+        _subtitle = role == 'doctor'
+            ? (user['specialization'] as String? ?? 'Doctor')
+            : role == 'admin'
+                ? 'Administrator'
+                : role;
+      });
+    }
+  }
+
   List<_NavItem> _items(BuildContext context) {
-    final role = AuthService.currentUserRole;
+    final role = AuthGuard.currentUserRole;
     if (role == 'doctor') {
       return [
         _NavItem('dashboard', Icons.dashboard, context.tr('doctor_dashboard')),
@@ -57,7 +87,7 @@ class Sidebar extends StatelessWidget {
                 return ListTile(
                   leading: Icon(item.icon, color: AppColors.textDark),
                   title: Text(item.label, style: const TextStyle(color: AppColors.textDark)),
-                  onTap: () => context.go('/${AuthService.currentUserRole}/${item.route}'),
+                  onTap: () => context.go('/${AuthGuard.currentUserRole}/${item.route}'),
                 );
               },
             ),
@@ -68,22 +98,42 @@ class Sidebar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             child: Row(
               children: [
-                const CircleAvatar(radius: 20, backgroundImage: AssetImage('assets/avatar_placeholder.png')),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primaryAccent,
+                  child: Text(
+                    _name.isNotEmpty ? _name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Dr. Jane Doe', style: TextStyle(fontWeight: FontWeight.w600)),
-                      Text('Cardiologist', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        _name.isNotEmpty ? _name : '—',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _subtitle,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout, size: 20),
-                  onPressed: () {
-                    AuthService.currentUserRole = null;
-                    context.go('/onboarding');
+                  onPressed: () async {
+                    AuthGuard.onLogout();
+                    await AuthService.logout();
+                    if (context.mounted) context.go('/onboarding');
                   },
                 ),
               ],

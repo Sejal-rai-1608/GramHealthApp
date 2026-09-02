@@ -28,6 +28,7 @@ import 'screens/doctor_consultations_screen.dart';
 import 'screens/doctor_prescriptions_screen.dart';
 import 'screens/doctor_profile_screen.dart';
 import 'screens/doctor_settings_screen.dart';
+import 'screens/doctor_onboarding_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'utils/auth_guard.dart';
 import 'screens/admin_users_screen.dart';
@@ -43,10 +44,11 @@ import 'screens/admin_settings_screen.dart';
 import 'screens/medicine_availability_screen.dart';
 import 'screens/health_overview_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthGuard.init(); // Restore session from secure storage
   runApp(const RuralCareApp());
 }
-
 final _router = GoRouter(
   initialLocation: '/',
   redirect: AuthGuard.redirect,
@@ -105,6 +107,9 @@ final _router = GoRouter(
         GoRoute(
             path: 'profile',
             builder: (c, s) => const DoctorProfileScreen()),
+        GoRoute(
+            path: 'onboarding',
+            builder: (c, s) => const DoctorOnboardingScreen()),
         GoRoute(
             path: 'settings',
             builder: (c, s) => const DoctorSettingsScreen()),

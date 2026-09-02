@@ -1,0 +1,78 @@
+﻿Analyzing GramHealth...                                         
+
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_appointments_screen.dart:24:11 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\screens\admin_appointments_screen.dart:26:23 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_appointments_screen.dart:27:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_appointments_screen.dart:73:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_consultations_screen.dart:23:11 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\screens\admin_consultations_screen.dart:25:23 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_consultations_screen.dart:26:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_consultations_screen.dart:72:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_doctors_screen.dart:27:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_facilities_screen.dart:26:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_facilities_screen.dart:83:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_patients_screen.dart:24:11 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\screens\admin_patients_screen.dart:26:23 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_patients_screen.dart:27:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_patients_screen.dart:73:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_pharmacies_screen.dart:26:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_pharmacies_screen.dart:83:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_prescriptions_screen.dart:61:36 - prefer_const_constructors
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\admin_settings_screen.dart:44:21 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\admin_settings_screen.dart:56:21 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\admin_settings_screen.dart:68:21 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\screens\admin_users_screen.dart:28:15 - prefer_const_constructors
+   info - Parameter 'key' could be a super parameter - lib\screens\doctor_appointments_screen.dart:4:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\screens\doctor_complete_consultation_screen.dart:7:9 - use_super_parameters
+warning - The declaration '_submit' isn't referenced - lib\screens\doctor_complete_consultation_screen.dart:44:8 - unused_element
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_dashboard_screen.dart:104:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_dashboard_screen.dart:104:31 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_dashboard_screen.dart:104:65 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_details_screen.dart:222:39 - prefer_const_constructors
+warning - Unused import: '../l10n/app_language.dart' - lib\screens\doctor_onboarding_screen.dart:3:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_onboarding_screen.dart:126:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_onboarding_screen.dart:127:24 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_onboarding_screen.dart:144:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_onboarding_screen.dart:172:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_onboarding_screen.dart:182:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\doctor_requests_screen.dart:82:23 - prefer_const_constructors
+   info - The member 'initState' overrides an inherited member but isn't annotated with '@override' - lib\screens\home_screen.dart:28:8 - annotate_overrides
+   info - Use 'const' with the constructor to improve performance - lib\screens\home_screen.dart:325:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\home_screen.dart:327:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\onboarding_screen.dart:119:11 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\onboarding_screen.dart:122:20 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\splash_screen.dart:84:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\splash_screen.dart:99:60 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\screens\splash_screen.dart:128:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\screens\splash_screen.dart:130:30 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\splash_screen.dart:143:51 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\screens\symptom_checker_screen.dart:74:43 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\symptom_checker_screen.dart:74:69 - curly_braces_in_flow_control_structures
+warning - The left operand can't be null, so the right operand is never executed - lib\screens\teleconsultation_request_screen.dart:266:58 - dead_null_aware_expression
+   info - Don't invoke 'print' in production code - lib\services\call_service.dart:32:7 - avoid_print
+warning - The value of the local variable 'isTablet' isn't used - lib\widgets\dashboard_layout.dart:20:11 - unused_local_variable
+   info - Use 'const' with the constructor to improve performance - lib\widgets\dashboard_layout.dart:22:21 - prefer_const_constructors
+warning - Unused import: '../theme/app_colors.dart' - lib\widgets\medication_schedule.dart:2:8 - unused_import
+warning - Unused import: '../theme/app_colors.dart' - lib\widgets\medicine_form_card.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\primary_button.dart:75:22 - deprecated_member_use
+   info - The import of '../services/auth_service.dart' is unnecessary because all of the used elements are also provided by the import of '../utils/auth_guard.dart' - lib\widgets\sidebar.dart:6:8 - unnecessary_import
+
+flutter : 56 issues 
+found. (ran in 71.9s)
+At line:1 char:1
++ flutter analyze 
+--no-pub 2>&1 | 
+Out-File -Encoding 
+UTF8 all_analyze.t ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (56 issues fou   
+ nd. (ran in 71.9s)    
+:String) [], Remot    
+eException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

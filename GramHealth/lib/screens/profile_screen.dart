@@ -15,14 +15,16 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
+  bool _isLoading = true;
 
-  String _name = 'SEJAL RAI';
-  String _address = 'Pipariya Village, MP';
-  String _phoneNumber = '+91 98765 43210';
-  String _age = '20';
-  final String _gender = 'female';
-  final String _bloodGroup = 'A+';
-  String _pinCode = '461775';
+  String _name = '';
+  String _email = '';
+  String _address = '';
+  String _phoneNumber = '';
+  String _age = '';
+  String _gender = '';
+  String _bloodGroup = '';
+  String _pinCode = '';
 
   late TextEditingController _nameCtrl;
   late TextEditingController _phoneCtrl;
@@ -33,11 +35,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: _name);
-    _phoneCtrl = TextEditingController(text: _phoneNumber);
-    _ageCtrl = TextEditingController(text: _age);
-    _pinCtrl = TextEditingController(text: _pinCode);
-    _addressCtrl = TextEditingController(text: _address);
+    _nameCtrl    = TextEditingController();
+    _phoneCtrl   = TextEditingController();
+    _ageCtrl     = TextEditingController();
+    _pinCtrl     = TextEditingController();
+    _addressCtrl = TextEditingController();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getUser();
+    if (user != null && mounted) {
+      setState(() {
+        _name        = user['name']  as String? ?? '';
+        _email       = user['email'] as String? ?? '';
+        _phoneNumber = user['phone'] as String? ?? '';
+        _address     = user['address']    as String? ?? '';
+        _age         = user['age']?.toString() ?? '';
+        _gender      = user['gender']     as String? ?? '';
+        _bloodGroup  = user['bloodGroup'] as String? ?? '';
+        _pinCode     = user['pinCode']    as String? ?? '';
+        _isLoading   = false;
+        // seed controllers
+        _nameCtrl.text    = _name;
+        _phoneCtrl.text   = _phoneNumber;
+        _ageCtrl.text     = _age;
+        _pinCtrl.text     = _pinCode;
+        _addressCtrl.text = _address;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -63,6 +91,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.secondaryBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.secondaryBg,
       body: SingleChildScrollView(
@@ -75,17 +109,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Stack(
                     children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
-                          image: const DecorationImage(
-                            image: NetworkImage(
-                              'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200',
-                            ),
-                            fit: BoxFit.cover,
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primaryAccent,
+                        child: Text(
+                          _name.isNotEmpty ? _name[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
                           ),
                         ),
                       ),
@@ -164,29 +196,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
+                  _buildInfoRow(Icons.email_outlined,
+                      'Email', _email.isNotEmpty ? _email : '—'),
+                  const Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Color(0x0D000000)),
                   _buildInfoRow(Icons.phone_outlined,
-                      context.tr('phone_number'), _phoneNumber),
+                      context.tr('phone_number'), _phoneNumber.isNotEmpty ? _phoneNumber : '—'),
                   const Divider(
                       height: 1,
                       indent: 16,
                       endIndent: 16,
                       color: Color(0x0D000000)),
                   _buildInfoRow(Icons.calendar_today_outlined,
-                      context.tr('age_gender'), '$_age Years / $_gender'),
+                      context.tr('age_gender'),
+                      () {
+                        final parts = [
+                          if (_age.isNotEmpty) '$_age Yrs',
+                          if (_gender.isNotEmpty) _gender,
+                        ];
+                        return parts.isEmpty ? '—' : parts.join(' / ');
+                      }()),
                   const Divider(
                       height: 1,
                       indent: 16,
                       endIndent: 16,
                       color: Color(0x0D000000)),
                   _buildInfoRow(Icons.location_on_outlined,
-                      context.tr('pin_code'), _pinCode),
+                      context.tr('pin_code'), _pinCode.isNotEmpty ? _pinCode : '—'),
                   const Divider(
                       height: 1,
                       indent: 16,
                       endIndent: 16,
                       color: Color(0x0D000000)),
                   _buildInfoRow(Icons.water_drop_outlined,
-                      context.tr('blood_group'), '$_bloodGroup Positive',
+                      context.tr('blood_group'), _bloodGroup.isNotEmpty ? _bloodGroup : '—',
                       iconColor: const Color(0xFFFF4D4D)),
                 ],
               ),
@@ -298,9 +344,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingRow(
                     Icons.logout,
                     context.tr('logout'),
-                    () {
-                      AuthService.currentUserRole = null;
-                      context.go('/onboarding');
+                    () async {
+                      AuthGuard.onLogout();
+                      await AuthService.logout();
+                      if (context.mounted) context.go('/onboarding');
                     },
                     textColor: const Color(0xFFFF4D4D),
                     iconColor: const Color(0xFFFF4D4D),

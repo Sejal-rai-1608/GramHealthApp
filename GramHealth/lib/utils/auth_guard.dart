@@ -1,52 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/auth_service.dart';
 
-/// Mock authentication service. Replace with real implementation.
-class AuthService {
-  // In a real app, this would be populated after login.
-  static String? currentUserRole; // 'patient', 'doctor', 'admin'
-
-  static bool get isLoggedIn => currentUserRole != null;
-}
+export '../services/auth_service.dart' show AuthService;
 
 /// Auth guard used by GoRouter to protect routes based on role.
+///
+/// NOTE: GoRouter's redirect callback is synchronous, so we cache the role
+/// in a simple in-memory variable that is populated on login and cleared on
+/// logout. [AuthGuard.init()] should be called once at app startup to
+/// populate it from secure storage.
 class AuthGuard {
+  AuthGuard._();
+
+  /// In-memory cache of the current user role (populated from secure storage).
+  static String? _cachedRole;
+
+  /// Call once at app startup (before [runApp]) to restore session.
+  static Future<void> init() async {
+    final loggedIn = await AuthService.isLoggedIn;
+    if (loggedIn) {
+      _cachedRole = await AuthService.getCurrentRole();
+    } else {
+      _cachedRole = null;
+      await AuthService.logout();
+    }
+  }
+
+  /// Called after a successful login to sync the in-memory cache.
+  static void onLogin(String role) {
+    _cachedRole = role.toLowerCase();
+  }
+
+  /// Called on logout to clear the in-memory cache.
+  static void onLogout() {
+    _cachedRole = null;
+  }
+
+  static bool get isLoggedIn => _cachedRole != null;
+  static String? get currentUserRole => _cachedRole;
+
+  /// GoRouter redirect callback (synchronous).
   static String? redirect(BuildContext context, GoRouterState state) {
     final location = state.uri.path;
-    final isPublicRoute = location == '/' || location == '/onboarding' || location == '/login';
+    final publicRoutes = ['/', '/onboarding', '/login'];
+    final isPublic = publicRoutes.contains(location);
 
-    // If not logged in and trying to access a protected route, go to onboarding.
-    if (!AuthService.isLoggedIn && !isPublicRoute) {
+    if (!isLoggedIn && !isPublic) {
       return '/onboarding';
     }
 
-    // If logged in and trying to access login/onboarding, redirect to their dashboard
-    if (AuthService.isLoggedIn && (location == '/login' || location == '/onboarding')) {
-      return _getDashboardForRole(AuthService.currentUserRole);
+    if (isLoggedIn && (location == '/login' || location == '/onboarding')) {
+      return _dashboardFor(_cachedRole);
     }
 
-    if (AuthService.isLoggedIn) {
-      final role = AuthService.currentUserRole;
-      
-      // Role-based restrictions
+    if (isLoggedIn) {
+      final role = _cachedRole;
       if (location.startsWith('/doctor') && role != 'doctor') {
-        return _getDashboardForRole(role);
+        return _dashboardFor(role);
       }
       if (location.startsWith('/admin') && role != 'admin') {
-        return _getDashboardForRole(role);
+        return _dashboardFor(role);
       }
-      if (location.startsWith('/main') && role != 'patient') {
-        return _getDashboardForRole(role);
+      if (location.startsWith('/main') && role != 'patient' && role != 'asha') {
+        return _dashboardFor(role);
       }
     }
 
-    // No redirection needed.
     return null;
   }
 
-  static String _getDashboardForRole(String? role) {
+  static String _dashboardFor(String? role) {
     if (role == 'admin') return '/admin/dashboard';
     if (role == 'doctor') return '/doctor/dashboard';
-    return '/main/home'; // patient default
+    return '/main/home';
   }
 }

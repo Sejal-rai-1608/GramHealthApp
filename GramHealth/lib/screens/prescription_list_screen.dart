@@ -1,38 +1,38 @@
 import 'package:flutter/material.dart';
+import '../services/api_client.dart';
+import '../services/prescription_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/medication_schedule.dart';
 
-class PrescriptionListScreen extends StatelessWidget {
+class PrescriptionListScreen extends StatefulWidget {
   const PrescriptionListScreen({super.key});
 
-  // Mock prescription data
-  final List<Map<String, dynamic>> prescriptions = const [
-    {
-      'id': 'p1',
-      'doctorName': 'Dr. Anita Joshi',
-      'specialization': 'General Physician',
-      'date': '2024-09-12',
-      'diagnosis': 'Common Cold',
-      'medicines': [
-        {
-          'name': 'Paracetamol',
-          'dosage': '500 mg',
-          'frequency': '2 times a day',
-          'timing': 'Morning & Night',
-          'duration': '5 days',
-          'foodInstruction': 'After food',
-        },
-        {
-          'name': 'Cetirizine',
-          'dosage': '10 mg',
-          'frequency': 'Once a day',
-          'timing': 'Morning',
-          'duration': '7 days',
-          'foodInstruction': 'Before food',
-        },
-      ],
-    },
-  ];
+  @override
+  State<PrescriptionListScreen> createState() => _PrescriptionListScreenState();
+}
+
+class _PrescriptionListScreenState extends State<PrescriptionListScreen> {
+  List<PrescriptionModel> _prescriptions = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrescriptions();
+  }
+
+  Future<void> _loadPrescriptions() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final data = await PrescriptionService.getPrescriptions();
+      if (mounted) setState(() { _prescriptions = data; _isLoading = false; });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _error = 'Failed to load prescriptions.'; _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,36 +40,78 @@ class PrescriptionListScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Prescriptions'),
         backgroundColor: AppColors.primaryAccent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadPrescriptions,
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: prescriptions.length,
-        itemBuilder: (context, index) {
-          final pres = prescriptions[index];
-          return Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListTile(
-              title: Text(pres['doctorName']),
-              subtitle: Text("${pres['specialization']} • ${pres['date']}") ,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => PrescriptionDetailScreen(prescription: pres),
-                ));
-              },
-            ),
-          );
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.wifi_off, color: Colors.grey, size: 48),
+                      const SizedBox(height: 12),
+                      Text(_error!,
+                          style: const TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                          onPressed: _loadPrescriptions,
+                          child: const Text('Retry')),
+                    ],
+                  ),
+                )
+              : _prescriptions.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.receipt_long_outlined,
+                              color: Colors.grey, size: 48),
+                          SizedBox(height: 12),
+                          Text('No prescriptions found.',
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _prescriptions.length,
+                      itemBuilder: (context, index) {
+                        final pres = _prescriptions[index];
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            title: Text(pres.doctorName),
+                            subtitle:
+                                Text('${pres.specialization} • ${pres.date}'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => PrescriptionDetailScreen(
+                                    prescription: pres.toDisplayMap()),
+                              ));
+                            },
+                          ),
+                        );
+                      },
+                    ),
     );
   }
 }
 
 class PrescriptionDetailScreen extends StatelessWidget {
   final Map<String, dynamic> prescription;
-  const PrescriptionDetailScreen({required this.prescription, super.key});
+  const PrescriptionDetailScreen(
+      {required this.prescription, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +126,9 @@ class PrescriptionDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Doctor: ${prescription['doctorName']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text('Doctor: ${prescription['doctorName']}',
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text('Specialization: ${prescription['specialization']}'),
             const SizedBox(height: 8),
@@ -92,9 +136,12 @@ class PrescriptionDetailScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text('Diagnosis: ${prescription['diagnosis']}'),
             const Divider(height: 32),
-            const Text('Medicines', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Medicines',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
-            ...medicines.map((m) => MedicationScheduleCard(medication: m)),
+            ...medicines
+                .map((m) => MedicationScheduleCard(medication: m)),
           ],
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_language.dart';
+import '../services/api_client.dart';
+import '../services/consultation_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
@@ -23,8 +25,24 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   String _selectedReason = 'General Fever';
   final TextEditingController _symptomsCtrl = TextEditingController();
   String _selectedTime = 'Morning (9 AM - 12 PM)';
+  String _selectedType = 'VIDEO'; // VIDEO or AUDIO
   bool _isSubmitted = false;
+  bool _isSubmitting = false;
   bool _isRecording = false;
+
+  // Doctor info passed via GoRouter extras
+  String? _doctorId;
+  String _doctorName = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final extra = GoRouterState.of(context).extra;
+    if (extra is Map<String, dynamic>) {
+      _doctorId   = extra['doctorId']   as String?;
+      _doctorName = extra['doctorName'] as String? ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -32,11 +50,45 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     super.dispose();
   }
 
-  void _handleSubmit() {
-    setState(() => _isSubmitted = true);
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) context.pop();
-    });
+  Future<void> _handleSubmit() async {
+    if (_selectedReason.isEmpty) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await ConsultationService.createConsultation(
+        reason: _selectedReason,
+        symptoms: _symptomsCtrl.text.trim().isEmpty
+            ? null
+            : _symptomsCtrl.text.trim(),
+        scheduledTime: _selectedTime,
+        doctorId: _doctorId,
+        type: _selectedType,
+      );
+      if (!mounted) return;
+      setState(() => _isSubmitted = true);
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (mounted) context.pop();
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Network error. Please try again.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -154,12 +206,12 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Dr. Anita Joshi',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                              Text(
+                                _doctorName.isNotEmpty ? 'Dr. $_doctorName' : context.tr('spec_gp'),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
                               ),
                               Text(
-                                context.tr('spec_gp'),
+                                _doctorId != null ? context.tr('spec_gp') : context.tr('send_request'),
                                 style: TextStyle(fontSize: 13, color: AppColors.textDark.withValues(alpha: 0.6)),
                               ),
                             ],
@@ -209,7 +261,43 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                     ),
                     const SizedBox(height: 24),
 
+                    // Consultation Type (Adaptive Bandwidth)
+                    Text(
+                      context.tr('consultation_type'),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedType = 'VIDEO'),
+                            child: _buildTypeCard(
+                              title: 'Video Call',
+                              subtitle: 'High Network Required',
+                              icon: Icons.videocam,
+                              isSelected: _selectedType == 'VIDEO',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedType = 'AUDIO'),
+                            child: _buildTypeCard(
+                              title: 'Audio Call',
+                              subtitle: 'Low Bandwidth (Rural App)',
+                              icon: Icons.call,
+                              isSelected: _selectedType == 'AUDIO',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
                     // Symptoms
+
                     Text(
                       context.tr('describe_symptoms'),
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
@@ -301,17 +389,43 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                     }),
                     const SizedBox(height: 20),
 
-                    PrimaryButton(
-                      title: context.tr('send_request'),
-                      onPress: _handleSubmit,
-                      width: double.infinity,
-                    ),
+                    _isSubmitting
+                        ? const Center(child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: CircularProgressIndicator(),
+                          ))
+                        : PrimaryButton(
+                            title: context.tr('send_request'),
+                            onPress: _handleSubmit,
+                            width: double.infinity,
+                          ),
                   ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTypeCard({required String title, required String subtitle, required IconData icon, required bool isSelected}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.primaryAccent : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isSelected ? AppColors.primaryAccent : const Color(0xFFEEEEEE)),
+        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 28, color: isSelected ? Colors.white : AppColors.primaryAccent),
+          const SizedBox(height: 8),
+          Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.textDark)),
+          const SizedBox(height: 4),
+          Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: isSelected ? Colors.white70 : Colors.grey[500])),
+        ],
       ),
     );
   }
