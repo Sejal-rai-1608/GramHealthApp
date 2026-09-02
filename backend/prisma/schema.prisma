@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String      @id @default(uuid()) @db.Uuid
+  name         String      @db.VarChar(150)
+  phone        String      @unique @db.VarChar(20)
+  email        String?     @unique @db.VarChar(255)
+  passwordHash String      @map("password_hash")
+  role         UserRole
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  ashaWorker   AshaWorker?
+  doctor       Doctor?
+  patient      Patient?
+
+  @@map("users")
+}
+
+model Patient {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @unique @map("user_id") @db.Uuid
+  dateOfBirth    DateTime?       @map("date_of_birth") @db.Date
+  gender         String?         @db.VarChar(20)
+  village        String?         @db.VarChar(150)
+  district       String?         @db.VarChar(150)
+  state          String?         @db.VarChar(150)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  consultations  Consultation[]
+  medicalRecords MedicalRecord[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions  Prescription[]
+
+  @@map("patients")
+}
+
+model Doctor {
+  id                 String         @id @default(uuid()) @db.Uuid
+  userId             String         @unique @map("user_id") @db.Uuid
+  specialization     String?        @db.VarChar(150)
+  registrationNumber String?        @unique @map("registration_number") @db.VarChar(100)
+  hospitalName       String?        @map("hospital_name") @db.VarChar(200)
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  consultations      Consultation[]
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions      Prescription[]
+
+  @@map("doctors")
+}
+
+model AshaWorker {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @unique @map("user_id") @db.Uuid
+  village       String?        @db.VarChar(150)
+  district      String?        @db.VarChar(150)
+  state         String?        @db.VarChar(150)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consultations Consultation[]
+
+  @@map("asha_workers")
+}
+
+model Consultation {
+  id             String             @id @default(uuid()) @db.Uuid
+  patientId      String             @map("patient_id") @db.Uuid
+  doctorId       String?            @map("doctor_id") @db.Uuid
+  ashaWorkerId   String?            @map("asha_worker_id") @db.Uuid
+  type           ConsultationType
+  status         ConsultationStatus
+  symptoms       String?
+  notes          String?
+  riskLevel      String?            @map("risk_level") @db.VarChar(20)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  ashaWorker     AshaWorker?        @relation(fields: [ashaWorkerId], references: [id])
+  doctor         Doctor?            @relation(fields: [doctorId], references: [id])
+  patient        Patient            @relation(fields: [patientId], references: [id])
+  medicalRecords MedicalRecord[]
+  prescriptions  Prescription[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([ashaWorkerId])
+  @@map("consultations")
+}
+
+model MedicalRecord {
+  id             String        @id @default(uuid()) @db.Uuid
+  patientId      String        @map("patient_id") @db.Uuid
+  consultationId String?       @map("consultation_id") @db.Uuid
+  diagnosis      String?
+  clinicalNotes  String?       @map("clinical_notes")
+  aiAnalysis     Json?         @map("ai_analysis")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  patient        Patient       @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([consultationId])
+  @@map("medical_records")
+}
+
+model Prescription {
+  id             String        @id @default(uuid()) @db.Uuid
+  patientId      String        @map("patient_id") @db.Uuid
+  consultationId String?       @map("consultation_id") @db.Uuid
+  doctorId       String        @map("doctor_id") @db.Uuid
+  medicines      Json
+  instructions   String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  doctor         Doctor        @relation(fields: [doctorId], references: [id])
+  patient        Patient       @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([consultationId])
+  @@map("prescriptions")
+}
+
+model SyncEvent {
+  id         String        @id @default(uuid()) @db.Uuid
+  deviceId   String        @map("device_id") @db.VarChar(150)
+  entityType String        @map("entity_type") @db.VarChar(100)
+  entityId   String?       @map("entity_id") @db.Uuid
+  operation  SyncOperation
+  status     SyncStatus
+  createdAt  DateTime      @default(now()) @map("created_at")
+  syncedAt   DateTime?     @map("synced_at")
+
+  @@index([deviceId])
+  @@index([status])
+  @@map("sync_events")
+}
+
+model ConnectivityLog {
+  id                String   @id @default(uuid()) @db.Uuid
+  deviceId          String   @map("device_id") @db.VarChar(150)
+  downloadSpeed     Decimal? @map("download_speed") @db.Decimal(10, 2)
+  uploadSpeed       Decimal? @map("upload_speed") @db.Decimal(10, 2)
+  latencyMs         Int?     @map("latency_ms")
+  packetLoss        Decimal? @map("packet_loss") @db.Decimal(5, 2)
+  batteryLevel      Int?     @map("battery_level")
+  connectivityLevel Int?     @map("connectivity_level")
+  selectedMode      String?  @map("selected_mode") @db.VarChar(20)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([deviceId])
+  @@index([createdAt])
+  @@map("connectivity_logs")
+}
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ASHA
+  ADMIN
+}
+
+enum ConsultationType {
+  VIDEO
+  AUDIO
+  CHAT
+  OFFLINE
+}
+
+enum ConsultationStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SyncOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  CONFLICT
+}
