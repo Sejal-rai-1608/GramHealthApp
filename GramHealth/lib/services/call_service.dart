@@ -32,13 +32,6 @@ class CallService {
         isVideoMuted: forceAudio,
         userDisplayName: userName,
         userEmail: userEmail,
-        featureFlags: {
-          'lobby-mode.enabled': false,
-          'meeting-password.enabled': false,
-          'prejoinpage.enabled': false,
-          'welcomepage.enabled': false,
-          'invite.enabled': false,
-        },
       );
 
       await JitsiMeetWrapper.joinMeeting(
