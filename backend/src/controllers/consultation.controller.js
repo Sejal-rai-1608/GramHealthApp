@@ -98,6 +98,29 @@ const assignDoctor = asyncHandler(async (req, res) => {
     });
 });
 
+const addVoiceNote = asyncHandler(async (req, res) => {
+    const { voiceNoteUrl, voiceNoteDuration } = req.body;
+    
+    if (!voiceNoteUrl) {
+        return res.status(400).json({
+            success: false,
+            message: 'voiceNoteUrl is required',
+        });
+    }
+
+    const consultation = await consultationService.addVoiceNote(
+        req.params.id,
+        req.user,
+        { voiceNoteUrl, voiceNoteDuration }
+    );
+
+    res.json({
+        success: true,
+        message: "Voice note added successfully",
+        data: consultation
+    });
+});
+
 module.exports = {
     createConsultation,
     getConsultationById,
@@ -105,5 +128,6 @@ module.exports = {
     updateStatus,
     acceptConsultation,
     completeConsultation,
-    assignDoctor
+    assignDoctor,
+    addVoiceNote
 };

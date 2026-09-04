@@ -79,6 +79,8 @@ model Consultation {
   status         ConsultationStatus
   symptoms       String?
   notes          String?
+  voiceNoteUrl   String?            @map("voice_note_url")
+  voiceNoteDuration Int?            @map("voice_note_duration")
   riskLevel      String?            @map("risk_level") @db.VarChar(20)
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")

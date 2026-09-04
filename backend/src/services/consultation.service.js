@@ -451,6 +451,39 @@ const assignDoctor = async (id, user, { doctorId }) => {
     });
 };
 
+const addVoiceNote = async (id, user, { voiceNoteUrl, voiceNoteDuration }) => {
+    const consultation = await getConsultationOr404(id);
+
+    const profileId = await getProfileIdForRole(user.role, user.userId);
+
+    const canModify =
+        user.role === "ADMIN" ||
+        (user.role === "PATIENT" && consultation.patientId === profileId) ||
+        (user.role === "ASHA" && consultation.ashaWorkerId === profileId);
+
+    if (!canModify) {
+        throw new ApiError(
+            "You do not have permission to attach a voice note to this consultation",
+            403,
+            "FORBIDDEN"
+        );
+    }
+
+    if (consultation.status === "COMPLETED" || consultation.status === "CANCELLED") {
+        throw new ApiError(
+            `Cannot add a voice note to a ${consultation.status.toLowerCase()} consultation`,
+            400,
+            "INVALID_STATE"
+        );
+    }
+
+    return prisma.consultation.update({
+        where: { id },
+        data: { voiceNoteUrl, voiceNoteDuration },
+        include: CONSULTATION_INCLUDE
+    });
+};
+
 module.exports = {
     createConsultation,
     getConsultationById,
@@ -458,5 +491,6 @@ module.exports = {
     updateStatus,
     acceptConsultation,
     completeConsultation,
-    assignDoctor
+    assignDoctor,
+    addVoiceNote
 };
