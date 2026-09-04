@@ -43,7 +43,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # Session data (role, name, etc.)
-  shared_preferences: ^2.3.3
+  shared_preferences: ^2.5.5
 
   cupertino_icons: ^1.0.8
   jitsi_meet_wrapper: ^0.2.0+1
