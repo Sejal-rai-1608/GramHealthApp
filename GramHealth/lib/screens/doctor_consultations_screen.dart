@@ -7,6 +7,7 @@ import '../widgets/empty_state.dart';
 import '../theme/app_colors.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
+import 'doctor_complete_consultation_screen.dart';
 
 class DoctorConsultationsScreen extends StatefulWidget {
   const DoctorConsultationsScreen({super.key});
@@ -49,17 +50,13 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
     }
   }
 
-  Future<void> _complete(String id) async {
-    try {
-      await ConsultationService.completeConsultation(id);
-      _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
+  void _complete(String id) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DoctorCompleteConsultationScreen(consultationId: id),
+      ),
+    ).then((_) => _load());
   }
 
   @override
@@ -158,6 +155,24 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                           // In a full implementation, this opens a dialog listing fetched ABHA and manual records using the patient's ID.
+                           // Simulating for the presentation:
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Accessing ABHA Digital Vault & Fetching remote records...'))
+                           );
+                        },
+                        icon: const Icon(Icons.health_and_safety, size: 16, color: Colors.blueAccent),
+                        label: const Text('History', style: TextStyle(color: Colors.blueAccent)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.blueAccent),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),

@@ -1,5 +1,6 @@
 import 'package:jitsi_meet_wrapper/jitsi_meet_wrapper.dart';
 import 'auth_service.dart';
+import 'connectivity_service.dart';
 
 class CallService {
   CallService._();
@@ -11,16 +12,23 @@ class CallService {
     required bool audioOnly,
   }) async {
     try {
+      final status = ConnectivityService.instance.currentStatus;
+      if (status == NetworkStatus.offline) {
+        throw Exception("ERROR_OFFLINE");
+      }
+
       final user = await AuthService.getUser();
       final userName = user?['name'] as String? ?? 'GramHealth User';
       final userEmail = user?['email'] as String? ?? '';
 
+      // Force UI-level fallback if network is weak
+      final bool forceAudio = audioOnly || (status == NetworkStatus.weak);
+
       final options = JitsiMeetingOptions(
         roomNameOrUrl: 'gramhealth-call-$consultationId',
-        // Our adaptive low-bandwidth setup:
-        isAudioOnly: audioOnly,
+        isAudioOnly: forceAudio,
         isAudioMuted: false,
-        isVideoMuted: audioOnly,
+        isVideoMuted: forceAudio,
         userDisplayName: userName,
         userEmail: userEmail,
       );

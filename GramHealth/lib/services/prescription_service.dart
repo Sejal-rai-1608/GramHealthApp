@@ -1,5 +1,7 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
+import '../services/sync_service.dart';
+import '../data/local_database.dart';
 
 /// Matches the backend Prescription model (+ joined doctor/patient info).
 class PrescriptionModel {
@@ -70,11 +72,27 @@ class PrescriptionService {
     int limit = 20,
   }) async {
     final url = '${AppConfig.apiPrescriptions}/me?page=$page&limit=$limit';
-    final response = await ApiClient.get(url);
-    final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await ApiClient.get(url);
+      final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+      
+      // Cache the response locally
+      for (var item in items) {
+        if (item is Map<String, dynamic>) {
+          await LocalDatabase.instance.cacheData('cached_prescriptions', item['id'].toString(), item);
+        }
+      }
+
+      return items
+          .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Fallback to offline cache
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      return cached
+          .map((e) => PrescriptionModel.fromJson(e))
+          .toList();
+    }
   }
 
   /// List prescriptions written by the logged-in doctor.
@@ -83,11 +101,27 @@ class PrescriptionService {
     int limit = 20,
   }) async {
     final url = '${AppConfig.apiDoctors}/prescriptions?page=$page&limit=$limit';
-    final response = await ApiClient.get(url);
-    final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await ApiClient.get(url);
+      final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+      // Cache the response locally
+      for (var item in items) {
+        if (item is Map<String, dynamic>) {
+          await LocalDatabase.instance.cacheData('cached_prescriptions', item['id'].toString(), item);
+        }
+      }
+
+      return items
+          .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Fallback to offline cache
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      return cached
+          .map((e) => PrescriptionModel.fromJson(e))
+          .toList();
+    }
   }
 
   /// Doctor creates a prescription for a consultation.
@@ -101,7 +135,25 @@ class PrescriptionService {
       'medicines': medicines,
     };
     if (instructions != null) body['instructions'] = instructions;
-    final response = await ApiClient.post(AppConfig.apiPrescriptions, body);
+
+    final response = await SyncService.instance.push(
+      entityType: 'prescription',
+      operation: 'POST',
+      endpoint: AppConfig.apiPrescriptions,
+      payload: body,
+    );
+
+    if (response['status'] == 'PENDING_SYNC') {
+      return PrescriptionModel(
+        id: response['id'],
+        doctorName: 'Local Draft',
+        specialization: '-',
+        date: PrescriptionModel._formatDate(DateTime.now().toIso8601String()),
+        diagnosis: 'Sync Pending...',
+        medicines: medicines,
+      );
+    }
+
     return PrescriptionModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }

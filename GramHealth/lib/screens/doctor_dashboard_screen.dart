@@ -8,6 +8,7 @@ import '../l10n/app_language.dart';
 import '../services/call_service.dart';
 import '../services/consultation_service.dart';
 import '../services/auth_service.dart';
+import 'doctor_complete_consultation_screen.dart';
 
 /// Doctor Dashboard – shows live KPI cards and a list of today's pending requests.
 class DoctorDashboardScreen extends StatefulWidget {
@@ -59,17 +60,13 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     }
   }
 
-  Future<void> _complete(String id) async {
-    try {
-      await ConsultationService.completeConsultation(id);
-      _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
+  void _complete(String id) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DoctorCompleteConsultationScreen(consultationId: id),
+      ),
+    ).then((_) => _load());
   }
 
   @override

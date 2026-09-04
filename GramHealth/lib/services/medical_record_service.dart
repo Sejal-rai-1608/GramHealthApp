@@ -1,69 +1,65 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
-import '../services/api_client.dart';
-
-/// Mirrors the backend MedicalRecord model (+ joined doctor name).
-class MedicalRecordModel {
-  final String id;
-  final String date;
-  final String doctor;
-  final String illness;
-  final String diagnosis;
-  final String prescription;
-
-  MedicalRecordModel({
-    required this.id,
-    required this.date,
-    required this.doctor,
-    required this.illness,
-    required this.diagnosis,
-    required this.prescription,
-  });
-
-  factory MedicalRecordModel.fromJson(Map<String, dynamic> json) {
-    // Try to get doctor name from joined doctor.user.name
-    final doctorObj = json['doctor'] as Map<String, dynamic>?;
-    final doctorUserObj = doctorObj?['user'] as Map<String, dynamic>?;
-    final doctorName =
-        doctorUserObj?['name']?.toString() ?? 'Unknown Doctor';
-
-    return MedicalRecordModel(
-      id: json['id']?.toString() ?? '',
-      date: _formatDate(json['createdAt']?.toString()),
-      doctor: doctorName,
-      illness: json['title']?.toString() ?? json['illness']?.toString() ?? '—',
-      diagnosis: json['diagnosis']?.toString() ?? '—',
-      prescription: json['notes']?.toString() ?? '—',
-    );
-  }
-
-  static String _formatDate(String? raw) {
-    if (raw == null) return '—';
-    try {
-      final dt = DateTime.parse(raw).toLocal();
-      final months = [
-        'Jan','Feb','Mar','Apr','May','Jun',
-        'Jul','Aug','Sep','Oct','Nov','Dec'
-      ];
-      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-    } catch (_) {
-      return raw;
-    }
-  }
-}
+import '../services/auth_service.dart';
+import '../models/medical_record.dart';
 
 class MedicalRecordService {
-  MedicalRecordService._();
+  Future<List<MedicalRecord>> getMyRecords() async {
+    final token = await AuthService.getToken();
+    if (token == null) throw Exception('User not authenticated');
 
-  /// Returns the logged-in patient's health records.
-  static Future<List<MedicalRecordModel>> getRecords({
-    int page = 1,
-    int limit = 20,
-  }) async {
-    final url = '${AppConfig.apiMedicalRecords}/me?page=$page&limit=$limit';
-    final response = await ApiClient.get(url);
-    final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => MedicalRecordModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiMedicalRecords}/me'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      final List<dynamic> items = data['data'];
+      return items.map((json) => MedicalRecord.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load medical records');
+    }
+  }
+  
+  Future<List<MedicalRecord>> getDoctorRecords(String patientId) async {
+    final token = await AuthService.getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    // Assuming there's a route for doctors to fetch a specific patient's record, 
+    // but the backend only provides /:id currently. For the MVP, we will simulate
+    // fetching the patient's records if we had the route, or just rely on the doctor fetching them.
+    // For now we will just use it to view a single record if needed.
+    return [];
+  }
+
+  Future<MedicalRecord> uploadManualRecord(String title, String type, String fileUrl) async {
+    final token = await AuthService.getToken();
+    if (token == null) throw Exception('User not authenticated');
+
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiMedicalRecords}/upload'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'title': title,
+        'documentType': type,
+        'fileUrl': fileUrl,
+        'issuedDate': DateTime.now().toIso8601String(),
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      return MedicalRecord.fromJson(data['data']);
+    } else {
+      throw Exception('Failed to upload record: ${response.statusCode} - ${response.body}');
+    }
   }
 }

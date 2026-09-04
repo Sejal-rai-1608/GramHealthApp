@@ -1,9 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../services/medical_record_service.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
+
+class MedicalRecordModel {
+  final String id;
+  final String date;
+  final String doctor;
+  final String illness;
+  final String diagnosis;
+  final String prescription;
+
+  MedicalRecordModel({
+    required this.id,
+    required this.date,
+    required this.doctor,
+    required this.illness,
+    required this.diagnosis,
+    required this.prescription,
+  });
+}
 
 class HealthRecordsScreen extends StatefulWidget {
   const HealthRecordsScreen({super.key});
@@ -28,7 +45,9 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   }
 
   Future<void> _loadRecords() async {
-    final records = await MedicalRecordService.getRecords();
+    // Stubbed legacy records for layout compatibility.
+    // Use patient_records_screen.dart for actual ABDM backend integration.
+    final records = <MedicalRecordModel>[];
     if (mounted) setState(() => _records = records);
   }
 

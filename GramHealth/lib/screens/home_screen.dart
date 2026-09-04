@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/doctor_service.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
+import '../widgets/connectivity_badge.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -165,29 +166,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Header
                 Container(
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const ConnectivityBadge(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            context.tr('greeting'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textDark.withValues(alpha: 0.6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr('greeting'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textDark.withValues(alpha: 0.6),
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textDark,
+                            Text(
+                              '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Row(
                         children: [
@@ -244,9 +252,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ], // row children close
+                  ), // row close
+                ], // column children close
+              ), // column close
+            ), // container close
 
                 // Banner
                 Container(

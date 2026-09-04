@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/medicine_form_card.dart';
+import '../services/consultation_service.dart';
+import '../services/prescription_service.dart';
 
 class DoctorCompleteConsultationScreen extends StatefulWidget {
-  const DoctorCompleteConsultationScreen({Key? key}) : super(key: key);
+  final String consultationId;
+  const DoctorCompleteConsultationScreen({Key? key, required this.consultationId}) : super(key: key);
 
   @override
   State<DoctorCompleteConsultationScreen> createState() =>
@@ -41,16 +44,48 @@ class _DoctorCompleteConsultationScreenState
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // In a real app, you would call the backend API here.
-      debugPrint('Consultation submitted');
-      debugPrint('Symptoms: ${_symptomsCtrl.text}');
-      debugPrint('Diagnosis: ${_diagnosisCtrl.text}');
-      debugPrint('Notes: ${_notesCtrl.text}');
-      debugPrint('Follow-up: $_followUpDate');
-      debugPrint('Medicines: $_medicines');
-      Navigator.of(context).pop();
+      if (_medicines.isNotEmpty) {
+        for (var med in _medicines) {
+          if ((med['name']?.trim().isEmpty ?? true) ||
+              (med['dosage']?.trim().isEmpty ?? true) ||
+              (med['frequency']?.trim().isEmpty ?? true) ||
+              (med['duration']?.trim().isEmpty ?? true)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please fill all required medicine fields (Name, Dosage, Frequency, Duration)'), backgroundColor: Colors.red),
+            );
+            return;
+          }
+        }
+        
+        // Map foodInstruction/timing into 'instructions'
+        final mappedMedicines = _medicines.map((m) {
+          final timing = m['timing']?.trim() ?? '';
+          final food = m['foodInstruction']?.trim() ?? '';
+          final extras = [timing, food].where((e) => e.isNotEmpty).join(' - ');
+          
+          return {
+            'name': m['name']?.trim(),
+            'dosage': m['dosage']?.trim(),
+            'frequency': m['frequency']?.trim(),
+            'duration': m['duration']?.trim(),
+            'instructions': extras.isNotEmpty ? extras : '',
+          };
+        }).toList();
+
+        await PrescriptionService.createPrescription(
+          consultationId: widget.consultationId,
+          medicines: mappedMedicines,
+          instructions: _notesCtrl.text,
+        );
+      }
+      await ConsultationService.completeConsultation(
+        widget.consultationId,
+        notes: _diagnosisCtrl.text,
+        riskLevel: 'LOW',
+      );
+      if (mounted) Navigator.of(context).pop();
     }
   }
 

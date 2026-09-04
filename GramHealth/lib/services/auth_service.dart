@@ -34,7 +34,7 @@ class AuthService {
 
   static Future<bool> get isLoggedIn async {
     final token = await getToken();
-    if (token == null || token.isEmpty || token.startsWith('mock-')) {
+    if (token == null || token.isEmpty) {
       return false;
     }
     return true;

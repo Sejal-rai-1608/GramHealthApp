@@ -2,8 +2,38 @@ const prisma = require("../config/prisma");
 const ApiError = require("../utils/ApiError");
 const { getPagination, buildMeta } = require("../utils/pagination");
 const { getProfileIdForRole, requireProfile } = require("../utils/profile");
+const { v4: uuidv4 } = require('uuid');
 
 const USER_SELECT = { id: true, name: true, phone: true, email: true };
+
+const generateMockABHARecords = (patientProfileId) => {
+  return [
+    {
+      id: uuidv4(),
+      patientId: patientProfileId,
+      title: "Apollo Hospital - Complete Blood Count (CBC)",
+      documentType: "LAB_REPORT",
+      fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      source: "ABHA",
+      issuedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      patient: { user: { name: "Mock ABHA User" } }
+    },
+    {
+      id: uuidv4(),
+      patientId: patientProfileId,
+      title: "AIIMS - Chest X-Ray",
+      documentType: "X_RAY",
+      fileUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4b/Chest_radiograph_of_a_normal_human_male.jpg",
+      source: "ABHA",
+      issuedDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      patient: { user: { name: "Mock ABHA User" } }
+    }
+  ];
+};
 
 const MEDICAL_RECORD_INCLUDE = {
     patient: { include: { user: { select: USER_SELECT } } },
@@ -81,7 +111,28 @@ const listMyMedicalRecords = async (user, query = {}) => {
         })
     ]);
 
-    return { items, meta: buildMeta(total, page, limit) };
+    let allItems = [...items];
+    // For MVP Presentation: Automatically simulating a connection to the ABDM grid.
+    const abhaRecords = generateMockABHARecords(patientProfileId);
+    allItems = [...allItems, ...abhaRecords];
+    allItems.sort((a, b) => new Date(b.issuedDate || b.createdAt) - new Date(a.issuedDate || a.createdAt));
+
+    return { items: allItems, meta: buildMeta(total, page, limit) };
+};
+
+const uploadPatientRecord = async (user, data) => {
+    const patientProfileId = await requireProfile("PATIENT", user.userId);
+    return prisma.medicalRecord.create({
+        data: {
+            patientId: patientProfileId,
+            title: data.title,
+            documentType: data.documentType,
+            fileUrl: data.fileUrl,
+            source: 'MANUAL',
+            issuedDate: data.issuedDate ? new Date(data.issuedDate) : new Date(),
+        },
+        include: MEDICAL_RECORD_INCLUDE
+    });
 };
 
 const getMedicalRecordById = async (id, user) => {
@@ -159,5 +210,6 @@ module.exports = {
     createMedicalRecord,
     listMyMedicalRecords,
     getMedicalRecordById,
-    listDoctorMedicalRecords
+    listDoctorMedicalRecords,
+    uploadPatientRecord
 };

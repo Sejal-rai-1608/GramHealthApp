@@ -85,7 +85,7 @@ const loginUser = async ({ email, password }) => {
             userId: user.id,
             role: user.role
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || "gramhealth-fallback-secret-key",
         {
             expiresIn: "7d"
         }

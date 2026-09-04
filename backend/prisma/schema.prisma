@@ -13,6 +13,7 @@ model User {
   email        String?     @unique @db.VarChar(255)
   passwordHash String      @map("password_hash")
   role         UserRole
+  abhaId       String?     @unique @map("abha_id") @db.VarChar(50)
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   ashaWorker   AshaWorker?
@@ -100,6 +101,11 @@ model MedicalRecord {
   diagnosis      String?
   clinicalNotes  String?       @map("clinical_notes")
   aiAnalysis     Json?         @map("ai_analysis")
+  title          String?       @db.VarChar(255)
+  documentType   String?       @map("document_type") @db.VarChar(50)
+  fileUrl        String?       @map("file_url")
+  source         String?       @default("MANUAL") @db.VarChar(50)
+  issuedDate     DateTime?     @map("issued_date")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   consultation   Consultation? @relation(fields: [consultationId], references: [id])

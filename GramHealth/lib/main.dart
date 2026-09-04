@@ -12,7 +12,7 @@ import 'screens/home_screen.dart';
 import 'screens/doctor_list_screen.dart';
 import 'screens/doctor_details_screen.dart';
 import 'screens/symptom_checker_screen.dart';
-import 'screens/health_records_screen.dart';
+import 'screens/patient_records_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/chatbot_screen.dart';
@@ -43,10 +43,14 @@ import 'screens/admin_reports_screen.dart';
 import 'screens/admin_settings_screen.dart';
 import 'screens/medicine_availability_screen.dart';
 import 'screens/health_overview_screen.dart';
+import 'services/connectivity_service.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthGuard.init(); // Restore session from secure storage
+  ConnectivityService.instance.initialize();
+  SyncService.instance.initialize();
   runApp(const RuralCareApp());
 }
 final _router = GoRouter(
@@ -75,7 +79,7 @@ final _router = GoRouter(
         GoRoute(
             path: 'records',
             builder: (c, s) =>
-                const MainShell(child: HealthRecordsScreen())),
+                MainShell(child: PatientRecordsScreen())),
         GoRoute(
             path: 'profile',
             builder: (c, s) => const MainShell(child: ProfileScreen())),

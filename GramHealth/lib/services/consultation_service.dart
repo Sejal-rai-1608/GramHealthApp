@@ -1,5 +1,6 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
+import '../services/sync_service.dart';
 
 class ConsultationModel {
   final String id;
@@ -98,8 +99,23 @@ class ConsultationService {
     if (symptoms != null && symptoms.isNotEmpty) body['symptoms'] = symptoms;
     if (doctorId != null) body['doctorId'] = doctorId;
 
-    final response =
-        await ApiClient.post(AppConfig.apiConsultations, body);
+    final response = await SyncService.instance.push(
+      entityType: 'consultation',
+      operation: 'POST',
+      endpoint: AppConfig.apiConsultations,
+      payload: body,
+    );
+    if (response['status'] == 'PENDING_SYNC') {
+      return ConsultationModel(
+        id: response['id'],
+        status: 'PENDING_SYNC',
+        type: type,
+        reason: reason,
+        symptoms: symptoms,
+        scheduledTime: scheduledTime,
+        doctorId: doctorId,
+      );
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -116,8 +132,17 @@ class ConsultationService {
   static Future<ConsultationModel> acceptConsultation(String id, {String? notes}) async {
     final body = <String, dynamic>{};
     if (notes != null) body['notes'] = notes;
-    final response = await ApiClient.patch(
-        '${AppConfig.apiConsultations}/$id/accept', body);
+    
+    final response = await SyncService.instance.push(
+      entityType: 'consultation_$id',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$id/accept',
+      payload: body,
+    );
+    
+    if (response['status'] == 'PENDING_SYNC') {
+       return ConsultationModel(id: id, status: 'ACCEPTED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -128,8 +153,17 @@ class ConsultationService {
     final body = <String, dynamic>{};
     if (notes != null) body['notes'] = notes;
     if (riskLevel != null) body['riskLevel'] = riskLevel;
-    final response = await ApiClient.patch(
-        '${AppConfig.apiConsultations}/$id/complete', body);
+
+    final response = await SyncService.instance.push(
+      entityType: 'consultation_$id',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$id/complete',
+      payload: body,
+    );
+    
+    if (response['status'] == 'PENDING_SYNC') {
+       return ConsultationModel(id: id, status: 'COMPLETED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
