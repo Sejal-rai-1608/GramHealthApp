@@ -80,10 +80,25 @@ const uploadPatientRecord = asyncHandler(async (req, res) => {
     });
 });
 
+const listDoctorPatientRecords = asyncHandler(async (req, res) => {
+    const { items, meta } = await medicalRecordService.listDoctorPatientRecords(
+        req.params.patientId,
+        req.query
+    );
+
+    res.json({
+        success: true,
+        message: "Patient's medical records retrieved successfully",
+        data: items,
+        meta
+    });
+});
+
 module.exports = {
     createMedicalRecord,
     listMyMedicalRecords,
     getMedicalRecordById,
     listDoctorMedicalRecords,
-    uploadPatientRecord
+    uploadPatientRecord,
+    listDoctorPatientRecords
 };

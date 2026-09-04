@@ -7,7 +7,10 @@ import '../widgets/empty_state.dart';
 import '../theme/app_colors.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
+import '../services/medical_record_service.dart';
+import '../models/medical_record.dart';
 import 'doctor_complete_consultation_screen.dart';
+import 'dart:convert';
 
 class DoctorConsultationsScreen extends StatefulWidget {
   const DoctorConsultationsScreen({super.key});
@@ -128,66 +131,61 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
             ],
             if (isPending || isAccepted) ...[
               const SizedBox(height: 12),
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (isPending)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _accept(c.id),
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('Accept'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.leafGreenPrimary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
+                    ElevatedButton.icon(
+                      onPressed: () => _accept(c.id),
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Accept'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.leafGreenPrimary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   if (isAccepted) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => CallService.startCall(
-                          consultationId: c.id,
-                          audioOnly: c.type.toUpperCase() == 'AUDIO',
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => CallService.startCall(
+                              consultationId: c.id,
+                              audioOnly: c.type.toUpperCase() == 'AUDIO',
+                            ),
+                            icon: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 16),
+                            label: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
                         ),
-                        icon: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 16),
-                        label: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showPatientHistory(context, c),
+                            icon: const Icon(Icons.history, size: 16, color: Colors.blueAccent),
+                            label: const Text('History', style: TextStyle(color: Colors.blueAccent)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.blueAccent),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                           // In a full implementation, this opens a dialog listing fetched ABHA and manual records using the patient's ID.
-                           // Simulating for the presentation:
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Accessing ABHA Digital Vault & Fetching remote records...'))
-                           );
-                        },
-                        icon: const Icon(Icons.health_and_safety, size: 16, color: Colors.blueAccent),
-                        label: const Text('History', style: TextStyle(color: Colors.blueAccent)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.blueAccent),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _complete(c.id),
-                        icon: const Icon(Icons.done_all, size: 16),
-                        label: const Text('Complete'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryAccent,
-                          foregroundColor: AppColors.textDark,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
+                    ElevatedButton.icon(
+                      onPressed: () => _complete(c.id),
+                      icon: const Icon(Icons.done_all, size: 16),
+                      label: const Text('Complete Consultation'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryAccent,
+                        foregroundColor: AppColors.textDark,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ],
@@ -197,6 +195,103 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showPatientHistory(BuildContext context, ConsultationModel c) {
+    if (c.patientId == null || c.patientId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No patient ID assigned.')));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Patient Health Vault', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Fetching linked records securely...', style: TextStyle(color: Colors.grey.shade600)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: FutureBuilder<List<MedicalRecord>>(
+                  future: MedicalRecordService().getDoctorRecords(c.patientId!),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                    }
+                    final records = snapshot.data ?? [];
+                    if (records.isEmpty) {
+                      return const Center(child: Text('No medical records found in this vault.', style: TextStyle(color: Colors.grey)));
+                    }
+                    return ListView.builder(
+                      itemCount: records.length,
+                      itemBuilder: (context, index) {
+                        final record = records[index];
+                        final isAbha = record.source == 'ABHA';
+                        return Card(
+                          elevation: isAbha ? 3 : 1,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            side: isAbha ? BorderSide(color: Colors.blue.shade200, width: 2) : BorderSide.none,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: Icon(
+                              record.documentType == 'X_RAY' ? Icons.image : Icons.description,
+                              color: isAbha ? Colors.blue : AppColors.leafGreenPrimary,
+                            ),
+                            title: Text(record.title ?? 'Untitled'),
+                            subtitle: Text('${isAbha ? 'ABHA Vault' : 'Manual Upload'} \u2022 ${record.issuedDate?.toString().substring(0, 10) ?? '-'}'),
+                            trailing: const Icon(Icons.remove_red_eye),
+                            onTap: () {
+                              if (record.fileUrl != null && record.fileUrl!.isNotEmpty) {
+                                if (record.fileUrl!.startsWith('data:image')) {
+                                  final base64String = record.fileUrl!.split(',').last;
+                                  final bytes = base64Decode(base64String);
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => Dialog(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          AppBar(
+                                            title: const Text('Document View'), 
+                                            automaticallyImplyLeading: false,
+                                            actions: const [CloseButton()],
+                                          ),
+                                          Flexible(child: InteractiveViewer(child: Image.memory(bytes))),
+                                        ]
+                                      )
+                                    )
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Simulating external PDF link...")));
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No document attachment found.")));
+                              }
+                            },
+                          ),
+                        );
+                      }
+                    );
+                  }
+                ),
+              )
+            ],
+          ),
+        );
+      }
     );
   }
 }

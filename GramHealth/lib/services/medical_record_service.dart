@@ -30,11 +30,21 @@ class MedicalRecordService {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('User not authenticated');
 
-    // Assuming there's a route for doctors to fetch a specific patient's record, 
-    // but the backend only provides /:id currently. For the MVP, we will simulate
-    // fetching the patient's records if we had the route, or just rely on the doctor fetching them.
-    // For now we will just use it to view a single record if needed.
-    return [];
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiMedicalRecords}/patient/$patientId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      final List<dynamic> items = data['data'];
+      return items.map((json) => MedicalRecord.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to fetch patient history: ${response.body}');
+    }
   }
 
   Future<MedicalRecord> uploadManualRecord(String title, String type, String fileUrl) async {

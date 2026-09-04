@@ -120,6 +120,30 @@ const listMyMedicalRecords = async (user, query = {}) => {
     return { items: allItems, meta: buildMeta(total, page, limit) };
 };
 
+const listDoctorPatientRecords = async (patientProfileId, query = {}) => {
+    const { page, limit, skip, take } = getPagination(query);
+
+    const where = { patientId: patientProfileId };
+
+    const [total, items] = await Promise.all([
+        prisma.medicalRecord.count({ where }),
+        prisma.medicalRecord.findMany({
+            where,
+            include: { patient: { include: { user: { select: USER_SELECT } } } },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take
+        })
+    ]);
+
+    let allItems = [...items];
+    const abhaRecords = generateMockABHARecords(patientProfileId);
+    allItems = [...allItems, ...abhaRecords];
+    allItems.sort((a, b) => new Date(b.issuedDate || b.createdAt) - new Date(a.issuedDate || a.createdAt));
+
+    return { items: allItems, meta: buildMeta(total, page, limit) };
+};
+
 const uploadPatientRecord = async (user, data) => {
     const patientProfileId = await requireProfile("PATIENT", user.userId);
     return prisma.medicalRecord.create({
@@ -211,5 +235,6 @@ module.exports = {
     listMyMedicalRecords,
     getMedicalRecordById,
     listDoctorMedicalRecords,
-    uploadPatientRecord
+    uploadPatientRecord,
+    listDoctorPatientRecords
 };
