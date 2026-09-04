@@ -25,12 +25,20 @@ class CallService {
       final bool forceAudio = audioOnly || (status == NetworkStatus.weak);
 
       final options = JitsiMeetingOptions(
-        roomNameOrUrl: 'gramhealth-call-$consultationId',
+        roomNameOrUrl: 'gramhealth_call_$consultationId',
+        serverUrl: 'https://meet.ffmuc.net', // Open source Jitsi instance to bypass meet.jit.si auth restrictions
         isAudioOnly: forceAudio,
         isAudioMuted: false,
         isVideoMuted: forceAudio,
         userDisplayName: userName,
         userEmail: userEmail,
+        featureFlags: {
+          'lobby-mode.enabled': false,
+          'meeting-password.enabled': false,
+          'prejoinpage.enabled': false,
+          'welcomepage.enabled': false,
+          'invite.enabled': false,
+        },
       );
 
       await JitsiMeetWrapper.joinMeeting(
