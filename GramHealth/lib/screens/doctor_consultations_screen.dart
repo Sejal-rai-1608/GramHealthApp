@@ -11,6 +11,9 @@ import '../services/medical_record_service.dart';
 import '../models/medical_record.dart';
 import 'doctor_complete_consultation_screen.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DoctorConsultationsScreen extends StatefulWidget {
   const DoctorConsultationsScreen({super.key});
@@ -149,19 +152,30 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => CallService.startCall(
-                              consultationId: c.id,
-                              audioOnly: c.type.toUpperCase() == 'AUDIO',
-                            ),
-                            icon: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 16),
-                            label: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
+                          child: c.voiceNoteUrl != null
+                              ? ElevatedButton.icon(
+                                  onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
+                                  icon: const Icon(Icons.play_circle_fill, size: 16),
+                                  label: const Text('Play Voice Note'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orangeAccent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                )
+                              : ElevatedButton.icon(
+                                  onPressed: () => CallService.startCall(
+                                    consultationId: c.id,
+                                    audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                  ),
+                                  icon: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 16),
+                                  label: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -196,6 +210,96 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _playVoiceNote(BuildContext context, String base64Url) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+      
+      final String base64Data = base64Url.split(',').last;
+      final bytes = base64Decode(base64Data);
+      
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/temp_voice_note.m4a');
+      await file.writeAsBytes(bytes);
+      
+      if (mounted) Navigator.pop(context); // Close loading
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          final player = AudioPlayer();
+          bool isPlaying = false;
+          player.play(DeviceFileSource(file.path));
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              player.onPlayerStateChanged.listen((state) {
+                if (mounted) {
+                  setState(() => isPlaying = state == PlayerState.playing);
+                }
+              });
+
+              return AlertDialog(
+                title: const Text('Patient Voice Request'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.mic, size: 48, color: Colors.orangeAccent),
+                    const SizedBox(height: 16),
+                    const Text('Listen to the offline voice note sent by the patient.'),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          iconSize: 48,
+                          color: Colors.blueAccent,
+                          icon: Icon(isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                          onPressed: () {
+                            if (isPlaying) {
+                              player.pause();
+                            } else {
+                              player.resume();
+                            }
+                          },
+                        ),
+                        IconButton(
+                          iconSize: 48,
+                          color: Colors.redAccent,
+                          icon: const Icon(Icons.stop_circle),
+                          onPressed: () async {
+                            await player.stop();
+                          },
+                        )
+                      ],
+                    )
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      player.dispose();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Close'),
+                  )
+                ],
+              );
+            }
+          );
+        }
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load voice note.')));
+      }
+    }
   }
 
   void _showPatientHistory(BuildContext context, ConsultationModel c) {

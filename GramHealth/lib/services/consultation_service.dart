@@ -12,6 +12,7 @@ class ConsultationModel {
   final String? doctorId;
   final String? patientId;
   final String? patientName;
+  final String? voiceNoteUrl;
 
   ConsultationModel({
     required this.id,
@@ -23,6 +24,7 @@ class ConsultationModel {
     this.doctorId,
     this.patientId,
     this.patientName,
+    this.voiceNoteUrl,
   });
 
   factory ConsultationModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class ConsultationModel {
       doctorId: json['doctorId']?.toString(),
       patientId: json['patientId']?.toString(),
       patientName: patientName,
+      voiceNoteUrl: json['voiceNoteUrl']?.toString(),
     );
   }
 }
@@ -85,6 +88,7 @@ class ConsultationService {
     String? symptoms,
     String? scheduledTime,
     String? doctorId,
+    String? voiceNoteUrl,
   }) async {
     // Map frontend fields to backend: type is required, reason goes into notes
     final notes = [
@@ -98,6 +102,7 @@ class ConsultationService {
     };
     if (symptoms != null && symptoms.isNotEmpty) body['symptoms'] = symptoms;
     if (doctorId != null) body['doctorId'] = doctorId;
+    if (voiceNoteUrl != null) body['voiceNoteUrl'] = voiceNoteUrl;
 
     final response = await SyncService.instance.push(
       entityType: 'consultation',

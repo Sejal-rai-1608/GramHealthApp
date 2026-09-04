@@ -6,6 +6,8 @@ import '../services/consultation_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/offline_voice_recorder.dart';
+import '../services/connectivity_service.dart';
 
 class TeleconsultationRequestScreen extends StatefulWidget {
   const TeleconsultationRequestScreen({super.key});
@@ -28,7 +30,10 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   String _selectedType = 'VIDEO'; // VIDEO or AUDIO
   bool _isSubmitted = false;
   bool _isSubmitting = false;
-  bool _isRecording = false;
+  String? _voiceNoteBase64;
+
+  NetworkStatus _networkStatus = NetworkStatus.online;
+  StreamSubscription? _netSub;
 
   // Doctor info passed via GoRouter extras
   String? _doctorId;
@@ -45,8 +50,25 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   }
 
   @override
+  void initState() {
+    super.initState();
+    _networkStatus = ConnectivityService.instance.currentStatus;
+    _netSub = ConnectivityService.instance.statusStream.listen((status) {
+      if (mounted) {
+        setState(() {
+          _networkStatus = status;
+          if (status == NetworkStatus.weak && _selectedType == 'VIDEO') {
+             _selectedType = 'AUDIO';
+          }
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _symptomsCtrl.dispose();
+    _netSub?.cancel();
     super.dispose();
   }
 
@@ -61,7 +83,8 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
             : _symptomsCtrl.text.trim(),
         scheduledTime: _selectedTime,
         doctorId: _doctorId,
-        type: _selectedType,
+        type: _networkStatus == NetworkStatus.offline ? 'OFFLINE' : _selectedType,
+        voiceNoteUrl: _voiceNoteBase64,
       );
       if (!mounted) return;
       setState(() => _isSubmitted = true);
@@ -263,24 +286,34 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
 
                     // Consultation Type (Adaptive Bandwidth)
                     Text(
-                      context.tr('consultation_type'),
+                      _networkStatus == NetworkStatus.offline 
+                          ? 'Offline Mode Active' 
+                          : context.tr('consultation_type'),
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
                     ),
                     const SizedBox(height: 12),
+                    if (_networkStatus == NetworkStatus.offline)
+                       Container(
+                         padding: const EdgeInsets.all(16),
+                         decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16)),
+                         child: Text("You are completely offline. You must record a voice note below instead of requesting a live call. We will automatically send it to the doctor when your internet returns.", style: TextStyle(color: Colors.orange.shade800)),
+                       )
+                    else 
                     Row(
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedType = 'VIDEO'),
-                            child: _buildTypeCard(
-                              title: 'Video Call',
-                              subtitle: 'High Network Required',
-                              icon: Icons.videocam,
-                              isSelected: _selectedType == 'VIDEO',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                        if (_networkStatus != NetworkStatus.weak)
+                           Expanded(
+                             child: GestureDetector(
+                               onTap: () => setState(() => _selectedType = 'VIDEO'),
+                               child: _buildTypeCard(
+                                 title: 'Video Call',
+                                 subtitle: 'High Network Required',
+                                 icon: Icons.videocam,
+                                 isSelected: _selectedType == 'VIDEO',
+                               ),
+                             ),
+                           ),
+                        if (_networkStatus != NetworkStatus.weak) const SizedBox(width: 12),
                         Expanded(
                           child: GestureDetector(
                             onTap: () => setState(() => _selectedType = 'AUDIO'),
@@ -321,24 +354,16 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                               ),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () => setState(() => _isRecording = !_isRecording),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: _isRecording ? AppColors.primaryAccent.withValues(alpha: 0.2) : Colors.transparent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.mic,
-                                size: 20,
-                                color: _isRecording ? AppColors.primaryAccent : const Color(0xFF666666),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    OfflineVoiceRecorder(
+                      onRecordingComplete: (base64) {
+                        setState(() {
+                          _voiceNoteBase64 = base64.isEmpty ? null : base64;
+                        });
+                      }
                     ),
                     const SizedBox(height: 24),
 
