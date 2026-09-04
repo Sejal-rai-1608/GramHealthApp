@@ -131,7 +131,7 @@ const uploadPatientRecord = async (user, data) => {
             source: 'MANUAL',
             issuedDate: data.issuedDate ? new Date(data.issuedDate) : new Date(),
         },
-        include: MEDICAL_RECORD_INCLUDE
+        include: { patient: { include: { user: { select: USER_SELECT } } } }
     });
 };
 
