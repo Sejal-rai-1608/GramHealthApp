@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/pharmacy_service.dart';
 import '../services/auth_service.dart';
+import '../utils/auth_guard.dart';
 import '../theme/app_colors.dart';
 
 const List<String> kEssentialMedicines = [
@@ -37,6 +38,7 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
 
   Future<void> _logout() async {
     await AuthService.logout();
+    AuthGuard.onLogout();
     if (mounted) context.go('/login');
   }
 
