@@ -1,5 +1,7 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
+import '../services/connectivity_service.dart';
+import '../data/local_database.dart';
 
 /// Model matching the backend Doctor + User join response.
 class DoctorModel {
@@ -63,11 +65,27 @@ class DoctorService {
     int page = 1,
     int limit = 20,
   }) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_doctors');
+      var models = cached.map((e) => DoctorModel.fromJson(e)).toList();
+      if (specialization != null) {
+        models = models.where((d) => d.specialization == specialization).toList();
+      }
+      return models;
+    }
+
     String url = '${AppConfig.apiDoctors}?page=$page&limit=$limit';
     if (specialization != null) url += '&specialization=$specialization';
 
     final response = await ApiClient.get(url);
     final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+    for (var item in items) {
+      if (item is Map<String, dynamic> && item['id'] != null) {
+        await LocalDatabase.instance.cacheData('cached_doctors', item['id'].toString(), item);
+      }
+    }
+
     return items
         .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -75,7 +93,14 @@ class DoctorService {
 
   /// Returns a single doctor by ID.
   static Future<DoctorModel> getDoctorById(String id) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getCachedData('cached_doctors', id);
+      if (cached != null) return DoctorModel.fromJson(cached);
+      throw Exception('Doctor data not found offline.');
+    }
     final response = await ApiClient.get('${AppConfig.apiDoctors}/$id');
-    return DoctorModel.fromJson(response['data'] as Map<String, dynamic>);
+    final data = response['data'] as Map<String, dynamic>;
+    await LocalDatabase.instance.cacheData('cached_doctors', id, data);
+    return DoctorModel.fromJson(data);
   }
 }

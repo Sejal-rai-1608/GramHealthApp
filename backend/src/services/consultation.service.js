@@ -459,7 +459,8 @@ const addVoiceNote = async (id, user, { voiceNoteUrl, voiceNoteDuration }) => {
     const canModify =
         user.role === "ADMIN" ||
         (user.role === "PATIENT" && consultation.patientId === profileId) ||
-        (user.role === "ASHA" && consultation.ashaWorkerId === profileId);
+        (user.role === "ASHA" && consultation.ashaWorkerId === profileId) ||
+        (user.role === "DOCTOR" && consultation.doctorId === profileId);
 
     if (!canModify) {
         throw new ApiError(

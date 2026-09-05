@@ -25,6 +25,7 @@ class AppConfig {
   static String get apiMedicalRecords => '$baseUrl/api/medical-records';
   static String get apiPrescriptions  => '$baseUrl/api/prescriptions';
   static String get apiUsers          => '$baseUrl/api/users';
+  static String get apiPharmacy       => '$baseUrl/api/pharmacy';
 
   // ── Token key stored in secure storage ───────────────────────────────────
   static const String tokenKey = 'gram_health_token';

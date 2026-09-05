@@ -8,7 +8,10 @@ import '../theme/app_colors.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
 import '../services/medical_record_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/connectivity_service.dart';
 import '../models/medical_record.dart';
+import '../widgets/voice_note_dialog.dart';
 import 'doctor_complete_consultation_screen.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -137,6 +140,20 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (c.voiceNoteUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
+                        icon: const Icon(Icons.play_circle_fill, size: 16),
+                        label: const Text('Play Voice Note'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orangeAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
                   if (isPending)
                     ElevatedButton.icon(
                       onPressed: () => _accept(c.id),
@@ -152,30 +169,39 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: c.voiceNoteUrl != null
-                              ? ElevatedButton.icon(
-                                  onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
-                                  icon: const Icon(Icons.play_circle_fill, size: 16),
-                                  label: const Text('Play Voice Note'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orangeAccent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                )
-                              : ElevatedButton.icon(
-                                  onPressed: () => CallService.startCall(
-                                    consultationId: c.id,
-                                    audioOnly: c.type.toUpperCase() == 'AUDIO',
-                                  ),
-                                  icon: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, size: 16),
-                                  label: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blueAccent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                               if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+                                   showDialog(
+                                     context: context,
+                                     builder: (context) => VoiceNoteDialog(consultationId: c.id),
+                                   );
+                               } else {
+                                   CallService.startCall(
+                                     consultationId: c.id,
+                                     audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                   );
+                               }
+                            },
+                            icon: Icon(
+                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? Icons.mic
+                                  : (c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam),
+                              size: 16,
+                            ),
+                            label: Text(
+                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? 'Voice Note'
+                                  : (c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? Colors.orangeAccent
+                                  : Colors.blueAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(

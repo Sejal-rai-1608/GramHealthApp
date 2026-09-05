@@ -42,6 +42,7 @@ import 'screens/admin_facilities_screen.dart';
 import 'screens/admin_reports_screen.dart';
 import 'screens/admin_settings_screen.dart';
 import 'screens/medicine_availability_screen.dart';
+import 'screens/pharmacy_dashboard_screen.dart';
 import 'screens/health_overview_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -158,6 +159,11 @@ final _router = GoRouter(
             builder: (c, s) => const AdminSettingsScreen()),
       ],
     ),
+    // Pharmacy routes (role: pharmacy)
+    GoRoute(
+      path: '/pharmacy/dashboard',
+      builder: (c, s) => const PharmacyDashboardScreen(),
+    ),
     // Shared push routes
     GoRoute(
         path: '/notifications',
@@ -188,7 +194,11 @@ final _router = GoRouter(
         builder: (c, s) => const EmergencyHelpScreen()),
     GoRoute(
         path: '/medicine',
-        builder: (c, s) => const MedicineAvailabilityScreen()),
+        builder: (c, s) {
+          final query = s.uri.queryParameters['query'] ?? '';
+          return MedicineAvailabilityScreen(medicineQuery: query);
+        },
+    ),
     GoRoute(
         path: '/health-overview',
         builder: (c, s) => const HealthOverviewScreen()),

@@ -1,7 +1,8 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
 import '../services/sync_service.dart';
-
+import '../services/connectivity_service.dart';
+import '../data/local_database.dart';
 class ConsultationModel {
   final String id;
   final String status;
@@ -56,10 +57,26 @@ class ConsultationService {
     int limit = 20,
     String? status,
   }) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
+      var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
+      if (status != null) {
+        models = models.where((c) => c.status == status).toList();
+      }
+      return models;
+    }
+
     String url = '${AppConfig.apiConsultations}?page=$page&limit=$limit';
     if (status != null) url += '&status=$status';
     final response = await ApiClient.get(url);
     final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+    for (var item in items) {
+      if (item is Map<String, dynamic> && item['id'] != null) {
+        await LocalDatabase.instance.cacheData('cached_consultations', item['id'].toString(), item);
+      }
+    }
+
     return items
         .map((e) => ConsultationModel.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -71,10 +88,26 @@ class ConsultationService {
     int limit = 50,
     String? status,
   }) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
+      var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
+      if (status != null) {
+        models = models.where((c) => c.status == status).toList();
+      }
+      return models;
+    }
+
     String url = '${AppConfig.apiDoctors}/consultations?page=$page&limit=$limit';
     if (status != null) url += '&status=$status';
     final response = await ApiClient.get(url);
     final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+    for (var item in items) {
+      if (item is Map<String, dynamic> && item['id'] != null) {
+        await LocalDatabase.instance.cacheData('cached_consultations', item['id'].toString(), item);
+      }
+    }
+
     return items
         .map((e) => ConsultationModel.fromJson(e as Map<String, dynamic>))
         .toList();

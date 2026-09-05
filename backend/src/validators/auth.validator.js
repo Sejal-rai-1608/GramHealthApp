@@ -19,7 +19,7 @@ const register = [
         .isLength({ max: 128 }).withMessage("Password must be at most 128 characters"),
     body("role")
         .optional()
-        .isIn(["PATIENT", "DOCTOR", "ASHA", "ADMIN"]).withMessage("Invalid role")
+        .isIn(["PATIENT", "DOCTOR", "ASHA", "ADMIN", "PHARMACY"]).withMessage("Invalid role")
 ];
 
 module.exports = { register };

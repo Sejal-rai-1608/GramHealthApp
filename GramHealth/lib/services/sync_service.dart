@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../data/local_database.dart';
 import 'connectivity_service.dart';
 import 'api_client.dart';
+import 'pharmacy_service.dart';
 
 enum SyncStatus { localOnly, pendingSync, syncing, synced, failed, conflict }
 
@@ -20,12 +21,14 @@ class SyncService {
     _networkSubscription = ConnectivityService.instance.statusStream.listen((status) {
       if (status == NetworkStatus.online || status == NetworkStatus.weak) {
         processQueue();
+        PharmacyService.syncPharmacies().catchError((e) => print('Failed BG Pharmacy Sync $e'));
       }
     });
 
     // Run an initial check if we start the app online
     if (ConnectivityService.instance.currentStatus != NetworkStatus.offline) {
       processQueue();
+      PharmacyService.syncPharmacies().catchError((e) => print('Failed init Pharmacy Sync $e'));
     }
   }
 

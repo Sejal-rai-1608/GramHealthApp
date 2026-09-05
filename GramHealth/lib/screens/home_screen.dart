@@ -10,6 +10,8 @@ import '../services/doctor_service.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
 import '../widgets/connectivity_badge.dart';
+import '../widgets/voice_note_dialog.dart';
+import '../services/connectivity_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -378,16 +380,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () => CallService.startCall(
-                              consultationId: c.id,
-                              audioOnly: c.type.toUpperCase() == 'AUDIO',
-                            ),
+                            onPressed: () {
+                              if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => VoiceNoteDialog(consultationId: c.id),
+                                );
+                              } else {
+                                CallService.startCall(
+                                  consultationId: c.id,
+                                  audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                );
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent,
+                              backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? Colors.orangeAccent
+                                  : (c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                            child: Text(
+                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? 'Record Note'
+                                  : (c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                            ),
                           ),
                         ],
                       ),

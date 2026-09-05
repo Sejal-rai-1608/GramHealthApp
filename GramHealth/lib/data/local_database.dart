@@ -24,9 +24,37 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 4,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cached_doctors(
+          id TEXT PRIMARY KEY,
+          data TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cached_records(
+          id TEXT PRIMARY KEY,
+          data TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cached_pharmacies(
+          id TEXT PRIMARY KEY,
+          data TEXT
+        )
+      ''');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -59,6 +87,27 @@ class LocalDatabase {
 
     await db.execute('''
       CREATE TABLE cached_users(
+        id TEXT PRIMARY KEY,
+        data TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE cached_doctors(
+        id TEXT PRIMARY KEY,
+        data TEXT
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE cached_records(
+        id TEXT PRIMARY KEY,
+        data TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE cached_pharmacies(
         id TEXT PRIMARY KEY,
         data TEXT
       )
