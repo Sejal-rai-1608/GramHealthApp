@@ -11,7 +11,7 @@ import 'api_client.dart';
 class AuthService {
   AuthService._();
 
-  // ── Token helpers ─────────────────────────────────────────────────────────
+  // ── Token & Offline Credential helpers ────────────────────────────────────
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -26,6 +26,18 @@ class AuthService {
   static Future<void> _saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConfig.userKey, jsonEncode(user));
+  }
+  
+  static Future<void> _saveOfflineCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('${AppConfig.userKey}_email', email);
+    await prefs.setString('${AppConfig.userKey}_password', password);
+  }
+  
+  static Future<void> _clearOfflineCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('${AppConfig.userKey}_email');
+    await prefs.remove('${AppConfig.userKey}_password');
   }
 
   static Future<Map<String, dynamic>?> getUser() async {
@@ -61,20 +73,40 @@ class AuthService {
   /// Throws [ApiException] on failure.
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
-    final response = await ApiClient.post(
-      '${AppConfig.apiAuth}/login',
-      {'email': email, 'password': password},
-      auth: false,
-    );
+    try {
+      final response = await ApiClient.post(
+        '${AppConfig.apiAuth}/login',
+        {'email': email, 'password': password},
+        auth: false,
+      );
 
-    final data = response['data'] as Map<String, dynamic>;
-    final token = data['token'] as String;
-    final user = data['user'] as Map<String, dynamic>;
+      final data = response['data'] as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
 
-    await _saveToken(token);
-    await _saveUser(user);
+      await _saveToken(token);
+      await _saveUser(user);
+      await _saveOfflineCredentials(email, password);
 
-    return user;
+      return user;
+    } catch (e) {
+      if (e is ApiException) {
+        rethrow;
+      }
+      // If network error, attempt offline login
+      final prefs = await SharedPreferences.getInstance();
+      final offlineEmail = prefs.getString('${AppConfig.userKey}_email');
+      final offlinePassword = prefs.getString('${AppConfig.userKey}_password');
+
+      if (offlineEmail != null && offlineEmail.toLowerCase() == email.toLowerCase() && offlinePassword == password) {
+        final cachedUser = await getUser();
+        if (cachedUser != null) {
+          return cachedUser;
+        }
+      }
+      
+      throw Exception('Network error. Please check your connection or provide valid cached credentials.');
+    }
   }
 
   // ── Register ──────────────────────────────────────────────────────────────
@@ -117,5 +149,6 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConfig.tokenKey);
     await prefs.remove(AppConfig.userKey);
+    await _clearOfflineCredentials();
   }
 }

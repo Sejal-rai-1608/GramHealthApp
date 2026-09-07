@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Network error. Please check your connection.');
+      _showError('Network error or invalid offline credentials.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
