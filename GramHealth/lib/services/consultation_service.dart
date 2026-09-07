@@ -214,4 +214,14 @@ class ConsultationService {
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
+
+  /// Update the status of a consultation directly (allowed for patients).
+  static Future<void> updateStatus(String consultationId, String status) async {
+    await SyncService.instance.push(
+      entityType: 'consultation_$consultationId',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$consultationId/status',
+      payload: {'status': status},
+    );
+  }
 }

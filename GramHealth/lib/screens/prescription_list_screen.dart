@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
 import '../services/prescription_service.dart';
 import '../theme/app_colors.dart';
@@ -38,7 +39,17 @@ class _PrescriptionListScreenState extends State<PrescriptionListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Prescriptions'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+               context.go('/main/home');
+            }
+          },
+        ),
+        title: const Text('My Prescriptions', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primaryAccent,
         actions: [
           IconButton(

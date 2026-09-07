@@ -380,17 +380,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
                                 showDialog(
                                   context: context,
                                   builder: (context) => VoiceNoteDialog(consultationId: c.id),
                                 );
                               } else {
-                                CallService.startCall(
+                                await CallService.startCall(
                                   consultationId: c.id,
                                   audioOnly: c.type.toUpperCase() == 'AUDIO',
                                 );
+                                // Automatically hide the consultation from the dashboard once the call loop finishes
+                                if (mounted) {
+                                  setState(() {
+                                    _activeConsultations.removeWhere((item) => item.id == c.id);
+                                  });
+                                }
+                                // Secretly tell backend we completed it so it doesn't reappear
+                                try {
+                                  await ConsultationService.updateStatus(c.id, 'COMPLETED');
+                                } catch (_) {}
                               }
                             },
                             style: ElevatedButton.styleFrom(
