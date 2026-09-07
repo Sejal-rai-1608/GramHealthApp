@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -14,11 +13,13 @@ model User {
   email        String?     @unique @db.VarChar(255)
   passwordHash String      @map("password_hash")
   role         UserRole
+  abhaId       String?     @unique @map("abha_id") @db.VarChar(50)
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   ashaWorker   AshaWorker?
   doctor       Doctor?
   patient      Patient?
+  pharmacy     Pharmacy?
 
   @@map("users")
 }
@@ -79,6 +80,8 @@ model Consultation {
   status         ConsultationStatus
   symptoms       String?
   notes          String?
+  voiceNoteUrl   String?            @map("voice_note_url")
+  voiceNoteDuration Int?            @map("voice_note_duration")
   riskLevel      String?            @map("risk_level") @db.VarChar(20)
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
@@ -101,6 +104,11 @@ model MedicalRecord {
   diagnosis      String?
   clinicalNotes  String?       @map("clinical_notes")
   aiAnalysis     Json?         @map("ai_analysis")
+  title          String?       @db.VarChar(255)
+  documentType   String?       @map("document_type") @db.VarChar(50)
+  fileUrl        String?       @map("file_url")
+  source         String?       @default("MANUAL") @db.VarChar(50)
+  issuedDate     DateTime?     @map("issued_date")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   consultation   Consultation? @relation(fields: [consultationId], references: [id])
@@ -161,11 +169,41 @@ model ConnectivityLog {
   @@map("connectivity_logs")
 }
 
+model Pharmacy {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @unique @map("user_id") @db.Uuid
+  name        String              @db.VarChar(150)
+  latitude    Float               @db.DoublePrecision
+  longitude   Float               @db.DoublePrecision
+  address     String?             @db.VarChar(255)
+  contact     String?             @db.VarChar(20)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventories PharmacyInventory[]
+
+  @@map("pharmacies")
+}
+
+model PharmacyInventory {
+  id           String    @id @default(uuid()) @db.Uuid
+  pharmacyId   String    @map("pharmacy_id") @db.Uuid
+  medicineName String    @map("medicine_name") @db.VarChar(150)
+  inStock      Boolean   @default(false) @map("in_stock")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  pharmacy     Pharmacy  @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@index([pharmacyId])
+  @@index([medicineName])
+  @@map("pharmacy_inventories")
+}
+
 enum UserRole {
   PATIENT
   DOCTOR
   ASHA
   ADMIN
+  PHARMACY
 }
 
 enum ConsultationType {

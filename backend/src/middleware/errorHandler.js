@@ -15,7 +15,7 @@ const prismaErrorToApiError = (err) => {
         case "P2007":
             return new ApiError("Invalid value provided", 400, "INVALID_VALUE");
         default:
-            return new ApiError("Database error", 500, "DATABASE_ERROR");
+            return new ApiError(`Database error: ${err.message || 'Unknown database issue'}`, 500, "DATABASE_ERROR");
     }
 };
 
@@ -45,7 +45,7 @@ const errorHandler = (err, req, res, next) => {
 
     if (!error) {
         console.error("Unhandled error:", err);
-        error = new ApiError("Internal server error", 500, "INTERNAL_ERROR");
+        error = new ApiError(`Internal server error: ${err ? err.message : 'Unknown'}`, 500, "INTERNAL_ERROR");
     } else if (error.statusCode >= 500) {
         console.error(`${error.statusCode} ${error.message}:`, err);
     } else {

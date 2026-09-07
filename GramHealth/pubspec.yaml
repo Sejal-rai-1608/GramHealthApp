@@ -43,10 +43,17 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # Session data (role, name, etc.)
-  shared_preferences: ^2.3.3
+  shared_preferences: ^2.5.5
 
   cupertino_icons: ^1.0.8
   jitsi_meet_wrapper: ^0.2.0+1
+  sqflite: ^2.4.2+1
+  path_provider: ^2.1.6
+  uuid: ^4.6.0
+  connectivity_plus: ^7.3.1
+  image_picker: ^1.2.3
+  record: ^6.2.1
+  audioplayers: ^6.7.1
 
 dev_dependencies:
   flutter_test:

@@ -65,6 +65,9 @@ class AuthGuard {
       if (location.startsWith('/main') && role != 'patient' && role != 'asha') {
         return _dashboardFor(role);
       }
+      if (location.startsWith('/pharmacy') && role != 'pharmacy') {
+        return _dashboardFor(role);
+      }
     }
 
     return null;
@@ -73,6 +76,7 @@ class AuthGuard {
   static String _dashboardFor(String? role) {
     if (role == 'admin') return '/admin/dashboard';
     if (role == 'doctor') return '/doctor/dashboard';
+    if (role == 'pharmacy') return '/pharmacy/dashboard';
     return '/main/home';
   }
 }

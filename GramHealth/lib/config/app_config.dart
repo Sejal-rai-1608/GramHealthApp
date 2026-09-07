@@ -12,7 +12,7 @@ class AppConfig {
   static String get baseUrl {
     if (kIsWeb) return 'http://localhost:5000';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000';
+      return 'https://gramhealthapp.onrender.com';
     }
     return 'http://localhost:5000';
   }
@@ -25,6 +25,7 @@ class AppConfig {
   static String get apiMedicalRecords => '$baseUrl/api/medical-records';
   static String get apiPrescriptions  => '$baseUrl/api/prescriptions';
   static String get apiUsers          => '$baseUrl/api/users';
+  static String get apiPharmacy       => '$baseUrl/api/pharmacy';
 
   // ── Token key stored in secure storage ───────────────────────────────────
   static const String tokenKey = 'gram_health_token';

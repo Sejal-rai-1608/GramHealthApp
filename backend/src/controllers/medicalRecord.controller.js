@@ -56,9 +56,49 @@ const listDoctorMedicalRecords = asyncHandler(async (req, res) => {
     });
 });
 
+const uploadPatientRecord = asyncHandler(async (req, res) => {
+    const { title, documentType, fileUrl, issuedDate } = req.body;
+    
+    if (!title || !fileUrl) {
+        return res.status(400).json({
+            success: false,
+            message: 'title, documentType, and fileUrl are required',
+        });
+    }
+
+    const record = await medicalRecordService.uploadPatientRecord(req.user, {
+        title,
+        documentType,
+        fileUrl,
+        issuedDate
+    });
+
+    res.status(201).json({
+        success: true,
+        message: "Medical document uploaded successfully",
+        data: record
+    });
+});
+
+const listDoctorPatientRecords = asyncHandler(async (req, res) => {
+    const { items, meta } = await medicalRecordService.listDoctorPatientRecords(
+        req.params.patientId,
+        req.query
+    );
+
+    res.json({
+        success: true,
+        message: "Patient's medical records retrieved successfully",
+        data: items,
+        meta
+    });
+});
+
 module.exports = {
     createMedicalRecord,
     listMyMedicalRecords,
     getMedicalRecordById,
-    listDoctorMedicalRecords
+    listDoctorMedicalRecords,
+    uploadPatientRecord,
+    listDoctorPatientRecords
 };

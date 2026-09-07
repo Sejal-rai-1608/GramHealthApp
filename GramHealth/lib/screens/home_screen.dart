@@ -9,6 +9,9 @@ import '../services/auth_service.dart';
 import '../services/doctor_service.dart';
 import '../services/consultation_service.dart';
 import '../services/call_service.dart';
+import '../widgets/connectivity_badge.dart';
+import '../widgets/voice_note_dialog.dart';
+import '../services/connectivity_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -165,29 +168,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Header
                 Container(
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const ConnectivityBadge(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            context.tr('greeting'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textDark.withValues(alpha: 0.6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr('greeting'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textDark.withValues(alpha: 0.6),
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textDark,
+                            Text(
+                              '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Row(
                         children: [
@@ -244,9 +254,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ], // row children close
+                  ), // row close
+                ], // column children close
+              ), // column close
+            ), // container close
 
                 // Banner
                 Container(
@@ -368,16 +380,41 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () => CallService.startCall(
-                              consultationId: c.id,
-                              audioOnly: c.type.toUpperCase() == 'AUDIO',
-                            ),
+                            onPressed: () async {
+                              if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => VoiceNoteDialog(consultationId: c.id),
+                                );
+                              } else {
+                                await CallService.startCall(
+                                  consultationId: c.id,
+                                  audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                );
+                                // Automatically hide the consultation from the dashboard once the call loop finishes
+                                if (mounted) {
+                                  setState(() {
+                                    _activeConsultations.removeWhere((item) => item.id == c.id);
+                                  });
+                                }
+                                // Secretly tell backend we completed it so it doesn't reappear
+                                try {
+                                  await ConsultationService.updateStatus(c.id, 'COMPLETED');
+                                } catch (_) {}
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent,
+                              backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? Colors.orangeAccent
+                                  : (c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                            child: Text(
+                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                  ? 'Record Note'
+                                  : (c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                            ),
                           ),
                         ],
                       ),

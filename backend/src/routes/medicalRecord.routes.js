@@ -10,13 +10,17 @@ const {
 const {
     createMedicalRecord,
     listMyMedicalRecords,
-    getMedicalRecordById
+    getMedicalRecordById,
+    uploadPatientRecord,
+    listDoctorPatientRecords
 } = require("../controllers/medicalRecord.controller");
 
 const router = express.Router();
 
 router.post("/", authenticate, authorize("DOCTOR"), validate(createMedicalRecordValidator), createMedicalRecord);
+router.post("/upload", authenticate, authorize("PATIENT", "DOCTOR"), uploadPatientRecord);
 router.get("/me", authenticate, authorize("PATIENT"), validate(listMedicalRecordsValidator), listMyMedicalRecords);
+router.get("/patient/:patientId", authenticate, authorize("DOCTOR", "ADMIN"), listDoctorPatientRecords);
 router.get("/:id", authenticate, authorize("PATIENT", "DOCTOR", "ADMIN"), validate(medicalRecordParam), getMedicalRecordById);
 
 module.exports = router;

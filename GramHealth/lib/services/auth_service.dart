@@ -1,31 +1,48 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import 'api_client.dart';
 
 /// Real authentication service that talks to the GramHealth backend.
 ///
-/// Stores the JWT token in [FlutterSecureStorage] and cached user data
-/// (role, name, id) in the same store so they survive app restarts.
+/// Stores the JWT token in [SharedPreferences] and cached user data
+/// (role, name, id) in the same store so they survive app restarts 
+/// (and aggressive Jitsi foreground OS-halts).
 class AuthService {
   AuthService._();
 
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // ── Token & Offline Credential helpers ────────────────────────────────────
 
-  // ── Token helpers ─────────────────────────────────────────────────────────
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(AppConfig.tokenKey);
+  }
 
-  static Future<String?> getToken() => _storage.read(key: AppConfig.tokenKey);
+  static Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConfig.tokenKey, token);
+  }
 
-  static Future<void> _saveToken(String token) =>
-      _storage.write(key: AppConfig.tokenKey, value: token);
-
-  static Future<void> _saveUser(Map<String, dynamic> user) =>
-      _storage.write(key: AppConfig.userKey, value: jsonEncode(user));
+  static Future<void> _saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConfig.userKey, jsonEncode(user));
+  }
+  
+  static Future<void> _saveOfflineCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('${AppConfig.userKey}_email', email);
+    await prefs.setString('${AppConfig.userKey}_password', password);
+  }
+  
+  static Future<void> _clearOfflineCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('${AppConfig.userKey}_email');
+    await prefs.remove('${AppConfig.userKey}_password');
+  }
 
   static Future<Map<String, dynamic>?> getUser() async {
-    final raw = await _storage.read(key: AppConfig.userKey);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(AppConfig.userKey);
     if (raw == null) return null;
     return jsonDecode(raw) as Map<String, dynamic>;
   }
@@ -34,7 +51,7 @@ class AuthService {
 
   static Future<bool> get isLoggedIn async {
     final token = await getToken();
-    if (token == null || token.isEmpty || token.startsWith('mock-')) {
+    if (token == null || token.isEmpty) {
       return false;
     }
     return true;
@@ -56,20 +73,40 @@ class AuthService {
   /// Throws [ApiException] on failure.
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
-    final response = await ApiClient.post(
-      '${AppConfig.apiAuth}/login',
-      {'email': email, 'password': password},
-      auth: false,
-    );
+    try {
+      final response = await ApiClient.post(
+        '${AppConfig.apiAuth}/login',
+        {'email': email, 'password': password},
+        auth: false,
+      );
 
-    final data = response['data'] as Map<String, dynamic>;
-    final token = data['token'] as String;
-    final user = data['user'] as Map<String, dynamic>;
+      final data = response['data'] as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
 
-    await _saveToken(token);
-    await _saveUser(user);
+      await _saveToken(token);
+      await _saveUser(user);
+      await _saveOfflineCredentials(email, password);
 
-    return user;
+      return user;
+    } catch (e) {
+      if (e is ApiException) {
+        rethrow;
+      }
+      // If network error, attempt offline login
+      final prefs = await SharedPreferences.getInstance();
+      final offlineEmail = prefs.getString('${AppConfig.userKey}_email');
+      final offlinePassword = prefs.getString('${AppConfig.userKey}_password');
+
+      if (offlineEmail != null && offlineEmail.toLowerCase() == email.toLowerCase() && offlinePassword == password) {
+        final cachedUser = await getUser();
+        if (cachedUser != null) {
+          return cachedUser;
+        }
+      }
+      
+      throw Exception('Network error. Please check your connection or provide valid cached credentials.');
+    }
   }
 
   // ── Register ──────────────────────────────────────────────────────────────
@@ -109,7 +146,9 @@ class AuthService {
   // ── Logout ────────────────────────────────────────────────────────────────
 
   static Future<void> logout() async {
-    await _storage.delete(key: AppConfig.tokenKey);
-    await _storage.delete(key: AppConfig.userKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConfig.tokenKey);
+    await prefs.remove(AppConfig.userKey);
+    await _clearOfflineCredentials();
   }
 }

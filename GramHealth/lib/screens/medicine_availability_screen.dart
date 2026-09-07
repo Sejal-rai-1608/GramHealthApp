@@ -6,58 +6,13 @@ import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 
-class Pharmacy {
-  final String id;
-  final String name;
-  final String distance;
-  final bool available;
-  final String address;
-  final double latitude;
-  final double longitude;
+import '../services/pharmacy_service.dart';
 
-  const Pharmacy({
-    required this.id,
-    required this.name,
-    required this.distance,
-    required this.available,
-    required this.address,
-    required this.latitude,
-    required this.longitude,
-  });
-}
-
-const List<Pharmacy> kPharmacies = [
-  Pharmacy(
-    id: '1',
-    name: 'Village Health Pharmacy',
-    distance: '1.2 km',
-    available: true,
-    address: 'Near Bus Stand, Village Road',
-    latitude: 22.7196,
-    longitude: 75.8577,
-  ),
-  Pharmacy(
-    id: '2',
-    name: 'City Medicos',
-    distance: '5.5 km',
-    available: true,
-    address: 'Main Market, District Center',
-    latitude: 22.7250,
-    longitude: 75.8650,
-  ),
-  Pharmacy(
-    id: '3',
-    name: 'Rural Care Point',
-    distance: '0.8 km',
-    available: false,
-    address: 'Opposite Government School',
-    latitude: 22.7150,
-    longitude: 75.8520,
-  ),
-];
+// No longer using hardcoded kPharmacies
 
 class MedicineAvailabilityScreen extends StatefulWidget {
-  const MedicineAvailabilityScreen({super.key});
+  final String? medicineQuery;
+  const MedicineAvailabilityScreen({this.medicineQuery, super.key});
 
   @override
   State<MedicineAvailabilityScreen> createState() => _MedicineAvailabilityScreenState();
@@ -65,6 +20,37 @@ class MedicineAvailabilityScreen extends StatefulWidget {
 
 class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
+  List<PharmacySearchResult> _pharmacies = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.medicineQuery != null && widget.medicineQuery!.isNotEmpty) {
+      _searchCtrl.text = widget.medicineQuery!;
+      _performSearch();
+    }
+  }
+
+  Future<void> _performSearch() async {
+    final query = _searchCtrl.text.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _pharmacies = [];
+      });
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    // Hardcoded user mock coordinates for Indore
+    final results = await PharmacyService.searchPharmaciesLocal(query, 22.7196, 75.8577);
+    if (mounted) {
+      setState(() {
+        _pharmacies = results;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -129,6 +115,7 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                       Expanded(
                         child: TextField(
                           controller: _searchCtrl,
+                          onSubmitted: (_) => _performSearch(),
                           decoration: InputDecoration(
                             hintText: context.tr('search_medicine'),
                             hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
@@ -136,6 +123,10 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                           ),
                           style: const TextStyle(fontSize: 14),
                         ),
+                      ),
+                      GestureDetector(
+                        onTap: _performSearch,
+                        child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primaryAccent),
                       ),
                     ],
                   ),
@@ -172,14 +163,15 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                           userAgentPackageName: 'com.ruralcare.app',
                         ),
                         MarkerLayer(
-                          markers: kPharmacies.map((p) {
+                          markers: _pharmacies.map((res) {
+                            final p = res.pharmacy;
                             return Marker(
                               point: LatLng(p.latitude, p.longitude),
                               width: 36,
                               height: 36,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: p.available ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                                  color: res.isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: const [
@@ -196,14 +188,35 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                   ),
                 ),
 
-                Text(
-                  context.tr('nearby_pharmacies'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.tr('nearby_pharmacies'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    ),
+                    if (_isLoading)
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
+                if (!_isLoading && _pharmacies.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        _searchCtrl.text.isEmpty
+                            ? 'Search for a medicine to see availability.'
+                            : 'No pharmacies configured or synced nearby.',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ),
+
                 // Pharmacy Cards
-                ...kPharmacies.map((p) {
+                ..._pharmacies.map((res) {
+                  final p = res.pharmacy;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: GlassCard(
@@ -226,15 +239,15 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: p.available ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                        color: res.isAvailable ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        p.available ? context.tr('available') : context.tr('out_of_stock'),
+                                        res.isAvailable ? context.tr('available') : context.tr('out_of_stock'),
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
-                                          color: p.available ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                                          color: res.isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                                         ),
                                       ),
                                     ),
@@ -252,7 +265,7 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                                     const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF666666)),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '${p.distance} ${context.tr('away')}',
+                                      '${res.distanceKm.toStringAsFixed(1)} km ${context.tr('away')}',
                                       style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
                                     ),
                                   ],

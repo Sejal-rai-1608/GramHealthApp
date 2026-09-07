@@ -5,7 +5,7 @@ const listUsers = [
     ...paginationQuery,
     query("role")
         .optional()
-        .isIn(["PATIENT", "DOCTOR", "ASHA", "ADMIN"]).withMessage("Invalid role filter")
+        .isIn(["PATIENT", "DOCTOR", "ASHA", "ADMIN", "PHARMACY"]).withMessage("Invalid role filter")
 ];
 
 module.exports = { listUsers };

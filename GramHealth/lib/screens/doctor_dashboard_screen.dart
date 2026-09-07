@@ -5,8 +5,16 @@ import '../widgets/stat_card.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/glass_card.dart';
 import '../l10n/app_language.dart';
+import '../services/call_service.dart';
 import '../services/consultation_service.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../widgets/voice_note_dialog.dart';
+import 'doctor_complete_consultation_screen.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Doctor Dashboard – shows live KPI cards and a list of today's pending requests.
 class DoctorDashboardScreen extends StatefulWidget {
@@ -56,6 +64,15 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         );
       }
     }
+  }
+
+  void _complete(String id) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DoctorCompleteConsultationScreen(consultationId: id),
+      ),
+    ).then((_) => _load());
   }
 
   @override
@@ -114,6 +131,19 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ),
 
               const SizedBox(height: 32),
+
+              if (accepted.isNotEmpty) ...[
+                const Text(
+                  'Active Consultations',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                ...accepted.map((c) => _ActiveCard(
+                  consultation: c,
+                  onComplete: () => _complete(c.id),
+                )),
+                const SizedBox(height: 24),
+              ],
 
               // Pending requests
               Text(
@@ -180,6 +210,23 @@ class _PendingCard extends StatelessWidget {
                 Text(consultation.scheduledTime!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ]),
             ],
+            if (consultation.voiceNoteUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => VoiceNoteHelper.playVoiceNote(context, consultation.voiceNoteUrl!),
+                    icon: const Icon(Icons.play_circle_fill, size: 16),
+                    label: const Text('Play Voice Note'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orangeAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -199,4 +246,212 @@ class _PendingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ActiveCard extends StatelessWidget {
+  final ConsultationModel consultation;
+  final VoidCallback onComplete;
+  const _ActiveCard({required this.consultation, required this.onComplete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    consultation.reason.isNotEmpty ? consultation.reason : 'General Consultation',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark),
+                  ),
+                ),
+                StatusBadge(status: consultation.status),
+              ],
+            ),
+            if (consultation.symptoms != null && consultation.symptoms!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Symptoms: ${consultation.symptoms}',
+                style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+              ),
+            ],
+            if (consultation.scheduledTime != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.access_time, size: 14, color: AppColors.leafGreenPrimary),
+                const SizedBox(width: 4),
+                Text(consultation.scheduledTime!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ]),
+            ],
+            if (consultation.voiceNoteUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => VoiceNoteHelper.playVoiceNote(context, consultation.voiceNoteUrl!),
+                    icon: const Icon(Icons.play_circle_fill, size: 16),
+                    label: const Text('Play Voice Note'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orangeAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                       if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+                           showDialog(
+                             context: context,
+                             builder: (context) => VoiceNoteDialog(consultationId: consultation.id),
+                           );
+                       } else {
+                           CallService.startCall(
+                             consultationId: consultation.id,
+                             audioOnly: consultation.type.toUpperCase() == 'AUDIO',
+                           );
+                       }
+                    },
+                    icon: Icon(
+                      ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                          ? Icons.mic
+                          : (consultation.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam),
+                      size: 14,
+                    ),
+                    label: Text(
+                      ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                          ? 'Voice Note'
+                          : (consultation.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                          ? Colors.orangeAccent
+                          : Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onComplete,
+                    icon: const Icon(Icons.done_all, size: 14),
+                    label: const Text('Complete'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryAccent,
+                      foregroundColor: AppColors.textDark,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class VoiceNoteHelper {
+  static Future<void> playVoiceNote(BuildContext context, String base64Url) async {
+    try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    final String base64Data = base64Url.split(',').last;
+    final bytes = base64Decode(base64Data);
+    
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/temp_voice_note.m4a');
+    await file.writeAsBytes(bytes);
+    
+    Navigator.pop(context); // Close loading
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final player = AudioPlayer();
+        bool isPlaying = false;
+        player.play(DeviceFileSource(file.path));
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            player.onPlayerStateChanged.listen((state) {
+              if (state == PlayerState.playing || state == PlayerState.paused || state == PlayerState.completed) {
+                setState(() => isPlaying = state == PlayerState.playing);
+              }
+            });
+
+            return AlertDialog(
+              title: const Text('Patient Voice Request'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.mic, size: 48, color: Colors.orangeAccent),
+                  const SizedBox(height: 16),
+                  const Text('Listen to the offline voice note sent by the patient.'),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        iconSize: 48,
+                        color: Colors.blueAccent,
+                        icon: Icon(isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                        onPressed: () {
+                          if (isPlaying) {
+                            player.pause();
+                          } else {
+                            player.resume();
+                          }
+                        },
+                      ),
+                      IconButton(
+                        iconSize: 48,
+                        color: Colors.redAccent,
+                        icon: const Icon(Icons.stop_circle),
+                        onPressed: () async {
+                          await player.stop();
+                        },
+                      )
+                    ],
+                  )
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    player.dispose();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Close'),
+                )
+              ],
+            );
+          }
+        );
+      }
+    );
+  } catch (e) {
+    Navigator.pop(context); // close loader
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load voice note.')));
+  }
+}
 }

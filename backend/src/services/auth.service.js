@@ -50,6 +50,15 @@ const registerUser = async ({ name, email, phone, password, role }) => {
         await prisma.doctor.create({ data: { userId: user.id } });
     } else if (effectiveRole === "ASHA") {
         await prisma.ashaWorker.create({ data: { userId: user.id } });
+    } else if (effectiveRole === "PHARMACY") {
+        await prisma.pharmacy.create({ 
+            data: { 
+                userId: user.id, 
+                name: `${name}'s Pharmacy`,
+                latitude: 0,
+                longitude: 0
+            } 
+        });
     }
     // ADMIN: no sub-table needed
 
@@ -85,9 +94,9 @@ const loginUser = async ({ email, password }) => {
             userId: user.id,
             role: user.role
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || "gramhealth-fallback-secret-key",
         {
-            expiresIn: "7d"
+            expiresIn: "3650d"
         }
     );
 

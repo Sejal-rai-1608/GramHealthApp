@@ -18,7 +18,8 @@ const {
     updateStatus,
     acceptConsultation,
     completeConsultation,
-    assignDoctor
+    assignDoctor,
+    addVoiceNote
 } = require("../controllers/consultation.controller");
 
 const router = express.Router();
@@ -30,5 +31,6 @@ router.patch("/:id/status", authenticate, authorize("PATIENT", "DOCTOR", "ASHA",
 router.patch("/:id/accept", authenticate, authorize("DOCTOR"), validate(acceptConsultationValidator), acceptConsultation);
 router.patch("/:id/complete", authenticate, authorize("DOCTOR"), validate(completeConsultationValidator), completeConsultation);
 router.patch("/:id/assign-doctor", authenticate, authorize("PATIENT", "ASHA", "ADMIN"), validate(assignDoctorValidator), assignDoctor);
+router.patch("/:id/voicenote", authenticate, authorize("PATIENT", "ASHA", "ADMIN", "DOCTOR"), addVoiceNote);
 
 module.exports = router;

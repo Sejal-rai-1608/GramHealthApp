@@ -25,12 +25,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _gender = '';
   String _bloodGroup = '';
   String _pinCode = '';
+  String _abhaId = '';
 
   late TextEditingController _nameCtrl;
   late TextEditingController _phoneCtrl;
   late TextEditingController _ageCtrl;
   late TextEditingController _pinCtrl;
   late TextEditingController _addressCtrl;
+  late TextEditingController _abhaCtrl;
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ageCtrl     = TextEditingController();
     _pinCtrl     = TextEditingController();
     _addressCtrl = TextEditingController();
+    _abhaCtrl    = TextEditingController();
     _loadUser();
   }
 
@@ -55,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _gender      = user['gender']     as String? ?? '';
         _bloodGroup  = user['bloodGroup'] as String? ?? '';
         _pinCode     = user['pinCode']    as String? ?? '';
+        _abhaId      = user['abhaId']     as String? ?? '';
         _isLoading   = false;
         // seed controllers
         _nameCtrl.text    = _name;
@@ -62,6 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _ageCtrl.text     = _age;
         _pinCtrl.text     = _pinCode;
         _addressCtrl.text = _address;
+        _abhaCtrl.text    = _abhaId;
       });
     } else {
       setState(() => _isLoading = false);
@@ -75,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ageCtrl.dispose();
     _pinCtrl.dispose();
     _addressCtrl.dispose();
+    _abhaCtrl.dispose();
     super.dispose();
   }
 
@@ -85,6 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _age = _ageCtrl.text;
       _pinCode = _pinCtrl.text;
       _address = _addressCtrl.text;
+      _abhaId = _abhaCtrl.text;
       _isEditing = false;
     });
   }
@@ -234,6 +241,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildInfoRow(Icons.water_drop_outlined,
                       context.tr('blood_group'), _bloodGroup.isNotEmpty ? _bloodGroup : '—',
                       iconColor: const Color(0xFFFF4D4D)),
+                  const Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Color(0x0D000000)),
+                  _buildInfoRow(Icons.health_and_safety_outlined,
+                      "ABHA ID", _abhaId.isNotEmpty ? _abhaId : '—',
+                      iconColor: Colors.blue),
                 ],
               ),
             ),
@@ -282,6 +297,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     _buildInputGroup(context.tr('address_village'),
                         _addressCtrl, Icons.map_outlined),
+                    _buildInputGroup("ABHA ID (Optional)",
+                        _abhaCtrl, Icons.health_and_safety_outlined),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: _handleSave,

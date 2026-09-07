@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../utils/auth_guard.dart';
+import 'connectivity_badge.dart';
 
 /// Top navigation bar used across dashboards.
 /// Shows a title, optional notification icon, and a hamburger button on small screens.
@@ -20,6 +21,7 @@ class TopNavbar extends StatelessWidget {
           : null,
       title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       actions: [
+        const Center(child: Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: ConnectivityBadge())),
         IconButton(icon: const Icon(Icons.notifications_none), onPressed: () => context.push('/notifications')),
         // Profile avatar / menu
         GestureDetector(

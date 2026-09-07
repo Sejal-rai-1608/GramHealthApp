@@ -1,6 +1,8 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
-
+import '../services/sync_service.dart';
+import '../services/connectivity_service.dart';
+import '../data/local_database.dart';
 class ConsultationModel {
   final String id;
   final String status;
@@ -11,6 +13,7 @@ class ConsultationModel {
   final String? doctorId;
   final String? patientId;
   final String? patientName;
+  final String? voiceNoteUrl;
 
   ConsultationModel({
     required this.id,
@@ -22,6 +25,7 @@ class ConsultationModel {
     this.doctorId,
     this.patientId,
     this.patientName,
+    this.voiceNoteUrl,
   });
 
   factory ConsultationModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,7 @@ class ConsultationModel {
       doctorId: json['doctorId']?.toString(),
       patientId: json['patientId']?.toString(),
       patientName: patientName,
+      voiceNoteUrl: json['voiceNoteUrl']?.toString(),
     );
   }
 }
@@ -52,10 +57,26 @@ class ConsultationService {
     int limit = 20,
     String? status,
   }) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
+      var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
+      if (status != null) {
+        models = models.where((c) => c.status == status).toList();
+      }
+      return models;
+    }
+
     String url = '${AppConfig.apiConsultations}?page=$page&limit=$limit';
     if (status != null) url += '&status=$status';
     final response = await ApiClient.get(url);
     final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+    for (var item in items) {
+      if (item is Map<String, dynamic> && item['id'] != null) {
+        await LocalDatabase.instance.cacheData('cached_consultations', item['id'].toString(), item);
+      }
+    }
+
     return items
         .map((e) => ConsultationModel.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -67,10 +88,26 @@ class ConsultationService {
     int limit = 50,
     String? status,
   }) async {
+    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
+      var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
+      if (status != null) {
+        models = models.where((c) => c.status == status).toList();
+      }
+      return models;
+    }
+
     String url = '${AppConfig.apiDoctors}/consultations?page=$page&limit=$limit';
     if (status != null) url += '&status=$status';
     final response = await ApiClient.get(url);
     final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+
+    for (var item in items) {
+      if (item is Map<String, dynamic> && item['id'] != null) {
+        await LocalDatabase.instance.cacheData('cached_consultations', item['id'].toString(), item);
+      }
+    }
+
     return items
         .map((e) => ConsultationModel.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -84,6 +121,7 @@ class ConsultationService {
     String? symptoms,
     String? scheduledTime,
     String? doctorId,
+    String? voiceNoteUrl,
   }) async {
     // Map frontend fields to backend: type is required, reason goes into notes
     final notes = [
@@ -97,9 +135,25 @@ class ConsultationService {
     };
     if (symptoms != null && symptoms.isNotEmpty) body['symptoms'] = symptoms;
     if (doctorId != null) body['doctorId'] = doctorId;
+    if (voiceNoteUrl != null) body['voiceNoteUrl'] = voiceNoteUrl;
 
-    final response =
-        await ApiClient.post(AppConfig.apiConsultations, body);
+    final response = await SyncService.instance.push(
+      entityType: 'consultation',
+      operation: 'POST',
+      endpoint: AppConfig.apiConsultations,
+      payload: body,
+    );
+    if (response['status'] == 'PENDING_SYNC') {
+      return ConsultationModel(
+        id: response['id'],
+        status: 'PENDING_SYNC',
+        type: type,
+        reason: reason,
+        symptoms: symptoms,
+        scheduledTime: scheduledTime,
+        doctorId: doctorId,
+      );
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -116,8 +170,17 @@ class ConsultationService {
   static Future<ConsultationModel> acceptConsultation(String id, {String? notes}) async {
     final body = <String, dynamic>{};
     if (notes != null) body['notes'] = notes;
-    final response = await ApiClient.patch(
-        '${AppConfig.apiConsultations}/$id/accept', body);
+    
+    final response = await SyncService.instance.push(
+      entityType: 'consultation_$id',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$id/accept',
+      payload: body,
+    );
+    
+    if (response['status'] == 'PENDING_SYNC') {
+       return ConsultationModel(id: id, status: 'ACCEPTED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -128,8 +191,17 @@ class ConsultationService {
     final body = <String, dynamic>{};
     if (notes != null) body['notes'] = notes;
     if (riskLevel != null) body['riskLevel'] = riskLevel;
-    final response = await ApiClient.patch(
-        '${AppConfig.apiConsultations}/$id/complete', body);
+
+    final response = await SyncService.instance.push(
+      entityType: 'consultation_$id',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$id/complete',
+      payload: body,
+    );
+    
+    if (response['status'] == 'PENDING_SYNC') {
+       return ConsultationModel(id: id, status: 'COMPLETED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
+    }
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -141,5 +213,15 @@ class ConsultationService {
         {'doctorId': doctorId});
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
+  }
+
+  /// Update the status of a consultation directly (allowed for patients).
+  static Future<void> updateStatus(String consultationId, String status) async {
+    await SyncService.instance.push(
+      entityType: 'consultation_$consultationId',
+      operation: 'PATCH',
+      endpoint: '${AppConfig.apiConsultations}/$consultationId/status',
+      payload: {'status': status},
+    );
   }
 }

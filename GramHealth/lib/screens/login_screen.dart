@@ -60,6 +60,9 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'doctor':
         context.go('/doctor/dashboard');
         break;
+      case 'pharmacy':
+        context.go('/pharmacy/dashboard');
+        break;
       default:
         context.go('/main/home');
     }
@@ -84,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Network error. Please check your connection.');
+      _showError('Network error or invalid offline credentials.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -319,6 +322,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   'admin',
                                   Icons.admin_panel_settings_outlined,
                                   'Admin'),
+                              _buildRoleCard(
+                                  'pharmacy',
+                                  Icons.local_pharmacy_outlined,
+                                  'Pharmacy'),
                             ],
                           ),
                           const SizedBox(height: 24),
