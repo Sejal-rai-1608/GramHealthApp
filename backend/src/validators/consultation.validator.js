@@ -28,6 +28,9 @@ const createConsultation = [
         .optional({ values: "falsy" })
         .trim()
         .isLength({ max: 5000 }).withMessage("notes must be at most 5000 characters"),
+    body("voiceNoteUrl")
+        .optional({ values: "falsy" })
+        .trim(),
     riskLevelValidator
 ];
 

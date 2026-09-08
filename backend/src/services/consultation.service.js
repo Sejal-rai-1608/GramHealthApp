@@ -74,7 +74,8 @@ const createConsultation = async (user, data) => {
             symptoms: data.symptoms,
             notes: data.notes,
             status: "PENDING",
-            ...(data.riskLevel !== undefined ? { riskLevel: data.riskLevel } : {})
+            ...(data.riskLevel !== undefined ? { riskLevel: data.riskLevel } : {}),
+            ...(data.voiceNoteUrl ? { voiceNoteUrl: data.voiceNoteUrl } : {})
         },
         include: CONSULTATION_INCLUDE
     });

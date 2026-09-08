@@ -88,7 +88,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
       user['hospital']         = hosp;
       await AuthService.updateUser(user);
 
-      if (mounted) context.go('/doctor/dashboard');
+      if (mounted) context.go('/doctor/requests');
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (e) {
@@ -202,7 +202,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               const SizedBox(height: 16),
               Center(
                 child: TextButton(
-                  onPressed: () => context.go('/doctor/dashboard'),
+                  onPressed: () => context.go('/doctor/requests'),
                   child: Text(
                     'Skip for now',
                     style: TextStyle(color: AppColors.textDark.withValues(alpha: 0.5), fontSize: 14),

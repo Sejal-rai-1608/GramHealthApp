@@ -15,10 +15,6 @@ const validateMedicines = (value) => {
         throw new Error("medicines must be an array");
     }
 
-    if (value.length === 0) {
-        throw new Error("medicines must not be empty");
-    }
-
     value.forEach((item, index) => {
         if (item === null || typeof item !== "object" || Array.isArray(item)) {
             throw new Error(`medicines[${index}] must be an object`);

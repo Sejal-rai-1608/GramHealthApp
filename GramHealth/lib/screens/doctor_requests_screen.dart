@@ -4,6 +4,10 @@ import '../theme/app_colors.dart';
 import '../widgets/dashboard_layout.dart';
 import '../widgets/glass_card.dart';
 import '../services/consultation_service.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:convert';
 
 /// Shows all PENDING consultation requests that the logged-in doctor can accept.
 /// Includes both assigned (to this doctor) and unassigned (open pool) requests.
@@ -250,6 +254,24 @@ class _DoctorRequestsScreenState extends State<DoctorRequestsScreen> {
             ),
           ],
 
+          if (c.voiceNoteUrl != null && c.voiceNoteUrl!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
+                icon: const Icon(Icons.play_circle_fill, size: 16),
+                label: const Text('Play Audio Symptoms'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 14),
 
           // Accept button
@@ -274,4 +296,95 @@ class _DoctorRequestsScreenState extends State<DoctorRequestsScreen> {
       ),
     );
   }
+
+  Future<void> _playVoiceNote(BuildContext context, String base64Url) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+      
+      final String base64Data = base64Url.split(',').last;
+      final bytes = base64Decode(base64Data);
+      
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/temp_voice_note.m4a');
+      await file.writeAsBytes(bytes);
+      
+      if (mounted) Navigator.pop(context); // Close loading
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          final player = AudioPlayer();
+          bool isPlaying = false;
+          player.play(DeviceFileSource(file.path));
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              player.onPlayerStateChanged.listen((state) {
+                if (mounted) {
+                  setState(() => isPlaying = state == PlayerState.playing);
+                }
+              });
+
+              return AlertDialog(
+                title: const Text('Patient Audio Symptoms'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.mic, size: 48, color: Colors.orangeAccent),
+                    const SizedBox(height: 16),
+                    const Text('Listen to the offline voice note sent by the patient outlining their symptoms.'),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          iconSize: 48,
+                          color: Colors.blueAccent,
+                          icon: Icon(isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                          onPressed: () {
+                            if (isPlaying) {
+                              player.pause();
+                            } else {
+                              player.resume();
+                            }
+                          },
+                        ),
+                        IconButton(
+                          iconSize: 48,
+                          color: Colors.redAccent,
+                          icon: const Icon(Icons.stop_circle),
+                          onPressed: () async {
+                            await player.stop();
+                          },
+                        )
+                      ],
+                    )
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      player.dispose();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Close'),
+                  )
+                ],
+              );
+            }
+          );
+        }
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load voice note.')));
+      }
+    }
+  }
 }
+

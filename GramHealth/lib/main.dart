@@ -20,14 +20,10 @@ import 'screens/teleconsultation_request_screen.dart';
 import 'screens/prescription_list_screen.dart';
 import 'screens/video_call_screen.dart';
 import 'screens/emergency_help_screen.dart';
-import 'screens/doctor_dashboard_screen.dart';
 import 'screens/doctor_requests_screen.dart';
-import 'screens/doctor_appointments_screen.dart';
-import 'screens/doctor_patients_screen.dart';
 import 'screens/doctor_consultations_screen.dart';
 import 'screens/doctor_prescriptions_screen.dart';
 import 'screens/doctor_profile_screen.dart';
-import 'screens/doctor_settings_screen.dart';
 import 'screens/doctor_onboarding_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'utils/auth_guard.dart';
@@ -89,20 +85,11 @@ final _router = GoRouter(
     // Doctor routes (role: doctor)
     GoRoute(
       path: '/doctor',
-      builder: (c, s) => const DoctorDashboardScreen(),
+      builder: (c, s) => const DoctorRequestsScreen(),
       routes: [
-        GoRoute(
-            path: 'dashboard',
-            builder: (c, s) => const DoctorDashboardScreen()),
         GoRoute(
             path: 'requests',
             builder: (c, s) => const DoctorRequestsScreen()),
-        GoRoute(
-            path: 'appointments',
-            builder: (c, s) => const DoctorAppointmentsScreen()),
-        GoRoute(
-            path: 'patients',
-            builder: (c, s) => const DoctorPatientsScreen()),
         GoRoute(
             path: 'consultations',
             builder: (c, s) => const DoctorConsultationsScreen()),
@@ -115,9 +102,6 @@ final _router = GoRouter(
         GoRoute(
             path: 'onboarding',
             builder: (c, s) => const DoctorOnboardingScreen()),
-        GoRoute(
-            path: 'settings',
-            builder: (c, s) => const DoctorSettingsScreen()),
       ],
     ),
     // Admin routes (role: admin)

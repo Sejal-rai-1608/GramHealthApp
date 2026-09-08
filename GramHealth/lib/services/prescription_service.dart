@@ -52,6 +52,7 @@ class PrescriptionModel {
   Map<String, dynamic> toDisplayMap() => {
         'id': id,
         'doctorName': doctorName,
+        'patientName': patientName,
         'specialization': specialization,
         'date': date,
         'diagnosis': diagnosis,

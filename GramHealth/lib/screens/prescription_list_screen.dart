@@ -137,9 +137,16 @@ class PrescriptionDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (prescription['patientName'] != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text('Patient: ${prescription['patientName']}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.leafGreenPrimary)),
+              ),
             Text('Doctor: ${prescription['doctorName']}',
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600)),
+                    fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text('Specialization: ${prescription['specialization']}'),
             const SizedBox(height: 8),

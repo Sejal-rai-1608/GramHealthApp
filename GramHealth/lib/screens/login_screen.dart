@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context.go('/admin/dashboard');
         break;
       case 'doctor':
-        context.go('/doctor/dashboard');
+        context.go('/doctor/requests');
         break;
       case 'pharmacy':
         context.go('/pharmacy/dashboard');
