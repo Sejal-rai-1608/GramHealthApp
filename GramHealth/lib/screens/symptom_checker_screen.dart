@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
-import '../data/mock_api.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
+import '../services/ai_service.dart';
+import '../models/ai_response.dart';
+
+class SymptomResult {
+  final String condition;
+  final String advice;
+  final String action;
+
+  SymptomResult({
+    required this.condition,
+    required this.advice,
+    required this.action,
+  });
+}
 
 class SymptomCheckerScreen extends StatefulWidget {
   const SymptomCheckerScreen({super.key});
@@ -27,10 +40,42 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   }
 
   Future<void> _analyze() async {
-    if (_selected.isEmpty) return;
+    final symptomsToAnalyze = _selected.toList();
+    if (_otherCtrl.text.trim().isNotEmpty) {
+      symptomsToAnalyze.add(_otherCtrl.text.trim());
+    }
+    if (symptomsToAnalyze.isEmpty) return;
+
     setState(() { _isAnalyzing = true; _result = null; });
-    final result = await SymptomService.checkSymptoms(_selected.toList());
-    if (mounted) setState(() { _isAnalyzing = false; _result = result; });
+    
+    try {
+      final queryText = "I have the following symptoms: ${symptomsToAnalyze.join(', ')}. What could this mean?";
+      final aiResponse = await AiService.query(queryText);
+      
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _result = SymptomResult(
+            condition: aiResponse.intent ?? 'Analysis Complete',
+            advice: aiResponse.answer ?? 'No detailed advice available.',
+            action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
+                ? 'Please consult a professional immediately.' 
+                : 'Monitor your symptoms.',
+          );
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _result = SymptomResult(
+            condition: 'Error',
+            advice: 'Could not analyze symptoms: ${e.toString()}',
+            action: 'Please try again later.',
+          );
+        });
+      }
+    }
   }
 
   @override

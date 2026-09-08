@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
+import '../services/ai_service.dart';
+import '../models/ai_response.dart';
 
 class Message {
   final String id;
@@ -52,7 +54,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
     super.dispose();
   }
 
-  void _handleSend() {
+  Future<void> _handleSend() async {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -70,34 +72,42 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
 
     _scrollToBottom();
 
-    // Simulate AI response
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    try {
+      final aiResponse = await AiService.query(text);
+      
       if (!mounted) return;
+      
+      String responseText = aiResponse.answer ?? "I'm sorry, I couldn't understand that.";
+      if (aiResponse.urgency == 'emergency') {
+        responseText = "🚨 EMERGENCY 🚨\n$responseText";
+      } else if (aiResponse.requiresProfessionalReview == true) {
+        responseText = "⚠️ Please consult a professional.\n$responseText";
+      }
+
       final aiMsg = Message(
-        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        text: _getAIResponse(text),
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: responseText,
         sender: 'ai',
         timestamp: DateTime.now(),
       );
+      
       setState(() {
         _messages.add(aiMsg);
       });
       _scrollToBottom();
-    });
-  }
-
-  String _getAIResponse(String input) {
-    final low = input.toLowerCase();
-    if (low.contains('fever') || low.contains('bukhar') || low.contains('taap') || low.contains('taav')) {
-      return "I see you're mentioning fever. Would you like to use our Symptom Checker or connect with Dr. Anita Joshi (General Physician)?";
+    } catch (e) {
+      if (!mounted) return;
+      final errorMsg = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: "Sorry, I encountered an error: ${e.toString()}",
+        sender: 'ai',
+        timestamp: DateTime.now(),
+      );
+      setState(() {
+        _messages.add(errorMsg);
+      });
+      _scrollToBottom();
     }
-    if (low.contains('appointment') || low.contains('booking') || low.contains('doctor')) {
-      return "You can book an appointment by going to the 'Consult Doctor' section on the Home screen or selecting a doctor from the carousel.";
-    }
-    if (low.contains('hello') || low.contains('hi') || low.contains('namaste') || low.contains('namaskar')) {
-      return "Hello! I can help you find doctors, check symptoms, or manage your health records. What's on your mind?";
-    }
-    return "I'm still learning, but I can help you navigate RuralCare. You can ask about doctors, symptoms, or how to see your records!";
   }
 
   void _scrollToBottom() {

@@ -4,6 +4,7 @@ const { getPagination, buildMeta } = require("../utils/pagination");
 const { canTransitionConsultationStatus } = require("../utils/consultationStatus");
 const { CONSULTATION_RISK_LEVELS } = require("../constants/consultation");
 const { getProfileIdForRole, requireProfile } = require("../utils/profile");
+const aiService = require("./ai.service");
 
 const USER_SELECT = { id: true, name: true, phone: true, email: true };
 
@@ -63,7 +64,7 @@ const createConsultation = async (user, data) => {
         );
     }
 
-    return prisma.consultation.create({
+    const result = await prisma.consultation.create({
         data: {
             patientId,
             ashaWorkerId,
@@ -78,6 +79,19 @@ const createConsultation = async (user, data) => {
         },
         include: CONSULTATION_INCLUDE
     });
+
+    if (result.symptoms || result.notes) {
+        aiService.syncPatientRecord(
+            result.patientId,
+            result.id,
+            "consultation",
+            result.createdAt,
+            `Symptoms: ${result.symptoms || 'None'}. Notes: ${result.notes || 'None'}`,
+            "GramHealth System"
+        );
+    }
+
+    return result;
 };
 
 const getConsultationById = async (id, user) => {
@@ -168,11 +182,22 @@ const updateStatus = async (id, user, { status, notes, riskLevel }) => {
             const profileId = await getProfileIdForRole("DOCTOR", user.userId);
 
             if (consultation.doctorId === profileId) {
-                return prisma.consultation.update({
+                const updated = await prisma.consultation.update({
                     where: { id },
                     data: { notes },
                     include: CONSULTATION_INCLUDE
                 });
+                
+                aiService.syncPatientRecord(
+                    updated.patientId,
+                    updated.id,
+                    "consultation",
+                    updated.updatedAt,
+                    `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+                    "GramHealth System"
+                );
+                
+                return updated;
             }
         }
 
@@ -218,11 +243,22 @@ const updateStatus = async (id, user, { status, notes, riskLevel }) => {
             data.notes = notes;
         }
 
-        return prisma.consultation.update({
+        const updated = await prisma.consultation.update({
             where: { id },
             data,
             include: CONSULTATION_INCLUDE
         });
+        
+        aiService.syncPatientRecord(
+            updated.patientId,
+            updated.id,
+            "consultation",
+            updated.updatedAt,
+            `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+            "GramHealth System"
+        );
+        
+        return updated;
     }
 
     if (transition === "ACTIVE->COMPLETED") {
@@ -256,11 +292,22 @@ const updateStatus = async (id, user, { status, notes, riskLevel }) => {
             data.riskLevel = riskLevel;
         }
 
-        return prisma.consultation.update({
+        const updated = await prisma.consultation.update({
             where: { id },
             data,
             include: CONSULTATION_INCLUDE
         });
+        
+        aiService.syncPatientRecord(
+            updated.patientId,
+            updated.id,
+            "consultation",
+            updated.updatedAt,
+            `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+            "GramHealth System"
+        );
+        
+        return updated;
     }
 
     if (transition === "PENDING->CANCELLED") {
@@ -353,11 +400,22 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
         data.notes = notes;
     }
 
-    return prisma.consultation.update({
+    const updated = await prisma.consultation.update({
         where: { id },
         data,
         include: CONSULTATION_INCLUDE
     });
+    
+    aiService.syncPatientRecord(
+        updated.patientId,
+        updated.id,
+        "consultation",
+        updated.updatedAt,
+        `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+        "GramHealth System"
+    );
+    
+    return updated;
 };
 
 const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
@@ -401,11 +459,22 @@ const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
         data.riskLevel = riskLevel;
     }
 
-    return prisma.consultation.update({
+    const updated = await prisma.consultation.update({
         where: { id },
         data,
         include: CONSULTATION_INCLUDE
     });
+    
+    aiService.syncPatientRecord(
+        updated.patientId,
+        updated.id,
+        "consultation",
+        updated.updatedAt,
+        `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+        "GramHealth System"
+    );
+    
+    return updated;
 };
 
 const assignDoctor = async (id, user, { doctorId }) => {

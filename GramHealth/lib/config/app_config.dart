@@ -10,11 +10,13 @@ class AppConfig {
 
   // ── Base URL ─────────────────────────────────────────────────────────────
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000';
+    if (kIsWeb) return 'http://localhost:3000';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://gramhealthapp.onrender.com';
+      // Use 127.0.0.1:3000 for ADB reverse on physical device
+      return 'http://127.0.0.1:3000';
     }
-    return 'http://localhost:5000';
+    // Fallback for iOS Simulator / desktop
+    return 'http://127.0.0.1:3000';
   }
 
   // ── API Routes ───────────────────────────────────────────────────────────
@@ -26,6 +28,7 @@ class AppConfig {
   static String get apiPrescriptions  => '$baseUrl/api/prescriptions';
   static String get apiUsers          => '$baseUrl/api/users';
   static String get apiPharmacy       => '$baseUrl/api/pharmacy';
+  static String get apiAi             => '$baseUrl/api/ai';
 
   // ── Token key stored in secure storage ───────────────────────────────────
   static const String tokenKey = 'gram_health_token';

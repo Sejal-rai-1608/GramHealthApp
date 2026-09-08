@@ -4,6 +4,9 @@ const prisma = require("../config/prisma");
 const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
+        const hasAuthHeader = !!authHeader;
+        
+        console.log(`[AuthMiddleware] POST ${req.path} - Has Auth Header: ${hasAuthHeader}`);
 
         if (!authHeader) {
             return res.status(401).json({
@@ -13,6 +16,7 @@ const authenticate = async (req, res, next) => {
         }
 
         if (!authHeader.startsWith("Bearer ")) {
+            console.log(`[AuthMiddleware] Failure: Invalid format`);
             return res.status(401).json({
                 success: false,
                 message: "Invalid authorization format"
@@ -21,12 +25,15 @@ const authenticate = async (req, res, next) => {
 
         const token = authHeader.split(" ")[1];
 
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
+        // Ensure we use the exact same secret as login
+        const secret = process.env.JWT_SECRET || "gramhealth-fallback-secret-key";
+
+        const decoded = jwt.verify(token, secret);
+        
+        console.log(`[AuthMiddleware] Token decoded for User ID: ${decoded.userId}`);
 
         if (!decoded.userId) {
+            console.log(`[AuthMiddleware] Failure: Missing userId in token payload`);
             return res.status(401).json({
                 success: false,
                 message: "Invalid or expired token"
@@ -39,6 +46,7 @@ const authenticate = async (req, res, next) => {
         });
 
         if (!user) {
+            console.log(`[AuthMiddleware] Failure: User not found in DB`);
             return res.status(401).json({
                 success: false,
                 message: "Invalid or expired token"
@@ -56,6 +64,7 @@ const authenticate = async (req, res, next) => {
         next();
 
     } catch (error) {
+        console.log(`[AuthMiddleware] Verification Failed: ${error.name} - ${error.message}`);
         if (
             error.name === "JsonWebTokenError" ||
             error.name === "TokenExpiredError" ||
