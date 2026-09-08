@@ -47,9 +47,9 @@ const createPrescription = async (user, { consultationId, medicines, instruction
         );
     }
 
-    if (consultation.status !== "ACTIVE") {
+    if (consultation.status !== "ACTIVE" && consultation.status !== "COMPLETED") {
         throw new ApiError(
-            `Prescriptions can only be created for active consultations (current status: ${consultation.status})`,
+            `Prescriptions can only be created for active or completed consultations (current status: ${consultation.status})`,
             400,
             "INVALID_CONSULTATION_STATE"
         );

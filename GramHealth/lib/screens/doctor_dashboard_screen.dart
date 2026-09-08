@@ -7,16 +7,18 @@ import '../widgets/glass_card.dart';
 import '../l10n/app_language.dart';
 import '../services/call_service.dart';
 import '../services/consultation_service.dart';
+import '../services/prescription_service.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/voice_note_dialog.dart';
 import 'doctor_complete_consultation_screen.dart';
+import 'prescription_list_screen.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Doctor Dashboard – shows live KPI cards and a list of today's pending requests.
+/// Doctor Dashboard – shows live KPI cards, consultations, and prescriptions.
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
 
@@ -28,6 +30,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   bool _loading = true;
   String _doctorName = '';
   List<ConsultationModel> _all = [];
+  List<PrescriptionModel> _prescriptions = [];
   String? _error;
 
   @override
@@ -41,10 +44,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     try {
       final user = await AuthService.getUser();
       final consultations = await ConsultationService.listDoctorConsultations(limit: 100);
+      final prescriptions = await PrescriptionService.getDoctorPrescriptions(limit: 100);
       if (mounted) {
         setState(() {
           _doctorName = user?['name'] as String? ?? '';
           _all = consultations;
+          _prescriptions = prescriptions;
           _loading = false;
         });
       }
@@ -77,6 +82,93 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: DashboardLayout(
+        title: context.tr('doctor_dashboard'),
+        child: Column(
+          children: [
+            Container(
+              color: Colors.white,
+              child: TabBar(
+                labelColor: AppColors.primaryAccent,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: AppColors.primaryAccent,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                tabs: const [
+                  Tab(text: 'Consultations'),
+                  Tab(text: 'Prescriptions'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                   _buildConsultationsTab(),
+                   _buildPrescriptionsTab(),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrescriptionsTab() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('Error loading prescriptions', style: TextStyle(color: Colors.redAccent)));
+    }
+    if (_prescriptions.isEmpty) {
+      return const Center(child: Text('No prescriptions found.', style: TextStyle(color: Colors.grey)));
+    }
+
+    final Map<String, List<PrescriptionModel>> grouped = {};
+    for (var p in _prescriptions) {
+      grouped.putIfAbsent(p.patientName, () => []).add(p);
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: grouped.length,
+        itemBuilder: (context, index) {
+          final patientName = grouped.keys.elementAt(index);
+          final pList = grouped[patientName]!;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ExpansionTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppColors.primaryAccent,
+                child: Icon(Icons.person, color: Colors.white),
+              ),
+              title: Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('${pList.length} prescription(s) provided'),
+              children: pList.map((p) => ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+                title: Text('Diagnosis: ${p.diagnosis}', style: const TextStyle(fontSize: 14)),
+                subtitle: Text('Date: ${p.date}', style: const TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right, size: 16),
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PrescriptionDetailScreen(prescription: p.toDisplayMap()),
+                  ));
+                },
+              )).toList(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildConsultationsTab() {
     final pending = _all.where((c) => c.status.toUpperCase() == 'PENDING').toList();
     final accepted = _all.where((c) => c.status.toUpperCase() == 'ACTIVE').toList();
     final completed = _all.where((c) => c.status.toUpperCase() == 'COMPLETED').toList();
@@ -88,81 +180,79 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       {'icon': Icons.check_circle,     'label': context.tr('completed_consultations'),   'value': '${completed.length}'},
     ];
 
-    return DashboardLayout(
-      title: context.tr('doctor_dashboard'),
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting
-              Text(
-                _doctorName.isNotEmpty
-                    ? '${context.tr('good_morning_doctor')}, Dr. $_doctorName 👋'
-                    : context.tr('good_morning_doctor'),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting
+            Text(
+              _doctorName.isNotEmpty
+                  ? '${context.tr('good_morning_doctor')}, Dr. $_doctorName 👋'
+                  : context.tr('good_morning_doctor'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              context.tr('dashboard_subtitle'),
+              style: const TextStyle(fontSize: 15, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+
+            // KPI cards
+            if (_loading)
+              const Center(child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(),
+              ))
+            else if (_error != null)
+              const Center(child: Text('Error loading data', style: TextStyle(color: Colors.redAccent)))
+            else
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: kpiData.map((d) => StatCard(
+                  icon: d['icon'] as IconData,
+                  label: d['label'] as String,
+                  value: d['value'] as String,
+                )).toList(),
               ),
-              const SizedBox(height: 6),
-              Text(
-                context.tr('dashboard_subtitle'),
-                style: const TextStyle(fontSize: 15, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
 
-              // KPI cards
-              if (_loading)
-                const Center(child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: CircularProgressIndicator(),
-                ))
-              else if (_error != null)
-                Center(child: Text('Error loading data', style: TextStyle(color: Colors.redAccent)))
-              else
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: kpiData.map((d) => StatCard(
-                    icon: d['icon'] as IconData,
-                    label: d['label'] as String,
-                    value: d['value'] as String,
-                  )).toList(),
-                ),
+            const SizedBox(height: 32),
 
-              const SizedBox(height: 32),
-
-              if (accepted.isNotEmpty) ...[
-                const Text(
-                  'Active Consultations',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                ...accepted.map((c) => _ActiveCard(
-                  consultation: c,
-                  onComplete: () => _complete(c.id),
-                )),
-                const SizedBox(height: 24),
-              ],
-
-              // Pending requests
-              Text(
-                context.tr('pending_requests'),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            if (accepted.isNotEmpty) ...[
+              const Text(
+                'Active Consultations',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
-
-              if (_loading)
-                const Center(child: CircularProgressIndicator())
-              else if (pending.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('No pending requests', style: TextStyle(color: Colors.grey))),
-                )
-              else
-                ...pending.map((c) => _PendingCard(consultation: c, onAccept: () => _accept(c.id))),
+              ...accepted.map((c) => _ActiveCard(
+                consultation: c,
+                onComplete: () => _complete(c.id),
+              )),
+              const SizedBox(height: 24),
             ],
-          ),
+
+            // Pending requests
+            Text(
+              context.tr('pending_requests'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (pending.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: Text('No pending requests', style: TextStyle(color: Colors.grey))),
+              )
+            else
+              ...pending.map((c) => _PendingCard(consultation: c, onAccept: () => _accept(c.id))),
+          ],
         ),
       ),
     );

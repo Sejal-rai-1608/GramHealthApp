@@ -8,6 +8,7 @@ class PrescriptionModel {
   final String id;
   final String doctorName;
   final String specialization;
+  final String patientName;
   final String date;
   final String diagnosis;
   final List<Map<String, dynamic>> medicines;
@@ -16,6 +17,7 @@ class PrescriptionModel {
     required this.id,
     required this.doctorName,
     required this.specialization,
+    required this.patientName,
     required this.date,
     required this.diagnosis,
     required this.medicines,
@@ -24,6 +26,9 @@ class PrescriptionModel {
   factory PrescriptionModel.fromJson(Map<String, dynamic> json) {
     final doctorObj = json['doctor'] as Map<String, dynamic>?;
     final doctorUserObj = doctorObj?['user'] as Map<String, dynamic>?;
+    
+    final patientObj = json['patient'] as Map<String, dynamic>?;
+    final patientUserObj = patientObj?['user'] as Map<String, dynamic>?;
 
     final rawMeds = json['medicines'] as List<dynamic>? ?? [];
     final medicines = rawMeds.map((m) {
@@ -36,6 +41,7 @@ class PrescriptionModel {
       doctorName: doctorUserObj?['name']?.toString() ?? 'Unknown Doctor',
       specialization:
           doctorObj?['specialization']?.toString() ?? 'General Physician',
+      patientName: patientUserObj?['name']?.toString() ?? 'Unknown Patient',
       date: _formatDate(json['createdAt']?.toString()),
       diagnosis: json['diagnosis']?.toString() ?? '—',
       medicines: medicines,
@@ -148,6 +154,7 @@ class PrescriptionService {
         id: response['id'],
         doctorName: 'Local Draft',
         specialization: '-',
+        patientName: 'Local Draft',
         date: PrescriptionModel._formatDate(DateTime.now().toIso8601String()),
         diagnosis: 'Sync Pending...',
         medicines: medicines,
