@@ -1,6 +1,7 @@
 import '../config/app_config.dart';
 import '../services/api_client.dart';
 import '../services/sync_service.dart';
+import '../services/connectivity_service.dart';
 import '../data/local_database.dart';
 
 /// Matches the backend Prescription model (+ joined doctor/patient info).
@@ -78,6 +79,11 @@ class PrescriptionService {
     int page = 1,
     int limit = 20,
   }) async {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      return cached.map((e) => PrescriptionModel.fromJson(e)).toList();
+    }
+    
     final url = '${AppConfig.apiPrescriptions}/me?page=$page&limit=$limit';
     try {
       final response = await ApiClient.get(url);
@@ -90,9 +96,14 @@ class PrescriptionService {
         }
       }
 
-      return items
+      final apiPrescriptions = items
           .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
           .toList();
+          
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      final drafts = cached.where((e) => e['diagnosis'] == 'Sync Pending...').map((e) => PrescriptionModel.fromJson(e));
+      
+      return [...drafts, ...apiPrescriptions];
     } catch (e) {
       // Fallback to offline cache
       final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
@@ -107,6 +118,11 @@ class PrescriptionService {
     int page = 1,
     int limit = 20,
   }) async {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      return cached.map((e) => PrescriptionModel.fromJson(e)).toList();
+    }
+
     final url = '${AppConfig.apiDoctors}/prescriptions?page=$page&limit=$limit';
     try {
       final response = await ApiClient.get(url);
@@ -119,9 +135,14 @@ class PrescriptionService {
         }
       }
 
-      return items
+      final apiPrescriptions = items
           .map((e) => PrescriptionModel.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
+      final drafts = cached.where((e) => e['diagnosis'] == 'Sync Pending...').map((e) => PrescriptionModel.fromJson(e));
+      
+      return [...drafts, ...apiPrescriptions];
     } catch (e) {
       // Fallback to offline cache
       final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
@@ -151,15 +172,23 @@ class PrescriptionService {
     );
 
     if (response['status'] == 'PENDING_SYNC') {
-      return PrescriptionModel(
-        id: response['id'],
-        doctorName: 'Local Draft',
-        specialization: '-',
-        patientName: 'Local Draft',
-        date: PrescriptionModel._formatDate(DateTime.now().toIso8601String()),
-        diagnosis: 'Sync Pending...',
-        medicines: medicines,
-      );
+      final draftJson = {
+        'id': response['id'],
+        'doctor': {
+          'user': {'name': 'Local Draft'},
+          'specialization': '-',
+        },
+        'patient': {
+          'user': {'name': 'Local Draft'},
+        },
+        'createdAt': DateTime.now().toIso8601String(),
+        'diagnosis': 'Sync Pending...',
+        'medicines': medicines,
+      };
+      
+      await LocalDatabase.instance.cacheData('cached_prescriptions', draftJson['id'] as String, draftJson);
+
+      return PrescriptionModel.fromJson(draftJson);
     }
 
     return PrescriptionModel.fromJson(

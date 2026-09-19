@@ -164,7 +164,9 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                                CallService.startCall(
                                  consultationId: c.id,
                                  audioOnly: c.type.toUpperCase() == 'AUDIO',
-                               );
+                               ).then((_) {
+                                 _complete(c.id);
+                               });
                            }
                         },
                         icon: Icon(

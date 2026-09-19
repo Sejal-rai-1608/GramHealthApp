@@ -30,9 +30,38 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Default all to false. In a real app we would load their existing state here.
+    // Default all to false initially
     for (var m in kEssentialMedicines) {
       _inventory[m] = false;
+    }
+    _loadInitialState();
+  }
+
+  Future<void> _loadInitialState() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await AuthService.getUser();
+      final currentUserId = user?['id'] as String?;
+      
+      if (currentUserId != null) {
+        final pharmacies = await PharmacyService.syncPharmacies();
+        final myPharmacy = pharmacies.firstWhere(
+          (p) => p.userId == currentUserId, 
+          orElse: () => throw Exception('Pharmacy not found for user'),
+        );
+
+        for (var inv in myPharmacy.inventories) {
+          final medName = inv['medicineName'] as String;
+          final inStock = inv['inStock'] as bool;
+          if (_inventory.containsKey(medName)) {
+            _inventory[medName] = inStock;
+          }
+        }
+      }
+    } catch (e) {
+      print('Failed to load initial pharmacy state: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -90,7 +119,10 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Expanded(
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else
+            Expanded(
             child: ListView.builder(
               itemCount: kEssentialMedicines.length,
               itemBuilder: (context, index) {

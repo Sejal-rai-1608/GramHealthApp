@@ -61,7 +61,7 @@ class ApiClient {
     final response = await http.get(
       Uri.parse(url),
       headers: await _headers(auth: auth),
-    );
+    ).timeout(const Duration(seconds: 10));
     _assertSuccess(response);
     return _parseBody(response);
   }
@@ -75,7 +75,7 @@ class ApiClient {
       Uri.parse(url),
       headers: await _headers(auth: auth),
       body: jsonEncode(body),
-    );
+    ).timeout(const Duration(seconds: 10));
     _assertSuccess(response);
     return _parseBody(response);
   }
@@ -89,7 +89,7 @@ class ApiClient {
       Uri.parse(url),
       headers: await _headers(auth: auth),
       body: jsonEncode(body),
-    );
+    ).timeout(const Duration(seconds: 10));
     _assertSuccess(response);
     return _parseBody(response);
   }
@@ -98,7 +98,7 @@ class ApiClient {
     final response = await http.delete(
       Uri.parse(url),
       headers: await _headers(auth: auth),
-    );
+    ).timeout(const Duration(seconds: 10));
     _assertSuccess(response);
     return _parseBody(response);
   }

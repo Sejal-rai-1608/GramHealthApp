@@ -8,6 +8,7 @@ import '../widgets/language_selector_modal.dart';
 import '../widgets/primary_button.dart';
 import '../services/api_client.dart';
 import '../utils/auth_guard.dart';
+import 'package:geocoding/geocoding.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl  = TextEditingController();
+  final _addressCtrl  = TextEditingController();
 
   bool _isRegistering = false;
   bool _isLoading     = false;
@@ -34,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
@@ -118,6 +121,31 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError('Passwords do not match.');
       return;
     }
+    
+    String? address;
+    double? latitude;
+    double? longitude;
+
+    if (_selectedRole == 'pharmacy') {
+      address = _addressCtrl.text.trim();
+      if (address.isEmpty) {
+        _showError('Please enter the pharmacy address.');
+        return;
+      }
+      
+      setState(() => _isLoading = true);
+      try {
+        List<Location> locations = await locationFromAddress(address);
+        if (locations.isNotEmpty) {
+          latitude = locations.first.latitude;
+          longitude = locations.first.longitude;
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        _showError('Could not find location from address. Please try a different address.');
+        return;
+      }
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -127,6 +155,9 @@ class _LoginScreenState extends State<LoginScreen> {
         phone: phone,
         password: password,
         role: _selectedRole,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
       );
       // After registration, log in automatically
       final user = await AuthService.login(email, password);
@@ -339,6 +370,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             placeholder: 'Enter your phone number',
                             controller: _phoneCtrl,
                           ),
+                          if (_selectedRole == 'pharmacy')
+                            CustomInput(
+                              label: 'Pharmacy Address',
+                              placeholder: 'Enter full pharmacy address (e.g., Street, City)',
+                              controller: _addressCtrl,
+                            ),
                         ],
 
                         CustomInput(

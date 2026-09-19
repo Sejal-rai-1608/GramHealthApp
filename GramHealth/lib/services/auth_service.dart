@@ -119,16 +119,24 @@ class AuthService {
     required String phone,
     required String password,
     required String role,
+    String? address,
+    double? latitude,
+    double? longitude,
   }) async {
+    final payload = {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+      'role': role.toUpperCase(),
+    };
+    if (address != null) payload['address'] = address;
+    if (latitude != null) payload['latitude'] = latitude;
+    if (longitude != null) payload['longitude'] = longitude;
+
     final response = await ApiClient.post(
       '${AppConfig.apiAuth}/register',
-      {
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'password': password,
-        'role': role.toUpperCase(),
-      },
+      payload,
       auth: false,
     );
 

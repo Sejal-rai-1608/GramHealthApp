@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
 const ApiError = require("../utils/ApiError");
 
-const registerUser = async ({ name, email, phone, password, role }) => {
+const registerUser = async ({ name, email, phone, password, role, address, latitude, longitude }) => {
     const existingUser = await prisma.user.findFirst({
         where: {
             OR: [
@@ -55,8 +55,9 @@ const registerUser = async ({ name, email, phone, password, role }) => {
             data: { 
                 userId: user.id, 
                 name: `${name}'s Pharmacy`,
-                latitude: 0,
-                longitude: 0
+                address: address || null,
+                latitude: latitude || 0,
+                longitude: longitude || 0
             } 
         });
     }

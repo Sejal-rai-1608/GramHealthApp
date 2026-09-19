@@ -11,6 +11,7 @@ class PharmacyModel {
   final double longitude;
   final String address;
   final List<dynamic> inventories;
+  final String userId;
 
   PharmacyModel({
     required this.id,
@@ -19,6 +20,7 @@ class PharmacyModel {
     required this.longitude,
     required this.address,
     required this.inventories,
+    required this.userId,
   });
 
   factory PharmacyModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class PharmacyModel {
       longitude: json['longitude']?.toDouble() ?? 0.0,
       address: json['address'] ?? '',
       inventories: json['inventories'] ?? [],
+      userId: json['userId'] ?? '',
     );
   }
 
@@ -39,6 +42,7 @@ class PharmacyModel {
         'longitude': longitude,
         'address': address,
         'inventories': inventories,
+        'userId': userId,
       };
 
   bool hasMedicine(String medicineName) {

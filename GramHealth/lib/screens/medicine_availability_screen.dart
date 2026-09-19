@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
@@ -22,13 +23,36 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   final TextEditingController _searchCtrl = TextEditingController();
   List<PharmacySearchResult> _pharmacies = [];
   bool _isLoading = false;
+  Position? _currentPosition;
 
   @override
   void initState() {
     super.initState();
+    _initLocationAndSearch();
+  }
+
+  Future<void> _initLocationAndSearch() async {
+    setState(() => _isLoading = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          _currentPosition = await Geolocator.getCurrentPosition();
+        }
+      }
+    } catch (_) {
+      // default position handling below
+    }
+
     if (widget.medicineQuery != null && widget.medicineQuery!.isNotEmpty) {
       _searchCtrl.text = widget.medicineQuery!;
       _performSearch();
+    } else {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -42,8 +66,12 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
     }
 
     setState(() => _isLoading = true);
-    // Hardcoded user mock coordinates for Indore
-    final results = await PharmacyService.searchPharmaciesLocal(query, 22.7196, 75.8577);
+    
+    // Default to Indore if GPS fails
+    final lat = _currentPosition?.latitude ?? 22.7196;
+    final lon = _currentPosition?.longitude ?? 75.8577;
+    
+    final results = await PharmacyService.searchPharmaciesLocal(query, lat, lon);
     if (mounted) {
       setState(() {
         _pharmacies = results;
@@ -56,6 +84,17 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openNavigation(double lat, double lon) async {
+    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lon');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open map app')));
+      }
+    }
   }
 
   @override
@@ -153,8 +192,8 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: FlutterMap(
-                      options: const MapOptions(
-                        initialCenter: LatLng(22.7196, 75.8577),
+                      options: MapOptions(
+                        initialCenter: LatLng(_currentPosition?.latitude ?? 22.7196, _currentPosition?.longitude ?? 75.8577),
                         initialZoom: 13.5,
                       ),
                       children: [
@@ -274,14 +313,17 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent,
-                              borderRadius: BorderRadius.circular(12),
+                          GestureDetector(
+                            onTap: () => _openNavigation(p.latitude, p.longitude),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryAccent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.navigation_outlined, color: AppColors.textDark, size: 20),
                             ),
-                            child: const Icon(Icons.navigation_outlined, color: AppColors.textDark, size: 20),
                           ),
                         ],
                       ),

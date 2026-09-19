@@ -2,7 +2,7 @@ const authService = require("../services/auth.service");
 
 const register = async (req, res) => {
     try {
-        const { name, email, phone, password, role } = req.body;
+        const { name, email, phone, password, role, address, latitude, longitude } = req.body;
 
         if (!name || !phone || !email || !password) {
             return res.status(400).json({
@@ -16,7 +16,10 @@ const register = async (req, res) => {
             email,
             phone,
             password,
-            role
+            role,
+            address,
+            latitude,
+            longitude
         });
 
         res.status(201).json({

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/prescription_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/medication_schedule.dart';
@@ -26,7 +27,15 @@ class _PrescriptionListScreenState extends State<PrescriptionListScreen> {
   Future<void> _loadPrescriptions() async {
     setState(() { _isLoading = true; _error = null; });
     try {
-      final data = await PrescriptionService.getPrescriptions();
+      final role = await AuthService.getCurrentRole();
+      List<PrescriptionModel> data;
+      
+      if (role == 'doctor') {
+        data = await PrescriptionService.getDoctorPrescriptions();
+      } else {
+        data = await PrescriptionService.getPrescriptions();
+      }
+      
       if (mounted) setState(() { _prescriptions = data; _isLoading = false; });
     } on ApiException catch (e) {
       if (mounted) setState(() { _error = e.message; _isLoading = false; });

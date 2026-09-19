@@ -57,7 +57,7 @@ class ConsultationService {
     int limit = 20,
     String? status,
   }) async {
-    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
       var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
       if (status != null) {
@@ -88,7 +88,7 @@ class ConsultationService {
     int limit = 50,
     String? status,
   }) async {
-    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
       var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
       if (status != null) {
@@ -179,8 +179,13 @@ class ConsultationService {
     );
     
     if (response['status'] == 'PENDING_SYNC') {
+       _updateLocalCacheStatus(id, 'ACCEPTED'); // Just ACCEPTED or ACTIVE depending on backend
        return ConsultationModel(id: id, status: 'ACCEPTED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
     }
+    
+    // Once successful online, forcefully update cache so it vanishes from pending
+    _updateLocalCacheStatus(id, 'ACTIVE'); 
+    
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -200,8 +205,12 @@ class ConsultationService {
     );
     
     if (response['status'] == 'PENDING_SYNC') {
+       _updateLocalCacheStatus(id, 'COMPLETED');
        return ConsultationModel(id: id, status: 'COMPLETED_OFFLINE', type: 'VIDEO', reason: notes ?? '');
     }
+    
+    _updateLocalCacheStatus(id, 'COMPLETED');
+    
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }
@@ -223,5 +232,17 @@ class ConsultationService {
       endpoint: '${AppConfig.apiConsultations}/$consultationId/status',
       payload: {'status': status},
     );
+    _updateLocalCacheStatus(consultationId, status);
+  }
+  
+  static Future<void> _updateLocalCacheStatus(String id, String status) async {
+    try {
+      final cachedList = await LocalDatabase.instance.getAllCachedData('cached_consultations');
+      final target = cachedList.firstWhere((e) => e['id'] == id, orElse: () => <String, dynamic>{});
+      if (target.isNotEmpty) {
+        target['status'] = status;
+        await LocalDatabase.instance.cacheData('cached_consultations', id, target);
+      }
+    } catch (_) {}
   }
 }

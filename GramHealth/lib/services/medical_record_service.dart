@@ -9,7 +9,7 @@ import '../models/medical_record.dart';
 
 class MedicalRecordService {
   Future<List<MedicalRecord>> getMyRecords() async {
-    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_records');
       return cached.map((json) => MedicalRecord.fromJson(json)).toList();
     }
@@ -42,7 +42,7 @@ class MedicalRecordService {
   }
   
   Future<List<MedicalRecord>> getDoctorRecords(String patientId) async {
-    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_records');
       var models = cached.map((json) => MedicalRecord.fromJson(json)).toList();
       return models.where((r) => r.patientId == patientId).toList();
@@ -79,7 +79,7 @@ class MedicalRecordService {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('User not authenticated');
 
-    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
+    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
       final tempId = 'offline_temp_${DateTime.now().millisecondsSinceEpoch}';
       
       final recordData = {

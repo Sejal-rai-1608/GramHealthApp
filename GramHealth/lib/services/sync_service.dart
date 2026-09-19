@@ -45,7 +45,7 @@ class SyncService {
   }) async {
     final status = ConnectivityService.instance.currentStatus;
 
-    if (status == NetworkStatus.offline) {
+    if (status != NetworkStatus.online) {
       // Offline: Enqueue the mutation.
       final uuid = const Uuid().v4();
       await LocalDatabase.instance.enqueueSync(
@@ -95,6 +95,7 @@ class SyncService {
         if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) break;
 
         final id = task['id'] as String;
+        final entityType = task['entity_type'] as String;
         final operation = task['operation'] as String;
         final endpoint = task['endpoint'] as String;
         final payloadStr = task['payload'] as String;
@@ -110,6 +111,12 @@ class SyncService {
           print('SyncEngine: processing $operation for $id');
           if (operation == 'POST') {
             await ApiClient.post(endpoint, payload);
+            try {
+              // Delete the offline draft to prevent duplicates after successful POST
+              final table = 'cached_${entityType}s';
+              final db = await LocalDatabase.instance.database;
+              await db.delete(table, where: 'id = ?', whereArgs: [id]);
+            } catch (_) {}
           } else if (operation == 'PATCH') {
             await ApiClient.patch(endpoint, payload);
           } else if (operation == 'DELETE') {
