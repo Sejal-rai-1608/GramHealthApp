@@ -1,0 +1,455 @@
+[
+  {
+    "query": "According to the document, what temperature qualifies as fever in the Revised Jones criteria?",
+    "raw_chunks": [
+      {
+        "id": "89e14997-3c3b-4cc3-acc7-df22314acbd8",
+        "dist": 0.8393
+      },
+      {
+        "id": "1e55c2ba-50ce-468a-9810-cdc1e88be7b8",
+        "dist": 0.8393
+      },
+      {
+        "id": "705e4bff-b014-41c3-aa22-dbfefb32b97f",
+        "dist": 0.9488
+      },
+      {
+        "id": "58b7f004-b104-4d3d-a290-cc72be7761c1",
+        "dist": 0.9488
+      },
+      {
+        "id": "176fb6ba-6533-433c-8122-06461d2067b7",
+        "dist": 0.9587
+      },
+      {
+        "id": "a766765c-f9eb-4e4e-831c-10ef2e030099",
+        "dist": 0.9587
+      },
+      {
+        "id": "31023a91-bf91-4ba9-9040-c9e9e26cfa6f",
+        "dist": 0.9968
+      },
+      {
+        "id": "c7ed2c23-3443-4d46-9967-5faacc4555fd",
+        "dist": 0.9968
+      },
+      {
+        "id": "c9380f0a-f85b-4812-b5e5-38025a2973be",
+        "dist": 1.1077
+      },
+      {
+        "id": "cce790dd-7072-42ba-9b0b-03eca38de6c5",
+        "dist": 1.1077
+      },
+      {
+        "id": "5a46508d-c66f-4f70-a9b9-efd87a321e2a",
+        "dist": 1.1229
+      },
+      {
+        "id": "3f25303f-0386-4d98-8ffd-fe55a74b2dc5",
+        "dist": 1.1229
+      },
+      {
+        "id": "dd0dbd99-196e-41c1-ad90-985683930d73",
+        "dist": 1.1517
+      },
+      {
+        "id": "e5905d7b-beb2-44e0-ba65-00a31955f5c2",
+        "dist": 1.1517
+      },
+      {
+        "id": "c6139b8f-a5cd-4624-ac1e-738aec555d45",
+        "dist": 1.1602
+      },
+      {
+        "id": "90536c83-3510-47b3-9afa-33896c36f6fd",
+        "dist": 1.1602
+      },
+      {
+        "id": "326139ed-c0e3-419b-947a-c6385ea19688",
+        "dist": 1.1842
+      },
+      {
+        "id": "6e06930e-ecbf-4289-8d93-9a3033ce842b",
+        "dist": 1.1842
+      },
+      {
+        "id": "681bdcbc-3df2-41a5-a5ad-49d8ffc8f4e9",
+        "dist": 1.189
+      },
+      {
+        "id": "3a59ca82-932c-44bc-aefb-5408097eb51a",
+        "dist": 1.189
+      },
+      {
+        "id": "88b6d68d-97de-4504-be85-ec7f83c240be",
+        "dist": 1.21
+      },
+      {
+        "id": "01c695d2-570d-4dd2-8886-6161ca283f10",
+        "dist": 1.21
+      },
+      {
+        "id": "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+        "dist": 1.2154
+      },
+      {
+        "id": "1ed19772-29ab-4636-a928-35b2cbafcb50",
+        "dist": 1.2154
+      },
+      {
+        "id": "6bb00e8d-b313-4afe-a050-bf03bc7dd979",
+        "dist": 1.2335
+      },
+      {
+        "id": "445ed455-09d3-4aa3-a922-d8f8022dc889",
+        "dist": 1.2335
+      },
+      {
+        "id": "f55789d1-0ac8-4489-8bdd-3108545c81fe",
+        "dist": 1.264
+      },
+      {
+        "id": "fff48df7-b287-46b8-82d9-ee7220dda7f8",
+        "dist": 1.264
+      },
+      {
+        "id": "8f1d4a6f-d6ea-4299-b396-0bd80e0f3c2f",
+        "dist": 1.2658
+      },
+      {
+        "id": "f8d21a58-5ff6-4b5a-b8be-ceebb9f31790",
+        "dist": 1.2658
+      }
+    ],
+    "retained_chunks": [
+      "89e14997-3c3b-4cc3-acc7-df22314acbd8",
+      "1e55c2ba-50ce-468a-9810-cdc1e88be7b8",
+      "705e4bff-b014-41c3-aa22-dbfefb32b97f",
+      "58b7f004-b104-4d3d-a290-cc72be7761c1",
+      "176fb6ba-6533-433c-8122-06461d2067b7",
+      "a766765c-f9eb-4e4e-831c-10ef2e030099",
+      "31023a91-bf91-4ba9-9040-c9e9e26cfa6f",
+      "c7ed2c23-3443-4d46-9967-5faacc4555fd",
+      "c9380f0a-f85b-4812-b5e5-38025a2973be",
+      "cce790dd-7072-42ba-9b0b-03eca38de6c5",
+      "5a46508d-c66f-4f70-a9b9-efd87a321e2a",
+      "3f25303f-0386-4d98-8ffd-fe55a74b2dc5",
+      "dd0dbd99-196e-41c1-ad90-985683930d73",
+      "e5905d7b-beb2-44e0-ba65-00a31955f5c2",
+      "c6139b8f-a5cd-4624-ac1e-738aec555d45",
+      "90536c83-3510-47b3-9afa-33896c36f6fd",
+      "326139ed-c0e3-419b-947a-c6385ea19688",
+      "6e06930e-ecbf-4289-8d93-9a3033ce842b",
+      "681bdcbc-3df2-41a5-a5ad-49d8ffc8f4e9",
+      "3a59ca82-932c-44bc-aefb-5408097eb51a",
+      "88b6d68d-97de-4504-be85-ec7f83c240be",
+      "01c695d2-570d-4dd2-8886-6161ca283f10",
+      "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+      "1ed19772-29ab-4636-a928-35b2cbafcb50",
+      "6bb00e8d-b313-4afe-a050-bf03bc7dd979",
+      "445ed455-09d3-4aa3-a922-d8f8022dc889"
+    ],
+    "grounded": true,
+    "answer": "According to Table 1 of the Revised Jones criteria in the provided document, a temperature of \u226538.5 \u00b0C qualifies as fever as a minor criterion for both low-risk and moderate- to high-risk populations.",
+    "sources": [
+      "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+      "1ed19772-29ab-4636-a928-35b2cbafcb50",
+      "6bb00e8d-b313-4afe-a050-bf03bc7dd979",
+      "445ed455-09d3-4aa3-a922-d8f8022dc889"
+    ]
+  },
+  {
+    "query": "What does the document say about fever in the Revised Jones criteria?",
+    "raw_chunks": [
+      {
+        "id": "89e14997-3c3b-4cc3-acc7-df22314acbd8",
+        "dist": 0.7605
+      },
+      {
+        "id": "1e55c2ba-50ce-468a-9810-cdc1e88be7b8",
+        "dist": 0.7605
+      },
+      {
+        "id": "705e4bff-b014-41c3-aa22-dbfefb32b97f",
+        "dist": 0.8362
+      },
+      {
+        "id": "58b7f004-b104-4d3d-a290-cc72be7761c1",
+        "dist": 0.8362
+      },
+      {
+        "id": "176fb6ba-6533-433c-8122-06461d2067b7",
+        "dist": 0.8742
+      },
+      {
+        "id": "a766765c-f9eb-4e4e-831c-10ef2e030099",
+        "dist": 0.8742
+      },
+      {
+        "id": "31023a91-bf91-4ba9-9040-c9e9e26cfa6f",
+        "dist": 0.9084
+      },
+      {
+        "id": "c7ed2c23-3443-4d46-9967-5faacc4555fd",
+        "dist": 0.9084
+      },
+      {
+        "id": "c9380f0a-f85b-4812-b5e5-38025a2973be",
+        "dist": 0.9584
+      },
+      {
+        "id": "cce790dd-7072-42ba-9b0b-03eca38de6c5",
+        "dist": 0.9584
+      },
+      {
+        "id": "681bdcbc-3df2-41a5-a5ad-49d8ffc8f4e9",
+        "dist": 1.0178
+      },
+      {
+        "id": "3a59ca82-932c-44bc-aefb-5408097eb51a",
+        "dist": 1.0178
+      },
+      {
+        "id": "dd0dbd99-196e-41c1-ad90-985683930d73",
+        "dist": 1.0211
+      },
+      {
+        "id": "e5905d7b-beb2-44e0-ba65-00a31955f5c2",
+        "dist": 1.0211
+      },
+      {
+        "id": "5a46508d-c66f-4f70-a9b9-efd87a321e2a",
+        "dist": 1.0375
+      },
+      {
+        "id": "3f25303f-0386-4d98-8ffd-fe55a74b2dc5",
+        "dist": 1.0375
+      },
+      {
+        "id": "c6139b8f-a5cd-4624-ac1e-738aec555d45",
+        "dist": 1.0487
+      },
+      {
+        "id": "90536c83-3510-47b3-9afa-33896c36f6fd",
+        "dist": 1.0487
+      },
+      {
+        "id": "326139ed-c0e3-419b-947a-c6385ea19688",
+        "dist": 1.1115
+      },
+      {
+        "id": "6e06930e-ecbf-4289-8d93-9a3033ce842b",
+        "dist": 1.1115
+      },
+      {
+        "id": "ad00fe55-ffcf-4c96-8aee-71d4b86d4d3c",
+        "dist": 1.1151
+      },
+      {
+        "id": "395d7885-4155-4aad-8b46-86989a0b69a6",
+        "dist": 1.1151
+      },
+      {
+        "id": "88b6d68d-97de-4504-be85-ec7f83c240be",
+        "dist": 1.1164
+      },
+      {
+        "id": "01c695d2-570d-4dd2-8886-6161ca283f10",
+        "dist": 1.1164
+      },
+      {
+        "id": "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+        "dist": 1.1176
+      },
+      {
+        "id": "1ed19772-29ab-4636-a928-35b2cbafcb50",
+        "dist": 1.1176
+      },
+      {
+        "id": "b2e552e6-1672-4c93-a798-55faad00779f",
+        "dist": 1.1205
+      },
+      {
+        "id": "6fbc16de-f300-4b10-9c50-0d361274a42f",
+        "dist": 1.1205
+      },
+      {
+        "id": "f55789d1-0ac8-4489-8bdd-3108545c81fe",
+        "dist": 1.1483
+      },
+      {
+        "id": "fff48df7-b287-46b8-82d9-ee7220dda7f8",
+        "dist": 1.1483
+      }
+    ],
+    "retained_chunks": [
+      "89e14997-3c3b-4cc3-acc7-df22314acbd8",
+      "1e55c2ba-50ce-468a-9810-cdc1e88be7b8",
+      "705e4bff-b014-41c3-aa22-dbfefb32b97f",
+      "58b7f004-b104-4d3d-a290-cc72be7761c1",
+      "176fb6ba-6533-433c-8122-06461d2067b7",
+      "a766765c-f9eb-4e4e-831c-10ef2e030099",
+      "31023a91-bf91-4ba9-9040-c9e9e26cfa6f",
+      "c7ed2c23-3443-4d46-9967-5faacc4555fd",
+      "c9380f0a-f85b-4812-b5e5-38025a2973be",
+      "cce790dd-7072-42ba-9b0b-03eca38de6c5",
+      "681bdcbc-3df2-41a5-a5ad-49d8ffc8f4e9",
+      "3a59ca82-932c-44bc-aefb-5408097eb51a",
+      "dd0dbd99-196e-41c1-ad90-985683930d73",
+      "e5905d7b-beb2-44e0-ba65-00a31955f5c2",
+      "5a46508d-c66f-4f70-a9b9-efd87a321e2a",
+      "3f25303f-0386-4d98-8ffd-fe55a74b2dc5",
+      "c6139b8f-a5cd-4624-ac1e-738aec555d45",
+      "90536c83-3510-47b3-9afa-33896c36f6fd",
+      "326139ed-c0e3-419b-947a-c6385ea19688",
+      "6e06930e-ecbf-4289-8d93-9a3033ce842b",
+      "ad00fe55-ffcf-4c96-8aee-71d4b86d4d3c",
+      "395d7885-4155-4aad-8b46-86989a0b69a6",
+      "88b6d68d-97de-4504-be85-ec7f83c240be",
+      "01c695d2-570d-4dd2-8886-6161ca283f10",
+      "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+      "1ed19772-29ab-4636-a928-35b2cbafcb50",
+      "b2e552e6-1672-4c93-a798-55faad00779f",
+      "6fbc16de-f300-4b10-9c50-0d361274a42f",
+      "f55789d1-0ac8-4489-8bdd-3108545c81fe",
+      "fff48df7-b287-46b8-82d9-ee7220dda7f8"
+    ],
+    "grounded": true,
+    "answer": "In the Revised Jones criteria, fever is categorized as a minor criterion for diagnosing rheumatic fever. According to Table 1, fever defined as \u226538.5 \u00b0C is listed as a minor criterion for both low-risk populations and moderate- to high-risk populations. The text also notes that low-grade fever is considered a minor criterion in moderate- or high-risk populations.",
+    "sources": [
+      "88ce051a-c5f8-4af3-9ff1-0955aafc9894",
+      "705e4bff-b014-41c3-aa22-dbfefb32b97f"
+    ]
+  },
+  {
+    "query": "How do I repair a car engine?",
+    "raw_chunks": [
+      {
+        "id": "7095929e-0666-490c-b7bc-1062e0fbdfa4",
+        "dist": 1.6956
+      },
+      {
+        "id": "56a26fc9-4685-4190-aac6-0ea66b7bcd14",
+        "dist": 1.6956
+      },
+      {
+        "id": "9cb269fe-3fd4-4927-a32d-fba905d64648",
+        "dist": 1.7573
+      },
+      {
+        "id": "2d7012dc-3dfa-4157-ac71-a967ff4a063c",
+        "dist": 1.7573
+      },
+      {
+        "id": "5f22eac6-b31b-49c4-b553-20a738fc6dfb",
+        "dist": 1.7627
+      },
+      {
+        "id": "4861fa31-7ecd-432b-9bbc-13362b984ef8",
+        "dist": 1.7627
+      },
+      {
+        "id": "d6712529-334b-437e-b431-ad3faaf5e6d0",
+        "dist": 1.795
+      },
+      {
+        "id": "5186b069-cf29-4489-bd84-0f5e5bec5c4e",
+        "dist": 1.795
+      },
+      {
+        "id": "4f90e2be-fa11-438a-913e-aa05bfbabf80",
+        "dist": 1.815
+      },
+      {
+        "id": "1f57130c-19ec-4d3e-a58f-a70ec4839856",
+        "dist": 1.815
+      },
+      {
+        "id": "4f5de329-17ec-4ffb-8736-a9118142792a",
+        "dist": 1.8207
+      },
+      {
+        "id": "7ba869e0-ac9f-4bfc-aa64-1fc4eb079c84",
+        "dist": 1.8207
+      },
+      {
+        "id": "82026ee5-e74c-4347-bf53-e475bcc6cf1d",
+        "dist": 1.8608
+      },
+      {
+        "id": "f2d96ee2-55f9-4347-bff0-ccf72456c059",
+        "dist": 1.8608
+      },
+      {
+        "id": "7a511c3a-01b8-4bb8-98c7-9dd3ddde2d86",
+        "dist": 1.8757
+      },
+      {
+        "id": "15a305a2-a5eb-488f-afc8-aa17435f9459",
+        "dist": 1.8757
+      },
+      {
+        "id": "d36765f2-c172-4e3a-8ba0-93555d6d314b",
+        "dist": 1.8759
+      },
+      {
+        "id": "e632610d-317c-4651-abd3-6a0a11f53145",
+        "dist": 1.8759
+      },
+      {
+        "id": "49049dc1-b0ee-49db-88fe-4a704b155dd8",
+        "dist": 1.878
+      },
+      {
+        "id": "301e28e8-ec3c-4bf7-bd84-233cfab5a22c",
+        "dist": 1.878
+      },
+      {
+        "id": "50968bfd-cd07-43e8-bf5c-a47e19e97aa6",
+        "dist": 1.8805
+      },
+      {
+        "id": "32ae8902-8d35-4323-b755-3f040cbab79e",
+        "dist": 1.8805
+      },
+      {
+        "id": "f08c78fe-2157-498b-b227-c8618adc3e04",
+        "dist": 1.881
+      },
+      {
+        "id": "c38b7047-f0e9-45fb-a75f-1ea457baf445",
+        "dist": 1.881
+      },
+      {
+        "id": "955007e9-8d38-4b3e-bb27-f1239568e012",
+        "dist": 1.8816
+      },
+      {
+        "id": "653cdba2-18a6-4049-b7e4-8809f11a4119",
+        "dist": 1.8816
+      },
+      {
+        "id": "ed2d784a-d1ac-4cf1-9039-b9c74c16cb3e",
+        "dist": 1.8825
+      },
+      {
+        "id": "e9707456-02e0-4d1b-98dc-87140f2111f7",
+        "dist": 1.8825
+      },
+      {
+        "id": "82909f4d-2d58-411b-9451-7b37a266b509",
+        "dist": 1.887
+      },
+      {
+        "id": "a4c1ae49-0ac7-4ee0-ab59-21d08fc5a319",
+        "dist": 1.887
+      }
+    ],
+    "retained_chunks": [],
+    "grounded": false,
+    "answer": "I do not have sufficient evidence in the provided context to answer your query on repairing a car engine.",
+    "sources": []
+  }
+]
