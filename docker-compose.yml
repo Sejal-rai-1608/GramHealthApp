@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gramvilla_db
+    environment:
+      POSTGRES_USER: gram_user
+      POSTGRES_PASSWORD: gram_password
+      POSTGRES_DB: gramhealth
+    ports:
+      - "5492:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: gramvilla_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: shubhamsawant2205@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5080:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
