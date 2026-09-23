@@ -54,6 +54,9 @@ dependencies:
   image_picker: ^1.2.3
   record: ^6.2.1
   audioplayers: ^6.7.1
+  crypto: ^3.0.3
+  archive: ^3.6.0
+  convert: ^3.1.2
 
 dev_dependencies:
   flutter_test:
@@ -64,3 +67,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/offline_medical/manifest.json
+    - assets/offline_medical/metadata.json
+    - assets/offline_medical/shards/

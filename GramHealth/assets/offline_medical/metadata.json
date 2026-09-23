@@ -1,1 +1,42 @@
-{"version":"1.0.0","generatedAt":"2026-09-09T00:00:00Z","sources":["PROTOTYPE OFFLINE KNOWLEDGE DATA"]}
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-09-09",
+  "totalConditions": 19,
+  "totalShards": 12,
+  "shards": [
+    "a",
+    "c",
+    "d",
+    "f",
+    "h",
+    "j",
+    "m",
+    "o",
+    "p",
+    "s",
+    "t",
+    "u"
+  ],
+  "sources": [
+    "WHO - Diabetes Fact Sheet",
+    "WHO - Dengue and Severe Dengue Fact Sheet",
+    "WHO - Typhoid Fact Sheet",
+    "WHO - Tuberculosis Fact Sheet / India NTEP",
+    "WHO - Cholera Fact Sheet",
+    "WHO - Hypertension Fact Sheet",
+    "WHO - Diarrhoeal Disease Fact Sheet",
+    "WHO - Headache Disorders Fact Sheet",
+    "WHO - Pneumonia Fact Sheet",
+    "WHO - Snakebite Envenoming Fact Sheet",
+    "WHO / NHM India - Anaemia Mukt Bharat",
+    "NHS UK - Fever in Adults",
+    "CDC - Common Cold",
+    "NHS UK - Jaundice in Adults",
+    "WHO - Malaria Fact Sheet",
+    "WHO - Oral Rehydration Salts",
+    "CDC - Conjunctivitis (Pink Eye)",
+    "NHS UK - UTI Overview",
+    "NHS UK - Appendicitis Overview"
+  ],
+  "license": "Original structured data by GramHealth; underlying facts from WHO/CDC/NHS/NHM public health resources"
+}

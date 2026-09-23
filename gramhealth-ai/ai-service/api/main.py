@@ -1,11 +1,14 @@
+import os
+import logging
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-import logging
 
 from .routes import router as rag_router, sync_router
 from .agent_routes import router as agent_router
+from .patient_routes import router as patient_router
+from rag.config.settings import is_gemini_configured
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +18,10 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# Enable CORS for development
+# Enable CORS (allow all origins for flexibility with server-to-server and web clients)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:3000", "http://127.0.0.1", "http://127.0.0.1:3000", "http://localhost:8080"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,7 +54,30 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(rag_router)
 app.include_router(sync_router)
 app.include_router(agent_router)
+app.include_router(patient_router)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "gramhealth-ai"}
+    """Basic process health check. Does NOT require Gemini generation to report healthy."""
+    return {
+        "status": "healthy",
+        "service": "gramhealth-ai",
+        "gemini_configured": is_gemini_configured()
+    }
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe that confirms configuration status without exposing secrets."""
+    return {
+        "ready": True,
+        "service": "gramhealth-ai",
+        "gemini_configured": is_gemini_configured()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    # Render provides $PORT; defaults to 8001 for local development
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=False)
+
+# touch to reload 1790174109625

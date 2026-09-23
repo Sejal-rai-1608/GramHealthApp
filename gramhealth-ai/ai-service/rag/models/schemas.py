@@ -21,11 +21,7 @@ class RAGQueryRequest(BaseModel):
     filters: Optional[dict] = None
 
 class ChunkMetadata(BaseModel):
-<<<<<<< HEAD
-    document_id: str
-=======
     document_id: Optional[str] = None
->>>>>>> f9f5067 (Initial commit)
     chunk_id: str
     title: Optional[str] = None
     source: Optional[str] = None
@@ -34,14 +30,11 @@ class ChunkMetadata(BaseModel):
     publication_date: Optional[str] = None
     document_type: Optional[str] = None
     language: Optional[str] = None
-<<<<<<< HEAD
-=======
     patient_id: Optional[str] = None
     record_id: Optional[str] = None
     record_type: Optional[str] = None
     record_date: Optional[str] = None
     collection: Optional[str] = None
->>>>>>> f9f5067 (Initial commit)
 
 class RetrievalResult(BaseModel):
     chunk_id: str

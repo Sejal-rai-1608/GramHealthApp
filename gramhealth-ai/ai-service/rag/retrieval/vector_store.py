@@ -25,18 +25,9 @@ class ChromaVectorStore:
         self.vector_store.add_documents(documents=documents, ids=ids)
         return ids
 
-<<<<<<< HEAD
-    def search_similarity(self, query: str, top_k: int = 5) -> List[Tuple[Document, float]]:
-=======
     def search_similarity(self, query: str, top_k: int = 5, filters: dict = None) -> List[Tuple[Document, float]]:
->>>>>>> f9f5067 (Initial commit)
         """
         Retrieves relevant documents with their similarity scores.
         Note: lower score in Chroma usually means higher similarity (distance).
         """
-<<<<<<< HEAD
-        return self.vector_store.similarity_search_with_score(query, k=top_k)
-=======
         return self.vector_store.similarity_search_with_score(query, k=top_k, filter=filters)
-
->>>>>>> f9f5067 (Initial commit)

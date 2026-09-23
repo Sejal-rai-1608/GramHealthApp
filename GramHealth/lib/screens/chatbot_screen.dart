@@ -3,8 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/offline_status_indicator.dart';
+import '../services/connectivity_service.dart';
 import '../services/ai_service.dart';
-import '../models/ai_response.dart';
 
 class Message {
   final String id;
@@ -179,6 +180,10 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                         style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4CAF50)),
                       ),
                     ],
+                  ),
+                  const Spacer(),
+                  OfflineStatusIndicator(
+                    isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline,
                   ),
                 ],
               ),

@@ -15,11 +15,7 @@ def temp_chroma(local_provider):
     temp_dir = tempfile.mkdtemp()
     store = ChromaVectorStore(temp_dir, local_provider, collection_name="test_local_collection")
     yield store
-<<<<<<< HEAD
-    shutil.rmtree(temp_dir)
-=======
     shutil.rmtree(temp_dir, ignore_errors=True)
->>>>>>> f9f5067 (Initial commit)
 
 def test_local_embed_query(local_provider):
     query = "What are the symptoms of dengue?"

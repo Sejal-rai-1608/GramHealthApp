@@ -1,11 +1,4 @@
 import logging
-<<<<<<< HEAD
-from typing import Dict, Any
-
-from .state import AgentState
-from .router import IntentRouter
-from agents import ClinicalAgent, EmergencyAgent, RAGAgent
-=======
 from typing import Dict, Any, List
 
 from .state import AgentState
@@ -14,7 +7,6 @@ from agents import ClinicalAgent, EmergencyAgent
 from rag.pipeline import RAGPipeline
 from patient.rag import PatientRAGService
 from patient.models import PatientContext
->>>>>>> f9f5067 (Initial commit)
 
 logger = logging.getLogger(__name__)
 
@@ -22,29 +14,6 @@ logger = logging.getLogger(__name__)
 router = IntentRouter()
 clinical_agent = ClinicalAgent()
 emergency_agent = EmergencyAgent()
-<<<<<<< HEAD
-rag_agent = RAGAgent()
-
-def classify_request(state: AgentState) -> AgentState:
-    logger.info(f"Classifying request: {state['user_query']}")
-    classification = router.classify(state["user_query"])
-    
-    # Emergency priority override:
-    urgency = classification.urgency
-    selected_agent = classification.selected_agent
-    intent = classification.intent
-    
-    if urgency == "emergency":
-        selected_agent = "emergency_agent"
-        intent = "emergency"
-        
-    return {
-        **state,
-        "intent": intent,
-        "urgency": urgency,
-        "symptoms": classification.symptoms,
-        "selected_agent": selected_agent,
-=======
 medical_rag = RAGPipeline()
 patient_rag = PatientRAGService()
 
@@ -64,23 +33,10 @@ def classify_request(state: AgentState) -> AgentState:
         "requires_medical_knowledge": classification.requires_medical_knowledge,
         "requires_structured_patient_lookup": classification.requires_structured_patient_lookup,
         "selected_agent": classification.selected_agent,
->>>>>>> f9f5067 (Initial commit)
         "routing_method": classification.routing_method,
         "graph_path": state.get("graph_path", []) + ["classify_request"]
     }
 
-<<<<<<< HEAD
-def execute_clinical_agent(state: AgentState) -> AgentState:
-    logger.info("Routing to Clinical Agent")
-    response = clinical_agent.execute(state["user_query"])
-    return {
-        **state,
-        "agent_response": response.response,
-        "confidence": response.confidence,
-        "requires_professional_review": response.requires_professional_review,
-        "grounded": False, # Clinical agent is general knowledge
-        "sources": [],
-=======
 def execute_patient_rag(state: AgentState) -> AgentState:
     logger.info("NODE START: execute_patient_rag")
     logger.info("Routing to Patient RAG")
@@ -180,22 +136,20 @@ def execute_clinical_agent(state: AgentState) -> AgentState:
         medical_evidence=state.get("medical_evidence", [])
     )
     logger.info("NODE END: execute_clinical_agent")
-    return {
+    result_state = {
         **state,
         "agent_response": response.get("answer"),
         "confidence": response.get("confidence", "high"),
         "requires_professional_review": response.get("requires_professional_review", True),
         "grounded": response.get("grounded", False),
         "sources": response.get("sources", []),
->>>>>>> f9f5067 (Initial commit)
         "graph_path": state.get("graph_path", []) + ["clinical_agent"]
     }
+    if response.get("error"):
+        result_state["error"] = response["error"]
+    return result_state
 
 def execute_emergency_agent(state: AgentState) -> AgentState:
-<<<<<<< HEAD
-    logger.info("Routing to Emergency Agent")
-    response = emergency_agent.execute(state["user_query"])
-=======
     logger.info("NODE START: execute_emergency_agent")
     logger.info("Routing to Emergency Agent")
     logger.info("Emergency detection result: True")
@@ -203,7 +157,6 @@ def execute_emergency_agent(state: AgentState) -> AgentState:
     response = emergency_agent.execute(state["user_query"])
     logger.info("Emergency agent completion")
     logger.info("NODE END: execute_emergency_agent")
->>>>>>> f9f5067 (Initial commit)
     return {
         **state,
         "agent_response": f"{response.response}\n\nRECOMMENDED ACTION: {response.recommended_action}",
@@ -214,28 +167,10 @@ def execute_emergency_agent(state: AgentState) -> AgentState:
         "graph_path": state.get("graph_path", []) + ["emergency_agent"]
     }
 
-<<<<<<< HEAD
-def execute_rag_agent(state: AgentState) -> AgentState:
-    logger.info("Routing to RAG Agent")
-    response = rag_agent.execute(state["user_query"])
-    return {
-        **state,
-        "agent_response": response.response,
-        "confidence": response.confidence,
-        "requires_professional_review": response.requires_professional_review,
-        "grounded": response.grounded,
-        "sources": response.sources,
-        "graph_path": state.get("graph_path", []) + ["rag_agent"]
-    }
-
-def execute_unsupported(state: AgentState) -> AgentState:
-    logger.info("Routing to Unsupported")
-=======
 def execute_unsupported(state: AgentState) -> AgentState:
     logger.info("NODE START: execute_unsupported")
     logger.info("Routing to Unsupported")
     logger.info("NODE END: execute_unsupported")
->>>>>>> f9f5067 (Initial commit)
     return {
         **state,
         "agent_response": "I cannot help with this request as it is outside my supported medical scope.",
@@ -247,14 +182,6 @@ def execute_unsupported(state: AgentState) -> AgentState:
     }
 
 def finalize_response(state: AgentState) -> AgentState:
-<<<<<<< HEAD
-    # Format the final response and add observability logs
-    logger.info(f"REQUEST intent={state.get('intent')} urgency={state.get('urgency')} agent={state.get('selected_agent')} routing_method={state.get('routing_method')}")
-    
-    return {
-        **state,
-        "final_response": state["agent_response"],
-=======
     logger.info("NODE START: finalize_response")
     logger.info(f"REQUEST intent={state.get('intent')} agent={state.get('selected_agent')}")
     
@@ -262,6 +189,5 @@ def finalize_response(state: AgentState) -> AgentState:
     return {
         **state,
         "final_response": state.get("agent_response", "Error processing request."),
->>>>>>> f9f5067 (Initial commit)
         "graph_path": state.get("graph_path", []) + ["finalize_response"]
     }

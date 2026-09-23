@@ -2,8 +2,8 @@ import logging
 from typing import List, Optional
 from langchain_core.documents import Document
 
-from .config.settings import settings
-from .models.schemas import RAGResponse, Citation
+from .config.settings import settings, is_gemini_configured
+from .models.schemas import RAGResponse, Citation, RetrievalResult
 from .ingestion.loader import ingest_pdf
 from .chunking.splitter import chunk_documents
 from .embeddings.provider import get_embedding_provider
@@ -63,14 +63,20 @@ class RAGPipeline:
         # 3. Store
         return self.vector_store.insert_documents(chunks)
 
+    def retrieve(self, query_text: str, top_k: int = None) -> List[RetrievalResult]:
+        """
+        Independently testable retrieval method that queries the vector store
+        and filters for relevance without triggering Gemini generation.
+        """
+        k = top_k or settings.top_k
+        raw_results = self.vector_store.search_similarity(query_text, top_k=k)
+        return self.relevance_filter.filter_and_format(raw_results)
+
     def query(self, query_text: str, top_k: int = None) -> RAGResponse:
         k = top_k or settings.top_k
         
         # 1. Retrieve
-        raw_results = self.vector_store.search_similarity(query_text, top_k=k)
-        
-        # 2. Filter relevance
-        filtered_results = self.relevance_filter.filter_and_format(raw_results)
+        filtered_results = self.retrieve(query_text, top_k=k)
         
         if not filtered_results:
             return RAGResponse(
@@ -82,14 +88,27 @@ class RAGPipeline:
                 sources=[]
             )
             
-        # 3. Build context
+        # 2. Build context
         context = ContextBuilder.build_context(filtered_results)
         
-        # 4. Generate Answer
+        # 3. Generate Answer
         raw_response = self.generator.generate(query_text, context)
         
-        # 5. Validate citations
-        citations = CitationValidator.validate_and_build(raw_response.referenced_chunk_ids, filtered_results)
+        # 4. Validate citations
+        if raw_response.referenced_chunk_ids:
+            citations = CitationValidator.validate_and_build(raw_response.referenced_chunk_ids, filtered_results)
+        elif not is_gemini_configured():
+            citations = [
+                Citation(
+                    title=res.metadata.title,
+                    publisher=res.metadata.publisher,
+                    url=res.metadata.source_url,
+                    chunk_id=res.metadata.chunk_id
+                )
+                for res in filtered_results
+            ]
+        else:
+            citations = []
         
         return RAGResponse(
             query=query_text,

@@ -4,17 +4,20 @@ import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
 import '../services/ai_service.dart';
-import '../models/ai_response.dart';
+import '../services/offline_ai_service.dart';
+import '../repositories/offline_medical_repository.dart';
 
 class SymptomResult {
   final String condition;
   final String advice;
   final String action;
+  final String source;
 
   SymptomResult({
     required this.condition,
     required this.advice,
     required this.action,
+    this.source = 'Online AI',
   });
 }
 
@@ -46,32 +49,77 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
     }
     if (symptomsToAnalyze.isEmpty) return;
 
+    final combinedQuery = symptomsToAnalyze.join(', ');
+
+    if (OfflineAiService.instance.isEmergency(combinedQuery)) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _result = SymptomResult(
+            condition: 'Emergency Indicator Detected',
+            advice: OfflineAiService.instance.buildEmergencyResponse(combinedQuery).text,
+            action: 'Please contact local emergency services (108) or go to the nearest emergency department immediately.',
+            source: 'Emergency Triage',
+          );
+        });
+      }
+      return;
+    }
+
     setState(() { _isAnalyzing = true; _result = null; });
     
     try {
-      final queryText = "I have the following symptoms: ${symptomsToAnalyze.join(', ')}. What could this mean?";
-      final aiResponse = await AiService.query(queryText);
+      final queryText = "I have the following symptoms: $combinedQuery. What could this mean?";
+      final aiResponse = await AiService.query(queryText)
+          .timeout(const Duration(seconds: 45));
+      
+      if (mounted) {
+        final conditionText = (aiResponse.intent != null && aiResponse.intent!.isNotEmpty && aiResponse.intent != 'offline_medical')
+            ? 'Clinical Assessment (${aiResponse.intent})'
+            : 'Clinical Assessment';
+
+        setState(() {
+          _isAnalyzing = false;
+          _result = SymptomResult(
+            condition: conditionText,
+            advice: aiResponse.answer ?? 'No detailed advice available.',
+            action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
+                ? 'Please consult a professional immediately.' 
+                : 'Monitor your symptoms.',
+            source: 'Online AI',
+          );
+        });
+      }
+    } catch (e) {
+      if (AiService.debugForceOnlineAi) {
+        // When debugForceOnlineAi is true, surface the real online error without silent offline fallback
+        if (mounted) {
+          setState(() {
+            _isAnalyzing = false;
+            _result = SymptomResult(
+              condition: 'Online AI Request Error',
+              advice: e.toString(),
+              action: 'Please check backend connectivity or try again.',
+              source: 'Online AI (Error)',
+            );
+          });
+        }
+        return;
+      }
+
+      // Offline fallback
+      final repo = OfflineMedicalRepository();
+      await repo.initialise();
+      final contextText = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
       
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
           _result = SymptomResult(
-            condition: aiResponse.intent ?? 'Analysis Complete',
-            advice: aiResponse.answer ?? 'No detailed advice available.',
-            action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
-                ? 'Please consult a professional immediately.' 
-                : 'Monitor your symptoms.',
-          );
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isAnalyzing = false;
-          _result = SymptomResult(
-            condition: 'Error',
-            advice: 'Could not analyze symptoms: ${e.toString()}',
-            action: 'Please try again later.',
+            condition: 'Offline Analysis',
+            advice: contextText,
+            action: 'Please consult a healthcare professional for accurate diagnosis.',
+            source: 'Offline AI',
           );
         });
       }
@@ -243,6 +291,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      _resultRow('Result Source', _result!.source),
+                      const SizedBox(height: 12),
                       _resultRow(context.tr('possible_condition'), _result!.condition, large: true),
                       const SizedBox(height: 12),
                       _resultRow(context.tr('advice'), _result!.advice),

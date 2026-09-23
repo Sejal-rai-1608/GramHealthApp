@@ -42,7 +42,14 @@ const authenticate = async (req, res, next) => {
 
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, name: true, phone: true, email: true, role: true }
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                email: true,
+                role: true,
+                patient: { select: { id: true } }
+            }
         });
 
         if (!user) {
@@ -54,11 +61,13 @@ const authenticate = async (req, res, next) => {
         }
 
         req.user = {
+            id: user.id,
             userId: user.id,
             role: user.role,
             name: user.name,
             phone: user.phone,
-            email: user.email
+            email: user.email,
+            patient: user.patient
         };
 
         next();

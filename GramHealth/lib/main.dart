@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
+
+import 'services/offline_ai_service.dart';
 
 import 'l10n/app_language.dart';
 import 'theme/app_theme.dart';
@@ -49,6 +52,13 @@ import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialise offline AI (non-blocking)
+  await OfflineAiService.instance.initialise();
+
+  // Non-blocking model presence check (no download triggered)
+  unawaited(OfflineAiService.instance.checkModelOnStartup());
+
   await AuthGuard.init(); // Restore session from secure storage
   ConnectivityService.instance.initialize();
   SyncService.instance.initialize();
