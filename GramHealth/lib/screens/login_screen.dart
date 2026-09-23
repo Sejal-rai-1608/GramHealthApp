@@ -85,9 +85,24 @@ class _LoginScreenState extends State<LoginScreen> {
       final role = (user['role'] as String? ?? 'PATIENT').toLowerCase();
       _navigateByRole(role);
     } on ApiException catch (e) {
-      _showError(e.message);
+      if (e.statusCode == 401 || (e.statusCode == 400 && e.message.toLowerCase().contains('invalid'))) {
+        _showError('Invalid email or password.');
+      } else if (e.statusCode == 503) {
+        _showError('Backend unreachable. Please verify network connection or ADB reverse.');
+      } else if (e.statusCode == 504) {
+        _showError('Connection timed out. Backend is not responding.');
+      } else {
+        _showError(e.message);
+      }
     } catch (e) {
-      _showError('Network error or invalid offline credentials.');
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('socketexception') ||
+          errStr.contains('connection refused') ||
+          errStr.contains('failed to fetch')) {
+        _showError('Backend unreachable. Please verify network connection or ADB reverse.');
+      } else {
+        _showError('Login failed: ${e.toString().replaceAll("Exception: ", "")}');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

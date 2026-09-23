@@ -19,26 +19,20 @@ class OfflineAiConfig {
   static const String modelRepoId = 'litert-community/Qwen2.5-0.5B-Instruct';
 
   /// Filename as it appears in the repository.
-  /// MUST be confirmed from the model card before shipping.
   static const String modelFilename =
-      'Qwen2.5-0.5B-Instruct_q8_0.task';
+      'Qwen2.5-0.5B-Instruct_seq128_q8_ekv1280.tflite';
 
   /// Canonical download URL (HTTPS only, no redirects).
   static const String modelDownloadUrl =
       'https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct'
-      '/resolve/main/Qwen2.5-0.5B-Instruct_q8_0.task';
+      '/resolve/main/Qwen2.5-0.5B-Instruct_seq128_q8_ekv1280.tflite';
 
-  /// Expected file size in bytes.
-  /// MUST be confirmed from the model card / curl -I before shipping.
-  /// Known q8_0 builds of 0.5B models are roughly 530–560 MB.
-  static const int modelExpectedSizeBytes = 548000000; // ~523 MB placeholder
+  /// Expected file size in bytes (513,219,800 bytes).
+  static const int modelExpectedSizeBytes = 513219800;
 
-  /// SHA-256 checksum.
-  /// MUST be obtained from the model card or computed locally:
-  ///   sha256sum Qwen2.5-0.5B-Instruct_q8_0.task
-  /// Set to empty string to skip checksum verification (NOT recommended
-  /// for production).
-  static const String modelSha256 = ''; // TODO: fill before release
+  /// Verified SHA-256 checksum from HuggingFace LFS metadata.
+  static const String modelSha256 =
+      '49b3b9ca95c46b185995edeb7314dec06c23f65d7a8c7b24ee97d5313e6032ac';
 
   /// Semantic version of this model registration entry.
   static const String modelVersion = '1.0.0';

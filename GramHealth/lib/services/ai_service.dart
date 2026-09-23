@@ -8,9 +8,8 @@ import 'auth_service.dart';
 import 'offline_ai_service.dart';
 
 class AiService {
-  /// Development flag to prevent offline fallback from concealing online failures.
-  /// When true, OfflineAiService will NOT be called on failure, letting the real error surface.
-  static const bool debugForceOnlineAi = true;
+  /// When false, offline fallback activates if online requests fail due to network/backend issues.
+  static const bool debugForceOnlineAi = false;
 
   static Future<AiResponse> query(String queryText, {String? patientId}) async {
     final token = await AuthService.getToken();

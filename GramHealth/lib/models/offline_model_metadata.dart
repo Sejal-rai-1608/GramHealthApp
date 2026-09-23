@@ -100,19 +100,31 @@ class LocalModelCompatibility {
   final bool supported;
   final bool enoughStorage;
   final bool enoughMemory;
+  final bool supportedAbi;
   final String? reason;
 
   const LocalModelCompatibility({
     required this.supported,
     required this.enoughStorage,
     required this.enoughMemory,
+    this.supportedAbi = true,
     this.reason,
   });
 
-  bool get canProceed => supported && enoughStorage && enoughMemory;
+  bool get canProceed => supported && enoughStorage && enoughMemory && supportedAbi;
+
+  factory LocalModelCompatibility.fromMap(Map<dynamic, dynamic> map) {
+    return LocalModelCompatibility(
+      supported: map['supported'] as bool? ?? false,
+      enoughStorage: map['enoughStorage'] as bool? ?? false,
+      enoughMemory: map['enoughMemory'] as bool? ?? false,
+      supportedAbi: map['supportedAbi'] as bool? ?? true,
+      reason: map['reason'] as String?,
+    );
+  }
 
   @override
   String toString() =>
       'LocalModelCompatibility(supported=$supported, '
-      'storage=$enoughStorage, memory=$enoughMemory, reason=$reason)';
+      'storage=$enoughStorage, memory=$enoughMemory, abi=$supportedAbi, reason=$reason)';
 }

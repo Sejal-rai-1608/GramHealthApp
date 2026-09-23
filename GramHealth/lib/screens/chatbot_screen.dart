@@ -1,23 +1,29 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/offline_status_indicator.dart';
+import '../widgets/offline_setup_card.dart';
+import '../models/local_model_status.dart';
 import '../services/connectivity_service.dart';
 import '../services/ai_service.dart';
+import '../services/offline_ai_service.dart';
 
 class Message {
   final String id;
   final String text;
   final String sender; // 'user' or 'ai'
   final DateTime timestamp;
+  final bool isOffline;
 
   Message({
     required this.id,
     required this.text,
     required this.sender,
     required this.timestamp,
+    this.isOffline = false,
   });
 }
 
@@ -32,6 +38,22 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   final List<Message> _messages = [];
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  StreamSubscription<LocalModelStatus>? _modelSub;
+  StreamSubscription<NetworkStatus>? _connSub;
+  bool _showSetupCard = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(OfflineAiService.instance.ensureModelLoaded());
+
+    _modelSub = OfflineAiService.instance.statusStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+    _connSub = ConnectivityService.instance.statusStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -50,9 +72,32 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
 
   @override
   void dispose() {
+    _modelSub?.cancel();
+    _connSub?.cancel();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  String get _statusSubtitle {
+    final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
+    if (isOnline) return 'AI • Online';
+    
+    final offlineService = OfflineAiService.instance;
+    final status = offlineService.modelStatus;
+    if (status == LocalModelStatus.downloading) {
+      return 'Offline AI • Downloading ${(offlineService.downloadProgress * 100).toInt()}%';
+    } else if (status == LocalModelStatus.loading) {
+      return 'Offline AI • Starting';
+    } else if (status == LocalModelStatus.generating) {
+      return 'Offline AI • Thinking';
+    }
+    return 'AI • Offline';
+  }
+
+  Color get _statusColor {
+    final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
+    return isOnline ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
   }
 
   Future<void> _handleSend() async {
@@ -85,11 +130,15 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
         responseText = "⚠️ Please consult a professional.\n$responseText";
       }
 
+      final bool isOffline = (aiResponse.agent == 'offline_ai_router') ||
+          (aiResponse.routingMethod?.contains('offline') ?? false);
+
       final aiMsg = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: responseText,
         sender: 'ai',
         timestamp: DateTime.now(),
+        isOffline: isOffline,
       );
       
       setState(() {
@@ -176,8 +225,8 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
                       Text(
-                        context.tr('online_assistant'),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4CAF50)),
+                        _statusSubtitle,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor),
                       ),
                     ],
                   ),
@@ -188,6 +237,15 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                 ],
               ),
             ),
+
+            // Optional Offline Setup Banner
+            if (_showSetupCard &&
+                ConnectivityService.instance.currentStatus == NetworkStatus.offline &&
+                OfflineAiService.instance.modelStatus == LocalModelStatus.unavailable) ...[
+              OfflineSetupCard(
+                onDismiss: () => setState(() => _showSetupCard = false),
+              ),
+            ],
 
             // Messages
             Expanded(
@@ -235,6 +293,26 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                             child: Column(
                               crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                               children: [
+                                if (!isUser) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: msg.isOffline
+                                          ? const Color(0xFFFF9800).withValues(alpha: 0.15)
+                                          : const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      msg.isOffline ? 'AI • Offline' : 'AI • Online',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: msg.isOffline ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 Text(
                                   msg.text,
                                   style: TextStyle(

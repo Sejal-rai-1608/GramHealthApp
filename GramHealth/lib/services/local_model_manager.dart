@@ -152,6 +152,12 @@ class LocalModelManager {
 
   /// Load the model into the LiteRT-LM runtime.
   Future<void> loadModel() async {
+    if (!(_compatibility?.canProceed ?? false)) {
+      _setStatus(LocalModelStatus.unavailable);
+      _setError(_compatibility?.reason ?? 'Offline AI is unavailable on this device.');
+      _log('Device incompatible for model load: ${_compatibility?.reason}');
+      return;
+    }
     if (_status != LocalModelStatus.ready) {
       _log('Cannot load: status is $_status');
       return;
@@ -188,25 +194,15 @@ class LocalModelManager {
   // ---------------------------------------------------------------------------
 
   Future<LocalModelCompatibility> _checkCompatibility() async {
-    // Android version check via platform channel is in native code.
-    // Here we check storage.
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final stat = await FileStat.stat(dir.path);
-      // Free space is not directly available in Dart; use a heuristic:
-      // if model file doesn't exist yet and we can proceed, assume OK
-      // unless we have a MemoryInfo from native.
-      // Native side (GramhealthLlmPlugin.kt) fills in memory/api checks.
-      return const LocalModelCompatibility(
-        supported: true,
-        enoughStorage: true, // refined by native check before download
-        enoughMemory: true,  // refined by native check before load
-      );
+      final compat = await llmService.checkCompatibility();
+      return compat;
     } catch (e) {
       return LocalModelCompatibility(
         supported: false,
         enoughStorage: false,
         enoughMemory: false,
+        supportedAbi: false,
         reason: 'Could not check device capabilities: $e',
       );
     }

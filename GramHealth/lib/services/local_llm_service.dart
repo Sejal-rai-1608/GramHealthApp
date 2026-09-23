@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../config/offline_ai_config.dart';
+import '../models/offline_model_metadata.dart';
 
 /// Abstract wrapper around the LiteRT-LM runtime.
 ///
@@ -16,6 +17,7 @@ abstract class LocalLlmService {
   Future<void> initialize({required String modelPath});
   Future<void> dispose();
   Future<bool> isReady();
+  Future<LocalModelCompatibility> checkCompatibility();
 
   /// Stream generated tokens progressively.
   ///
@@ -80,6 +82,47 @@ class LiteRtLmService implements LocalLlmService {
 
   @override
   Future<bool> isReady() async => _ready;
+
+  @override
+  Future<LocalModelCompatibility> checkCompatibility() async {
+    if (!Platform.isAndroid) {
+      return const LocalModelCompatibility(
+        supported: false,
+        enoughStorage: false,
+        enoughMemory: false,
+        supportedAbi: false,
+        reason: 'LiteRT-LM is only supported on Android.',
+      );
+    }
+    try {
+      final res = await _channel.invokeMethod<Map<dynamic, dynamic>>('checkCompatibility');
+      if (res != null) {
+        return LocalModelCompatibility.fromMap(res);
+      }
+      return const LocalModelCompatibility(
+        supported: true,
+        enoughStorage: true,
+        enoughMemory: true,
+        supportedAbi: true,
+      );
+    } on PlatformException catch (e) {
+      return LocalModelCompatibility(
+        supported: false,
+        enoughStorage: false,
+        enoughMemory: false,
+        supportedAbi: false,
+        reason: 'Compatibility check failed: ${e.message}',
+      );
+    } catch (e) {
+      return LocalModelCompatibility(
+        supported: false,
+        enoughStorage: false,
+        enoughMemory: false,
+        supportedAbi: false,
+        reason: 'Error checking compatibility: $e',
+      );
+    }
+  }
 
   @override
   Stream<String> generate({

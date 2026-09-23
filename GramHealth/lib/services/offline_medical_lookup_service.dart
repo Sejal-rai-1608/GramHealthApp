@@ -122,38 +122,67 @@ class OfflineMedicalLookupService {
   // ---------------------------------------------------------------------------
 
   static const Map<String, String> _hindiSymptomMap = {
-    'bukhar': 'fever',
+    // Multi-word Hindi & Marathi phrases first (to avoid partial word matching)
     'tez bukhar': 'high fever',
+    'bahut tez bukhar': 'high fever',
     'sir dard': 'headache',
     'sar dard': 'headache',
     'sirdard': 'headache',
-    'khasi': 'cough',
-    'khansi': 'cough',
+    'sardard': 'headache',
+    'pet dard': 'abdominal pain',
+    'seena dard': 'chest pain',
+    'badan dard': 'body pain',
+    'jod dard': 'joint pain',
     'nakam bahna': 'runny nose',
     'naak bahna': 'runny nose',
+    'peshab mein jalan': 'burning urination',
+    'laal aankh': 'red eye',
+    'aankhon mein dard': 'eye pain',
+    // Marathi specific phrases
+    'pot khupp dukht': 'abdominal pain',
+    'pot khup dukht': 'abdominal pain',
+    'pot dukht': 'abdominal pain',
+    'potat dukhne': 'abdominal pain',
+    'potat dukhat': 'abdominal pain',
+    'majha pot': 'abdomen',
+    'majhe pot': 'abdomen',
+    'doke dukht': 'headache',
+    'doke dukhne': 'headache',
+    'dokyadukhi': 'headache',
+    'chakkar yene': 'dizziness',
+    'shwas lagto': 'difficulty breathing',
+    'shwas yet nahi': 'difficulty breathing',
+    // Single words / Symptoms
+    'bukhar': 'fever',
+    'taap': 'fever',
+    'khasi': 'cough',
+    'khansi': 'cough',
+    'khokla': 'cough',
+    'sardi': 'cold',
+    'jukam': 'cold',
+    'zukam': 'cold',
     'ulti': 'vomiting',
     'vomiting': 'vomiting',
     'dast': 'diarrhea',
-    'pet dard': 'abdominal pain',
-    'seena dard': 'chest pain',
+    'hagan': 'diarrhea',
+    'jhada': 'diarrhea',
     'saans': 'breathing',
     'thakan': 'fatigue',
     'kamzori': 'weakness',
     'chakkhar': 'dizziness',
     'chakkar': 'dizziness',
-    'jukam': 'cold',
-    'sardard': 'headache',
     'sar': 'head',
-    'badan dard': 'body pain',
-    'jod dard': 'joint pain',
+    'doke': 'head',
     'peeda': 'pain',
     'dard': 'pain',
+    'dukht': 'pain',
+    'dukhne': 'pain',
+    'dukhat': 'pain',
     'sujan': 'swelling',
-    'laal aankh': 'red eye',
-    'aankhon mein dard': 'eye pain',
-    'peshab mein jalan': 'burning urination',
     'khaaj': 'itching',
     'daane': 'rash',
+    'appendix': 'appendicitis',
+    'mushroom': 'gastroenteritis abdominal',
   };
 
   static const Map<String, String> _spellingVariants = {
@@ -180,7 +209,7 @@ class OfflineMedicalLookupService {
   List<String> _extractMedicalTerms(String query) {
     var text = _normalise(query);
 
-    // Apply Hindi transliteration map
+    // Apply Hindi/Marathi transliteration map
     for (final entry in _hindiSymptomMap.entries) {
       text = text.replaceAll(entry.key, entry.value);
     }
@@ -196,7 +225,12 @@ class OfflineMedicalLookupService {
       'the', 'and', 'for', 'with', 'from', 'have', 'has',
       'what', 'when', 'where', 'how', 'why', 'who', 'are',
       'can', 'get', 'meri', 'mera', 'mujhe', 'kya', 'hai',
-      'kar', 'raha', 'rahi', 'bahut', 'zyada',
+      'kar', 'raha', 'rahi', 'rahe', 'bahut', 'zyada',
+      // Marathi stop words
+      'me', 'aaj', 'teva', 'pasun', 'majha', 'majhe', 'khupp', 'khup',
+      'aahe', 'mala', 'cha', 'chi', 'che', 'tar', 'nahi', 'na',
+      'khaalela', 'khalya', 'zalay', 'jhala', 'ahes', 'hota', 'hoti',
+      'tras', 'kay',
     };
     return words.where((w) => !stopWords.contains(w)).toList();
   }

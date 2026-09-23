@@ -237,19 +237,24 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
 
     private fun handleCompatibility(result: Result) {
         val apiLevel   = Build.VERSION.SDK_INT
-        val supported  = apiLevel >= 26
+        val apiSupported = apiLevel >= 26
         val enoughStorage = checkFreeStorage(700_000_000L)
         val enoughMemory  = checkAvailableRam(1_500_000_000L)
-        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"
+        val abis = Build.SUPPORTED_ABIS ?: emptyArray()
+        val supportedAbi = abis.contains("arm64-v8a")
+        val abi = abis.firstOrNull() ?: "unknown"
+        val supported = apiSupported && supportedAbi
 
         result.success(mapOf(
             "supported"     to supported,
             "enoughStorage" to enoughStorage,
             "enoughMemory"  to enoughMemory,
+            "supportedAbi"  to supportedAbi,
             "apiLevel"      to apiLevel,
             "abi"           to abi,
             "reason"        to when {
-                !supported     -> "Android API $apiLevel < 26 (Android 8.0)"
+                !apiSupported  -> "Android API $apiLevel < 26 (Android 8.0)"
+                !supportedAbi  -> "Device ABI '$abi' does not support arm64-v8a"
                 !enoughStorage -> "Insufficient free storage (need ≥700 MB)"
                 !enoughMemory  -> "Insufficient RAM (need ≥1.5 GB available)"
                 else           -> null

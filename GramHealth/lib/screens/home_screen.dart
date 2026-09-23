@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../services/call_service.dart';
 import '../widgets/connectivity_badge.dart';
 import '../widgets/voice_note_dialog.dart';
 import '../services/connectivity_service.dart';
+import '../services/offline_ai_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUser();
     _loadDoctors();
     _loadConsultations();
+
+    // Asynchronously initialise Offline AI in the background only after user is authenticated on Home Screen
+    unawaited(OfflineAiService.instance.initialise().then((_) {
+      return OfflineAiService.instance.checkModelOnStartup();
+    }).catchError((_) {}));
   }
 
   Future<void> _loadConsultations() async {

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import 'api_client.dart';
@@ -6,12 +8,11 @@ import 'api_client.dart';
 /// Real authentication service that talks to the GramHealth backend.
 ///
 /// Stores the JWT token in [SharedPreferences] and cached user data
-/// (role, name, id) in the same store so they survive app restarts 
-/// (and aggressive Jitsi foreground OS-halts).
+/// (role, name, id) in the same store so they survive app restarts.
 class AuthService {
   AuthService._();
 
-  // ── Token & Offline Credential helpers ────────────────────────────────────
+  // ── Token & User Helpers ──────────────────────────────────────────────────
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -26,18 +27,6 @@ class AuthService {
   static Future<void> _saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConfig.userKey, jsonEncode(user));
-  }
-  
-  static Future<void> _saveOfflineCredentials(String email, String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('${AppConfig.userKey}_email', email);
-    await prefs.setString('${AppConfig.userKey}_password', password);
-  }
-  
-  static Future<void> _clearOfflineCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('${AppConfig.userKey}_email');
-    await prefs.remove('${AppConfig.userKey}_password');
   }
 
   static Future<Map<String, dynamic>?> getUser() async {
@@ -68,11 +57,15 @@ class AuthService {
 
   // ── Login ─────────────────────────────────────────────────────────────────
 
-  /// Authenticates with the backend.
+  /// Authenticates with the backend via POST /api/auth/login.
   /// Returns the user map on success.
   /// Throws [ApiException] on failure.
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
+    print('[AUTH]');
+    print('POST ${AppConfig.apiAuth}/login');
+    print('Base URL: ${AppConfig.baseUrl}');
+
     try {
       final response = await ApiClient.post(
         '${AppConfig.apiAuth}/login',
@@ -86,26 +79,50 @@ class AuthService {
 
       await _saveToken(token);
       await _saveUser(user);
-      await _saveOfflineCredentials(email, password);
+
+      print('Network reachable: true');
+      print('Response status: 200');
+      print('Token received: ${token.isNotEmpty}');
 
       return user;
+    } on SocketException catch (e) {
+      print('Network reachable: false');
+      print('Error: SocketException: $e');
+      print('Token received: false');
+      throw const ApiException(
+        message: 'Backend unreachable. Please verify network connection or ADB reverse (tcp:3000 tcp:3000).',
+        statusCode: 503,
+      );
+    } on TimeoutException catch (e) {
+      print('Network reachable: false');
+      print('Error: TimeoutException: $e');
+      print('Token received: false');
+      throw const ApiException(
+        message: 'Connection timed out. Backend is not responding.',
+        statusCode: 504,
+      );
     } catch (e) {
       if (e is ApiException) {
+        print('Network reachable: true');
+        print('Response status: ${e.statusCode}');
+        print('Token received: false');
         rethrow;
       }
-      // If network error, attempt offline login
-      final prefs = await SharedPreferences.getInstance();
-      final offlineEmail = prefs.getString('${AppConfig.userKey}_email');
-      final offlinePassword = prefs.getString('${AppConfig.userKey}_password');
-
-      if (offlineEmail != null && offlineEmail.toLowerCase() == email.toLowerCase() && offlinePassword == password) {
-        final cachedUser = await getUser();
-        if (cachedUser != null) {
-          return cachedUser;
-        }
+      final str = e.toString().toLowerCase();
+      final bool isNet = str.contains('socketexception') ||
+          str.contains('connection refused') ||
+          str.contains('failed to fetch') ||
+          str.contains('clientexception');
+      print('Network reachable: ${!isNet}');
+      print('Token received: false');
+      print('Error: $e');
+      if (isNet) {
+        throw const ApiException(
+          message: 'Backend unreachable. Please verify network connection or ADB reverse.',
+          statusCode: 503,
+        );
       }
-      
-      throw Exception('Network error. Please check your connection or provide valid cached credentials.');
+      rethrow;
     }
   }
 
@@ -149,6 +166,5 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConfig.tokenKey);
     await prefs.remove(AppConfig.userKey);
-    await _clearOfflineCredentials();
   }
 }

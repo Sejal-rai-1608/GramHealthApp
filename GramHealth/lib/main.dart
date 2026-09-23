@@ -53,12 +53,6 @@ import 'services/sync_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialise offline AI (non-blocking)
-  await OfflineAiService.instance.initialise();
-
-  // Non-blocking model presence check (no download triggered)
-  unawaited(OfflineAiService.instance.checkModelOnStartup());
-
   await AuthGuard.init(); // Restore session from secure storage
   ConnectivityService.instance.initialize();
   SyncService.instance.initialize();

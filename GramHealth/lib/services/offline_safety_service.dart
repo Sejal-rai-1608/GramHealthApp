@@ -16,36 +16,39 @@ class OfflineSafetyService {
     'difficulty breathing', 'trouble breathing', 'can\'t breathe',
     'cannot breathe', 'short of breath', 'breathlessness',
     'saans nahi aa raha', 'saans nahi', 'saans lene mein takleef',
+    'shwas ghyayla tras', 'shwas ghetana tras', 'shwas lagto',
+    'dam lagto', 'shwas yet nahi',
     'choking', 'suffocating',
   ];
 
   static const List<String> _chestPainEmergency = [
     'chest pain', 'severe chest pain', 'chest tightness',
     'heart attack', 'seena dard', 'seene mein dard',
+    'chaati madhe dukhat', 'chaatit dukhat', 'chaatit vedna',
     'crushing chest', 'chest pressure',
   ];
 
   static const List<String> _strokeEmergency = [
     'stroke', 'face drooping', 'arm weakness', 'speech difficulty',
     'sudden numbness', 'sudden confusion', 'sudden vision',
-    'worst headache of life',
+    'worst headache of life', 'pakshaghat', 'lakwa',
   ];
 
   static const List<String> _unconsciousEmergency = [
     'unconscious', 'unresponsive', 'fainted', 'passed out',
     'not waking up', 'loss of consciousness', 'behosh',
-    'hosh nahi', 'gir gaya',
+    'hosh nahi', 'gir gaya', 'beshuddh', 'beshudh',
   ];
 
   static const List<String> _seizureEmergency = [
     'seizure', 'convulsion', 'fits', 'epilepsy attack',
-    'body shaking', 'dauraa', 'mirgi',
+    'body shaking', 'dauraa', 'mirgi', 'aetke yene', 'aanchki',
   ];
 
   static const List<String> _bleedingEmergency = [
     'severe bleeding', 'heavy bleeding', 'blood loss',
     'uncontrolled bleeding', 'coughing blood', 'blood in stool',
-    'khoon aa raha', 'bahut khoon',
+    'khoon aa raha', 'bahut khoon', 'raktasrav', 'rakta yet aahe',
   ];
 
   static const List<String> _allergyEmergency = [
@@ -60,13 +63,13 @@ class OfflineSafetyService {
   ];
 
   static const List<String> _snakeBiteEmergency = [
-    'snake bite', 'snakebite', 'saanp ne kaata',
-    'scorpion sting',
+    'snake bite', 'snakebite', 'saanp ne kaata', 'saanp chaavla',
+    'saanp chavla', 'vinchu chavla', 'scorpion sting',
   ];
 
   static const List<String> _poisoningEmergency = [
     'poisoning', 'swallowed poison', 'overdose',
-    'zehr khaya', 'dawa zyada le li',
+    'zehr khaya', 'dawa zyada le li', 'vishbaadha', 'vishbadha',
   ];
 
   // Paediatric emergencies

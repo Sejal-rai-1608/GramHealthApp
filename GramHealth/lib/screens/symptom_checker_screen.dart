@@ -108,17 +108,26 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       }
 
       // Offline fallback
+      await OfflineAiService.instance.initialise();
+      final offlineStream = OfflineAiService.instance.queryOffline("I have symptoms: $combinedQuery");
+      final buffer = StringBuffer();
+      await for (final token in offlineStream) {
+        buffer.write(token);
+      }
+      final qwenResponse = buffer.toString().trim();
+
       final repo = OfflineMedicalRepository();
       await repo.initialise();
-      final contextText = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
+      final fallbackContext = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
+      final finalAdvice = qwenResponse.isNotEmpty ? qwenResponse : fallbackContext;
       
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
           _result = SymptomResult(
-            condition: 'Offline Analysis',
-            advice: contextText,
-            action: 'Please consult a healthcare professional for accurate diagnosis.',
+            condition: 'These symptoms can occur with several conditions. The offline assistant cannot determine the exact cause.',
+            advice: finalAdvice,
+            action: 'Please seek professional medical evaluation for an accurate diagnosis.',
             source: 'Offline AI',
           );
         });
