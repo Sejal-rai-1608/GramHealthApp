@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context.go('/main/symptoms');
         break;
       case '3':
-        context.go('/medicine');
+        context.push('/medicine');
         break;
       case '6':
         context.go('/prescriptions');

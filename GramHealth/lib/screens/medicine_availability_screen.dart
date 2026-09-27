@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -88,10 +89,10 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
 
   Future<void> _openNavigation(double lat, double lon) async {
     final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lon');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
+    final success = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!success) {
+      final fallback = await launchUrl(url, mode: LaunchMode.inAppWebView);
+      if (!fallback && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open map app')));
       }
     }

@@ -123,7 +123,7 @@ class AuthService {
     double? latitude,
     double? longitude,
   }) async {
-    final payload = {
+    final payload = <String, dynamic>{
       'name': name,
       'email': email,
       'phone': phone,

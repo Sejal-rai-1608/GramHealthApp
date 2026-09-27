@@ -8,7 +8,7 @@ import '../widgets/language_selector_modal.dart';
 import '../widgets/primary_button.dart';
 import '../services/api_client.dart';
 import '../utils/auth_guard.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:geocoding/geocoding.dart' as geocoding;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
       
       setState(() => _isLoading = true);
       try {
-        List<Location> locations = await locationFromAddress(address);
+        List<geocoding.Location> locations = await geocoding.Geocoding().locationFromAddress(address);
         if (locations.isNotEmpty) {
           latitude = locations.first.latitude;
           longitude = locations.first.longitude;

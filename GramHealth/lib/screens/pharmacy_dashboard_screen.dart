@@ -25,16 +25,25 @@ class PharmacyDashboardScreen extends StatefulWidget {
 
 class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   final Map<String, bool> _inventory = {};
+  final List<String> _medicinesList = [];
+  final _newMedCtrl = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _medicinesList.addAll(kEssentialMedicines);
     // Default all to false initially
-    for (var m in kEssentialMedicines) {
+    for (var m in _medicinesList) {
       _inventory[m] = false;
     }
     _loadInitialState();
+  }
+
+  @override
+  void dispose() {
+    _newMedCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadInitialState() async {
@@ -53,8 +62,9 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
         for (var inv in myPharmacy.inventories) {
           final medName = inv['medicineName'] as String;
           final inStock = inv['inStock'] as bool;
-          if (_inventory.containsKey(medName)) {
-            _inventory[medName] = inStock;
+          _inventory[medName] = inStock;
+          if (!_medicinesList.contains(medName)) {
+            _medicinesList.add(medName);
           }
         }
       }
@@ -90,6 +100,19 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
     }
   }
 
+  void _addCustomMedicine() {
+    final val = _newMedCtrl.text.trim();
+    if (val.isEmpty) return;
+    if (!_medicinesList.contains(val)) {
+      setState(() {
+        _medicinesList.insert(0, val);
+        _inventory[val] = true;
+      });
+      _toggleMedicine(val, true);
+    }
+    _newMedCtrl.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,14 +142,38 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newMedCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Add new medicine name...',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _addCustomMedicine(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: AppColors.primaryAccent),
+                    onPressed: _addCustomMedicine,
+                  )
+                ],
+              ),
+            ),
+          ),
           if (_isLoading)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else
             Expanded(
             child: ListView.builder(
-              itemCount: kEssentialMedicines.length,
+              itemCount: _medicinesList.length,
               itemBuilder: (context, index) {
-                final med = kEssentialMedicines[index];
+                final med = _medicinesList[index];
                 final inStock = _inventory[med] ?? false;
                 
                 return Card(
