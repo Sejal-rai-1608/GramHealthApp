@@ -13,6 +13,7 @@ const consultationRoutes = require("./routes/consultation.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 const prescriptionRoutes = require("./routes/prescription.routes");
 const pharmacyRoutes = require("./routes/pharmacy.routes");
+const aiRoutes = require("./routes/ai.routes");
 
 const { notFound } = require("./middleware/notFound");
 const { errorHandler } = require("./middleware/errorHandler");
@@ -26,10 +27,15 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'x-request-id'],
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+app.use((req, res, next) => {
+  console.log(`[HTTP INCOMING] ${req.method} ${req.url} (from ${req.ip})`);
+  next();
+});
 
 app.get("/", (req, res) => {
   res.json({ 
@@ -58,6 +64,7 @@ app.use("/api/consultations", consultationRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/pharmacy", pharmacyRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

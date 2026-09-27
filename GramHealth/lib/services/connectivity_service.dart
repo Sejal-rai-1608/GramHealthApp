@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
@@ -18,6 +17,28 @@ class ConnectivityService {
 
   Stream<NetworkStatus> get statusStream => _statusController.stream;
   NetworkStatus get currentStatus => _currentStatus;
+  bool get isOnline => _currentStatus != NetworkStatus.offline;
+
+  /// Returns true if connected via Wi-Fi or Ethernet (unmetered / broadband).
+  Future<bool> isWifiOrEthernet() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      return results.contains(ConnectivityResult.wifi) ||
+          results.contains(ConnectivityResult.ethernet);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Returns true if connected via mobile cellular data.
+  Future<bool> isMobileData() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      return results.contains(ConnectivityResult.mobile);
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Starts listening to network interface changes and pings.
   void initialize() {

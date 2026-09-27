@@ -1,20 +1,29 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/offline_status_indicator.dart';
+import '../widgets/offline_setup_card.dart';
+import '../models/local_model_status.dart';
+import '../services/connectivity_service.dart';
+import '../services/ai_service.dart';
+import '../services/offline_ai_service.dart';
 
 class Message {
   final String id;
   final String text;
   final String sender; // 'user' or 'ai'
   final DateTime timestamp;
+  final bool isOffline;
 
   Message({
     required this.id,
     required this.text,
     required this.sender,
     required this.timestamp,
+    this.isOffline = false,
   });
 }
 
@@ -29,6 +38,22 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   final List<Message> _messages = [];
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  StreamSubscription<LocalModelStatus>? _modelSub;
+  StreamSubscription<NetworkStatus>? _connSub;
+  bool _showSetupCard = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(OfflineAiService.instance.ensureModelLoaded());
+
+    _modelSub = OfflineAiService.instance.statusStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+    _connSub = ConnectivityService.instance.statusStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -47,12 +72,54 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
 
   @override
   void dispose() {
+    _modelSub?.cancel();
+    _connSub?.cancel();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
 
-  void _handleSend() {
+  String get _statusSubtitle {
+    final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
+    if (isOnline) return 'AI • Online';
+    
+    final offlineService = OfflineAiService.instance;
+    final status = offlineService.modelStatus;
+    switch (status) {
+      case LocalModelStatus.downloading:
+        return 'Offline AI • Downloading ${(offlineService.downloadProgress * 100).toInt()}%';
+      case LocalModelStatus.verifying:
+        return 'Offline AI • Verifying';
+      case LocalModelStatus.verified:
+        return 'Offline AI • Verified';
+      case LocalModelStatus.compatible:
+        return 'Offline AI • Compatible';
+      case LocalModelStatus.loadable:
+      case LocalModelStatus.ready:
+        return 'Offline AI • Ready';
+      case LocalModelStatus.loading:
+        return 'Offline AI • Starting';
+      case LocalModelStatus.generating:
+        return 'Offline AI • Thinking';
+      case LocalModelStatus.lexiconOnly:
+        return 'Offline AI • Knowledge mode';
+      case LocalModelStatus.checking:
+        return 'Offline AI • Checking';
+      case LocalModelStatus.pending:
+        return 'Offline AI • Download pending';
+      case LocalModelStatus.error:
+        return 'Offline AI • Retry pending';
+      default:
+        return 'AI • Offline';
+    }
+  }
+
+  Color get _statusColor {
+    final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
+    return isOnline ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
+  }
+
+  Future<void> _handleSend() async {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -70,34 +137,46 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
 
     _scrollToBottom();
 
-    // Simulate AI response
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    try {
+      final aiResponse = await AiService.query(text);
+      
       if (!mounted) return;
+      
+      String responseText = aiResponse.answer ?? "I'm sorry, I couldn't understand that.";
+      if (aiResponse.urgency == 'emergency') {
+        responseText = "🚨 EMERGENCY 🚨\n$responseText";
+      } else if (aiResponse.requiresProfessionalReview == true) {
+        responseText = "⚠️ Please consult a professional.\n$responseText";
+      }
+
+      final bool isOffline = (aiResponse.agent == 'offline_ai_router') ||
+          (aiResponse.routingMethod?.contains('offline') ?? false);
+
       final aiMsg = Message(
-        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        text: _getAIResponse(text),
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: responseText,
         sender: 'ai',
         timestamp: DateTime.now(),
+        isOffline: isOffline,
       );
+      
       setState(() {
         _messages.add(aiMsg);
       });
       _scrollToBottom();
-    });
-  }
-
-  String _getAIResponse(String input) {
-    final low = input.toLowerCase();
-    if (low.contains('fever') || low.contains('bukhar') || low.contains('taap') || low.contains('taav')) {
-      return "I see you're mentioning fever. Would you like to use our Symptom Checker or connect with Dr. Anita Joshi (General Physician)?";
+    } catch (e) {
+      if (!mounted) return;
+      final errorMsg = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: "Sorry, I encountered an error: ${e.toString()}",
+        sender: 'ai',
+        timestamp: DateTime.now(),
+      );
+      setState(() {
+        _messages.add(errorMsg);
+      });
+      _scrollToBottom();
     }
-    if (low.contains('appointment') || low.contains('booking') || low.contains('doctor')) {
-      return "You can book an appointment by going to the 'Consult Doctor' section on the Home screen or selecting a doctor from the carousel.";
-    }
-    if (low.contains('hello') || low.contains('hi') || low.contains('namaste') || low.contains('namaskar')) {
-      return "Hello! I can help you find doctors, check symptoms, or manage your health records. What's on your mind?";
-    }
-    return "I'm still learning, but I can help you navigate RuralCare. You can ask about doctors, symptoms, or how to see your records!";
   }
 
   void _scrollToBottom() {
@@ -165,14 +244,30 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
                       Text(
-                        context.tr('online_assistant'),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4CAF50)),
+                        _statusSubtitle,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor),
                       ),
                     ],
+                  ),
+                  const Spacer(),
+                  OfflineStatusIndicator(
+                    isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline,
                   ),
                 ],
               ),
             ),
+
+            // Optional Offline Setup Banner
+            if (_showSetupCard &&
+                ConnectivityService.instance.currentStatus == NetworkStatus.offline &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.ready &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.loaded &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.generating &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.lexiconOnly) ...[
+              OfflineSetupCard(
+                onDismiss: () => setState(() => _showSetupCard = false),
+              ),
+            ],
 
             // Messages
             Expanded(
@@ -220,6 +315,26 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                             child: Column(
                               crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                               children: [
+                                if (!isUser) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: msg.isOffline
+                                          ? const Color(0xFFFF9800).withValues(alpha: 0.15)
+                                          : const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      msg.isOffline ? 'AI • Offline' : 'AI • Online',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: msg.isOffline ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 Text(
                                   msg.text,
                                   style: TextStyle(

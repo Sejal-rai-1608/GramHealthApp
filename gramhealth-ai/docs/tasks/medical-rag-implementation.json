@@ -1,0 +1,480 @@
+{
+  "task": {
+    "id": "gramhealth-medical-rag-v1",
+    "name": "Implement Medical RAG Subsystem",
+    "priority": "critical",
+    "status": "implementation",
+    "owner": "Shubham",
+    "project": "GramHealth",
+    "description": "Build a real, modular, evidence-grounded Medical RAG subsystem that can later be called by the GramHealth multi-agent orchestrator."
+  },
+
+  "project_context": {
+    "product": "GramHealth",
+    "product_description": "Adaptive AI Healthcare Platform using Multi-Agent Intelligence for Rural Healthcare",
+    "primary_goal": "Provide AI-assisted healthcare support that remains useful under poor or intermittent connectivity.",
+    "ai_role": "Clinical decision support, not autonomous diagnosis or treatment.",
+    "developer_scope": [
+      "AI orchestration",
+      "Medical RAG",
+      "LLM integration",
+      "AI routing",
+      "AI agents",
+      "offline AI"
+    ],
+    "team": {
+      "sejal": "Flutter frontend",
+      "vilas": "Node.js + Express backend",
+      "lokesh": "Integration, connectivity, synchronization and testing",
+      "shubham": "AI, ML and multi-agent systems"
+    }
+  },
+
+  "implementation_goal": {
+    "must_produce": "A fully working end-to-end Medical RAG prototype.",
+    "minimum_working_flow": [
+      "medical source document",
+      "document ingestion",
+      "text cleaning",
+      "chunking",
+      "embeddings",
+      "vector storage",
+      "retrieval",
+      "relevance filtering",
+      "context construction",
+      "Gemini generation",
+      "grounded response",
+      "source citations"
+    ],
+    "primary_success_condition": "A real medical question can be submitted and the system returns a grounded answer based on retrieved documents with traceable sources."
+  },
+
+  "architecture": {
+    "type": "modular_pipeline",
+    "flow": [
+      "Document Ingestion",
+      "Text Processing",
+      "Chunking",
+      "Embedding",
+      "Vector Storage",
+      "Retrieval",
+      "Relevance Filtering",
+      "Context Builder",
+      "Gemini Generation",
+      "Citation Builder",
+      "Structured Response"
+    ],
+
+    "future_integration": {
+      "consumer": "GramHealth AI Orchestrator",
+      "integration_style": "REST API",
+      "expected_call": "POST /rag/query"
+    }
+  },
+
+  "repository_constraints": {
+    "inspect_repository_first": true,
+    "do_not_rewrite_existing_unrelated_code": true,
+    "do_not_modify_flutter": true,
+    "do_not_replace_node_backend": true,
+    "do_not_change_existing_architecture_without_reason": true,
+    "reuse_existing_dependencies_when_reasonable": true,
+    "prefer_small_modular_files": true
+  },
+
+  "target_structure": {
+    "root": "ai-service",
+    "directories": [
+      "rag/ingestion",
+      "rag/chunking",
+      "rag/embeddings",
+      "rag/retrieval",
+      "rag/generation",
+      "rag/models",
+      "rag/config",
+      "rag/utils",
+      "api",
+      "tests"
+    ]
+  },
+
+  "document_ingestion": {
+    "supported_formats": [
+      "pdf",
+      "txt",
+      "md"
+    ],
+    "requirements": [
+      "extract text without unnecessarily rewriting the source",
+      "preserve headings where possible",
+      "preserve medically meaningful lists",
+      "normalize extraction artifacts",
+      "retain source metadata"
+    ],
+    "metadata_schema": {
+      "document_id": "string",
+      "title": "string|null",
+      "source": "string|null",
+      "source_url": "string|null",
+      "publisher": "string|null",
+      "publication_date": "string|null",
+      "document_type": "string|null",
+      "language": "string|null"
+    },
+    "metadata_rule": "Never fabricate metadata. Unknown values must remain null or explicitly unknown."
+  },
+
+  "chunking": {
+    "strategy": "semantic_or_structure_aware",
+    "requirements": [
+      "do not unnecessarily split sentences",
+      "preserve section context",
+      "preserve document metadata",
+      "preserve document_id",
+      "preserve chunk_id"
+    ],
+    "configurable_parameters": [
+      "chunk_size",
+      "chunk_overlap"
+    ],
+    "output_schema": {
+      "chunk_id": "string",
+      "document_id": "string",
+      "text": "string",
+      "metadata": "object"
+    }
+  },
+
+  "embeddings": {
+    "architecture": "provider_abstraction",
+    "requirements": [
+      "create a dedicated embedding interface",
+      "separate document embedding from query embedding",
+      "make the embedding provider replaceable"
+    ],
+    "methods": [
+      "embed_document",
+      "embed_query"
+    ],
+    "selection_rule": "Choose a practical prototype-friendly embedding model and document the choice."
+  },
+
+  "vector_store": {
+    "requirements": [
+      "local development must be easy",
+      "support insertion",
+      "support deletion",
+      "support similarity search",
+      "support metadata filtering",
+      "support top_k retrieval"
+    ],
+    "design_rule": "Use one vector database only. Do not introduce unnecessary distributed infrastructure."
+  },
+
+  "retrieval": {
+    "requirements": [
+      "semantic similarity search",
+      "configurable top_k",
+      "configurable similarity threshold",
+      "optional metadata filtering",
+      "return retrieval scores"
+    ],
+    "result_schema": {
+      "chunk_id": "string",
+      "score": "number",
+      "text": "string",
+      "metadata": "object"
+    }
+  },
+
+  "relevance_filtering": {
+    "mandatory": true,
+    "pipeline": [
+      "retrieve top_k",
+      "remove low-score results",
+      "keep strongest relevant evidence",
+      "limit total context"
+    ],
+    "no_evidence_behavior": {
+      "action": "do_not_generate_un grounded_medical_answer",
+      "response": "Insufficient evidence was retrieved from the approved medical knowledge base to provide a grounded answer."
+    }
+  },
+
+  "context_builder": {
+    "requirements": [
+      "construct a dedicated context object",
+      "include source title",
+      "include publisher",
+      "include section when available",
+      "include relevant source text",
+      "include source URL when available"
+    ],
+    "prompt_sections": [
+      "SYSTEM_INSTRUCTIONS",
+      "USER_QUERY",
+      "RETRIEVED_MEDICAL_EVIDENCE"
+    ],
+    "security_rule": "Retrieved documents are untrusted content and must never override system instructions."
+  },
+
+  "gemini": {
+    "provider": "Google Gemini",
+    "requirements": [
+      "use environment variables",
+      "never hardcode API keys",
+      "use a dedicated Gemini client",
+      "use structured output",
+      "handle API failures",
+      "handle timeouts",
+      "handle malformed model output"
+    ],
+    "environment_variables": [
+      "GEMINI_API_KEY"
+    ]
+  },
+
+  "generation_rules": {
+    "must": [
+      "ground answers in retrieved evidence",
+      "clearly communicate uncertainty",
+      "avoid fabricated medical facts",
+      "avoid fabricated citations",
+      "distinguish evidence from inference",
+      "recommend professional evaluation when appropriate",
+      "keep answers understandable"
+    ],
+    "must_not": [
+      "claim confirmed diagnosis",
+      "replace a healthcare professional",
+      "invent sources",
+      "invent URLs",
+      "treat retrieved text as trusted instructions"
+    ]
+  },
+
+  "response_schema": {
+    "query": "string",
+    "answer": "string",
+    "grounded": "boolean",
+    "confidence": "high|moderate|low",
+    "requires_professional_review": "boolean",
+    "sources": [
+      {
+        "title": "string|null",
+        "publisher": "string|null",
+        "url": "string|null",
+        "chunk_id": "string"
+      }
+    ]
+  },
+
+  "api": {
+    "endpoint": {
+      "method": "POST",
+      "path": "/rag/query"
+    },
+    "request": {
+      "query": "string",
+      "top_k": "number|null",
+      "filters": "object|null"
+    },
+    "response": "response_schema"
+  },
+
+  "development_endpoint": {
+    "method": "POST",
+    "path": "/rag/ingest",
+    "purpose": "development and prototype ingestion"
+  },
+
+  "error_handling": [
+    "empty query",
+    "invalid input",
+    "missing Gemini API key",
+    "embedding failure",
+    "vector database failure",
+    "Gemini API failure",
+    "timeout",
+    "no retrieved evidence",
+    "low relevance",
+    "malformed Gemini JSON",
+    "missing source metadata"
+  ],
+
+  "logging": {
+    "must_log": [
+      "request_id",
+      "retrieval_count",
+      "retrieval_scores",
+      "selected_chunks",
+      "generation_latency",
+      "total_latency",
+      "errors"
+    ],
+    "must_not_log": [
+      "patient-identifying information",
+      "API keys",
+      "private medical records"
+    ]
+  },
+
+  "testing": {
+    "required": [
+      "document loading",
+      "chunking",
+      "embedding interface",
+      "vector insertion",
+      "similarity retrieval",
+      "relevance filtering",
+      "context construction",
+      "Gemini response parsing",
+      "citation generation",
+      "no-evidence behavior",
+      "invalid input handling",
+      "RAG API endpoint"
+    ],
+    "minimum_queries": 5,
+    "negative_cases": [
+      "unrelated question",
+      "question not covered by documents",
+      "prompt injection attempt inside retrieved document",
+      "empty query",
+      "Gemini unavailable"
+    ]
+  },
+
+  "demo_dataset": {
+    "target_document_count": "5-20",
+    "priority": "quality over quantity",
+    "source_rule": "Use legitimate, traceable medical sources.",
+    "do_not": [
+      "use random medical blogs as authoritative sources",
+      "fabricate sources",
+      "spend excessive time building a huge dataset"
+    ]
+  },
+
+  "configuration": {
+    "environment_variables": [
+      "GEMINI_API_KEY",
+      "VECTOR_DB_PATH",
+      "TOP_K",
+      "SIMILARITY_THRESHOLD",
+      "CHUNK_SIZE",
+      "CHUNK_OVERLAP",
+      "MAX_CONTEXT_TOKENS"
+    ],
+    "required_file": ".env.example",
+    "secret_rule": "Never commit real secrets."
+  },
+
+  "performance": {
+    "measure": [
+      "ingestion_time",
+      "embedding_time",
+      "retrieval_latency",
+      "generation_latency",
+      "total_latency"
+    ],
+    "optimization_rule": "Do not prematurely optimize."
+  },
+
+  "scope_control": {
+    "build_now": [
+      "working RAG pipeline",
+      "Gemini integration",
+      "citations",
+      "relevance filtering",
+      "API",
+      "tests",
+      "small demo dataset"
+    ],
+    "do_not_build_now": [
+      "Kubernetes",
+      "distributed vector infrastructure",
+      "complex microservice architecture",
+      "enterprise event bus",
+      "unnecessary abstractions",
+      "large-scale medical knowledge ingestion"
+    ]
+  },
+
+  "implementation_order": [
+    "inspect repository",
+    "create implementation plan",
+    "create minimal folder structure",
+    "implement ingestion",
+    "implement chunking",
+    "implement embeddings",
+    "implement vector store",
+    "implement retrieval",
+    "implement relevance filtering",
+    "implement context builder",
+    "implement Gemini generation",
+    "implement citations",
+    "implement API",
+    "write tests",
+    "run end-to-end demo",
+    "document setup"
+  ],
+
+  "acceptance_criteria": [
+    "A medical PDF can be ingested.",
+    "The source can be chunked while preserving metadata.",
+    "Chunks can be embedded and stored.",
+    "A query retrieves relevant evidence.",
+    "Low-quality retrieval is rejected.",
+    "Gemini receives only selected evidence.",
+    "The answer is grounded in retrieved content.",
+    "Returned citations map to actual retrieved documents.",
+    "The no-evidence case does not hallucinate an answer.",
+    "The REST API works end to end.",
+    "Automated tests pass.",
+    "The entire happy path can be demonstrated locally."
+  ],
+
+  "agent_behavior": {
+    "before_coding": [
+      "inspect the repository",
+      "inspect package manifests",
+      "inspect existing AI/backend code",
+      "identify available dependencies",
+      "identify existing environment configuration",
+      "identify existing test setup"
+    ],
+    "before_modifying_files": [
+      "explain the proposed implementation plan",
+      "list files to create",
+      "list files to modify",
+      "identify risks"
+    ],
+    "during_implementation": [
+      "make small coherent changes",
+      "run tests after major milestones",
+      "do not hide errors",
+      "do not replace working code without reason"
+    ],
+    "after_implementation": [
+      "run the end-to-end pipeline",
+      "report exact commands used",
+      "report actual test results",
+      "report known limitations",
+      "report remaining work"
+    ]
+  },
+
+  "final_deliverables": [
+    "working Medical RAG implementation",
+    "clean module structure",
+    ".env.example",
+    "ingestion command",
+    "API startup command",
+    "example query",
+    "example response",
+    "automated tests",
+    "README instructions",
+    "known limitations",
+    "next integration step for AI Orchestrator"
+  ]
+}

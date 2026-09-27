@@ -3,6 +3,7 @@ const ApiError = require("../utils/ApiError");
 const { getPagination, buildMeta } = require("../utils/pagination");
 const { getProfileIdForRole, requireProfile } = require("../utils/profile");
 const { v4: uuidv4 } = require('uuid');
+const aiService = require("./ai.service");
 
 const USER_SELECT = { id: true, name: true, phone: true, email: true };
 
@@ -83,7 +84,7 @@ const createMedicalRecord = async (user, { consultationId, diagnosis, clinicalNo
         );
     }
 
-    return prisma.medicalRecord.create({
+    const result = await prisma.medicalRecord.create({
         data: {
             patientId: consultation.patientId,
             consultationId,
@@ -92,6 +93,19 @@ const createMedicalRecord = async (user, { consultationId, diagnosis, clinicalNo
         },
         include: MEDICAL_RECORD_INCLUDE
     });
+
+    if (result.diagnosis || result.clinicalNotes) {
+        aiService.syncPatientRecord(
+            result.patientId,
+            result.id,
+            "medical_record",
+            result.createdAt,
+            `Diagnosis: ${result.diagnosis || 'None'}. Clinical Notes: ${result.clinicalNotes || 'None'}`,
+            "GramHealth System"
+        );
+    }
+
+    return result;
 };
 
 const listMyMedicalRecords = async (user, query = {}) => {
@@ -146,7 +160,7 @@ const listDoctorPatientRecords = async (patientProfileId, query = {}) => {
 
 const uploadPatientRecord = async (user, data) => {
     const patientProfileId = await requireProfile("PATIENT", user.userId);
-    return prisma.medicalRecord.create({
+    const result = await prisma.medicalRecord.create({
         data: {
             patientId: patientProfileId,
             title: data.title,
@@ -157,6 +171,17 @@ const uploadPatientRecord = async (user, data) => {
         },
         include: { patient: { include: { user: { select: USER_SELECT } } } }
     });
+
+    aiService.syncPatientRecord(
+        result.patientId,
+        result.id,
+        "medical_record",
+        result.issuedDate,
+        `Title: ${result.title}. Type: ${result.documentType}. File URL: ${result.fileUrl}`,
+        "Manual Upload"
+    );
+
+    return result;
 };
 
 const getMedicalRecordById = async (id, user) => {
