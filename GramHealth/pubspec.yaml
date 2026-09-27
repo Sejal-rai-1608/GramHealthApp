@@ -54,9 +54,8 @@ dependencies:
   image_picker: ^1.2.3
   record: ^6.2.1
   audioplayers: ^6.7.1
-  crypto: ^3.0.3
-  archive: ^3.6.0
-  convert: ^3.1.2
+  geolocator: ^14.0.2
+  geocoding: ^5.0.0
 
 dev_dependencies:
   flutter_test:

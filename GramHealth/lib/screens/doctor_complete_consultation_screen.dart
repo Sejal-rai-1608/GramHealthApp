@@ -46,40 +46,40 @@ class _DoctorCompleteConsultationScreenState
 
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      if (_medicines.isNotEmpty) {
-        for (var med in _medicines) {
-          if ((med['name']?.trim().isEmpty ?? true) ||
-              (med['dosage']?.trim().isEmpty ?? true) ||
-              (med['frequency']?.trim().isEmpty ?? true) ||
-              (med['duration']?.trim().isEmpty ?? true)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please fill all required medicine fields (Name, Dosage, Frequency, Duration)'), backgroundColor: Colors.red),
-            );
-            return;
-          }
+      // Unconditionally evaluate medicines if provided
+      for (var med in _medicines) {
+        if ((med['name']?.trim().isEmpty ?? true) ||
+            (med['dosage']?.trim().isEmpty ?? true) ||
+            (med['frequency']?.trim().isEmpty ?? true) ||
+            (med['duration']?.trim().isEmpty ?? true)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please fill all required medicine fields (Name, Dosage, Frequency, Duration)'), backgroundColor: Colors.red),
+          );
+          return;
         }
-        
-        // Map foodInstruction/timing into 'instructions'
-        final mappedMedicines = _medicines.map((m) {
-          final timing = m['timing']?.trim() ?? '';
-          final food = m['foodInstruction']?.trim() ?? '';
-          final extras = [timing, food].where((e) => e.isNotEmpty).join(' - ');
-          
-          return {
-            'name': m['name']?.trim(),
-            'dosage': m['dosage']?.trim(),
-            'frequency': m['frequency']?.trim(),
-            'duration': m['duration']?.trim(),
-            'instructions': extras.isNotEmpty ? extras : '',
-          };
-        }).toList();
-
-        await PrescriptionService.createPrescription(
-          consultationId: widget.consultationId,
-          medicines: mappedMedicines,
-          instructions: _notesCtrl.text,
-        );
       }
+      
+      // Map foodInstruction/timing into 'instructions'
+      final mappedMedicines = _medicines.map((m) {
+        final timing = m['timing']?.trim() ?? '';
+        final food = m['foodInstruction']?.trim() ?? '';
+        final extras = [timing, food].where((e) => e.isNotEmpty).join(' - ');
+        
+        return {
+          'name': m['name']?.trim(),
+          'dosage': m['dosage']?.trim(),
+          'frequency': m['frequency']?.trim(),
+          'duration': m['duration']?.trim(),
+          'instructions': extras.isNotEmpty ? extras : '',
+        };
+      }).toList();
+
+      await PrescriptionService.createPrescription(
+        consultationId: widget.consultationId,
+        medicines: mappedMedicines,
+        instructions: _notesCtrl.text,
+      );
+
       await ConsultationService.completeConsultation(
         widget.consultationId,
         notes: _diagnosisCtrl.text,

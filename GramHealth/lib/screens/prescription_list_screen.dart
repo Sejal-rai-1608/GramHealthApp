@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/prescription_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/medication_schedule.dart';
@@ -26,7 +27,15 @@ class _PrescriptionListScreenState extends State<PrescriptionListScreen> {
   Future<void> _loadPrescriptions() async {
     setState(() { _isLoading = true; _error = null; });
     try {
-      final data = await PrescriptionService.getPrescriptions();
+      final role = await AuthService.getCurrentRole();
+      List<PrescriptionModel> data;
+      
+      if (role == 'doctor') {
+        data = await PrescriptionService.getDoctorPrescriptions();
+      } else {
+        data = await PrescriptionService.getPrescriptions();
+      }
+      
       if (mounted) setState(() { _prescriptions = data; _isLoading = false; });
     } on ApiException catch (e) {
       if (mounted) setState(() { _error = e.message; _isLoading = false; });
@@ -137,9 +146,16 @@ class PrescriptionDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (prescription['patientName'] != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text('Patient: ${prescription['patientName']}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.leafGreenPrimary)),
+              ),
             Text('Doctor: ${prescription['doctorName']}',
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600)),
+                    fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text('Specialization: ${prescription['specialization']}'),
             const SizedBox(height: 8),

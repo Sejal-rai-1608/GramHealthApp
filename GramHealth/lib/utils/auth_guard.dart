@@ -75,7 +75,7 @@ class AuthGuard {
 
   static String _dashboardFor(String? role) {
     if (role == 'admin') return '/admin/dashboard';
-    if (role == 'doctor') return '/doctor/dashboard';
+    if (role == 'doctor') return '/doctor/requests';
     if (role == 'pharmacy') return '/pharmacy/dashboard';
     return '/main/home';
   }

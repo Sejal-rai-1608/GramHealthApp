@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../widgets/dashboard_layout.dart';
-import '../widgets/glass_card.dart';
 import '../widgets/empty_state.dart';
 import '../theme/app_colors.dart';
 import '../services/prescription_service.dart';
+import 'prescription_list_screen.dart';
 
 class DoctorPrescriptionsScreen extends StatefulWidget {
   const DoctorPrescriptionsScreen({super.key});
@@ -44,67 +44,67 @@ class _DoctorPrescriptionsScreenState extends State<DoctorPrescriptionsScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.redAccent)))
-                : _prescriptions.isEmpty
-                    ? ListView(children: const [EmptyState(title: 'No Prescriptions', subtitle: 'Prescriptions you write will appear here.')])
-                    : ListView.builder(
-                        itemCount: _prescriptions.length + 1,
-                        itemBuilder: (context, i) {
-                          if (i == 0) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Text(
-                                context.tr('prescriptions'),
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                              ),
-                            );
-                          }
-                          return _buildItem(_prescriptions[i - 1]);
-                        },
-                      ),
+                : _buildPrescriptionsList(),
       ),
     );
   }
 
-  Widget _buildItem(PrescriptionModel p) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.leafGreenPale,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.description_outlined, color: AppColors.leafGreenPrimary, size: 24),
+  Widget _buildPrescriptionsList() {
+    if (_prescriptions.isEmpty) {
+      return ListView(
+        children: const [
+          EmptyState(title: 'No Prescriptions', subtitle: 'Prescriptions you write will appear here.')
+        ]
+      );
+    }
+    
+    final Map<String, List<PrescriptionModel>> grouped = {};
+    for (var p in _prescriptions) {
+      grouped.putIfAbsent(p.patientName, () => []).add(p);
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: grouped.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16, top: 16),
+            child: Text(
+              context.tr('prescriptions'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p.doctorName.isNotEmpty ? p.doctorName : 'Patient',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Diagnosis: ${p.diagnosis}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${p.medicines.length} medicine${p.medicines.length == 1 ? '' : 's'} • ${p.date}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                  ),
-                ],
-              ),
+          );
+        }
+        
+        final patientName = grouped.keys.elementAt(index - 1);
+        final pList = grouped[patientName]!;
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ExpansionTile(
+            leading: const CircleAvatar(
+              backgroundColor: AppColors.primaryAccent,
+              child: Icon(Icons.person, color: Colors.white),
             ),
-          ],
-        ),
-      ),
+            title: Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${pList.length} prescription(s) provided'),
+            children: pList.map((p) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              title: Text('Diagnosis: ${p.diagnosis}', style: const TextStyle(fontSize: 14)),
+              subtitle: Text('Date: ${p.date}', style: const TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right, size: 16),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => PrescriptionDetailScreen(prescription: p.toDisplayMap()),
+                ));
+              },
+            )).toList(),
+          ),
+        );
+      },
     );
   }
 }

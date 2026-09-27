@@ -25,14 +25,53 @@ class PharmacyDashboardScreen extends StatefulWidget {
 
 class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   final Map<String, bool> _inventory = {};
+  final List<String> _medicinesList = [];
+  final _newMedCtrl = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Default all to false. In a real app we would load their existing state here.
-    for (var m in kEssentialMedicines) {
+    _medicinesList.addAll(kEssentialMedicines);
+    // Default all to false initially
+    for (var m in _medicinesList) {
       _inventory[m] = false;
+    }
+    _loadInitialState();
+  }
+
+  @override
+  void dispose() {
+    _newMedCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialState() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await AuthService.getUser();
+      final currentUserId = user?['id'] as String?;
+      
+      if (currentUserId != null) {
+        final pharmacies = await PharmacyService.syncPharmacies();
+        final myPharmacy = pharmacies.firstWhere(
+          (p) => p.userId == currentUserId, 
+          orElse: () => throw Exception('Pharmacy not found for user'),
+        );
+
+        for (var inv in myPharmacy.inventories) {
+          final medName = inv['medicineName'] as String;
+          final inStock = inv['inStock'] as bool;
+          _inventory[medName] = inStock;
+          if (!_medicinesList.contains(medName)) {
+            _medicinesList.add(medName);
+          }
+        }
+      }
+    } catch (e) {
+      print('Failed to load initial pharmacy state: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -59,6 +98,19 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update inventory')));
       }
     }
+  }
+
+  void _addCustomMedicine() {
+    final val = _newMedCtrl.text.trim();
+    if (val.isEmpty) return;
+    if (!_medicinesList.contains(val)) {
+      setState(() {
+        _medicinesList.insert(0, val);
+        _inventory[val] = true;
+      });
+      _toggleMedicine(val, true);
+    }
+    _newMedCtrl.clear();
   }
 
   @override
@@ -90,11 +142,38 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Expanded(
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newMedCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Add new medicine name...',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _addCustomMedicine(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: AppColors.primaryAccent),
+                    onPressed: _addCustomMedicine,
+                  )
+                ],
+              ),
+            ),
+          ),
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else
+            Expanded(
             child: ListView.builder(
-              itemCount: kEssentialMedicines.length,
+              itemCount: _medicinesList.length,
               itemBuilder: (context, index) {
-                final med = kEssentialMedicines[index];
+                final med = _medicinesList[index];
                 final inStock = _inventory[med] ?? false;
                 
                 return Card(
