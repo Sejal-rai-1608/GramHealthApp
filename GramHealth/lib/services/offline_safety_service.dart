@@ -122,8 +122,8 @@ class OfflineSafetyService {
   }
 
   /// Build the deterministic emergency [OfflineResponse].
-  OfflineResponse buildEmergencyResponse(List<String> matchedTerms) {
-    return OfflineResponse.emergency(matchedTerms: matchedTerms);
+  OfflineResponse buildEmergencyResponse(List<String> matchedTerms, {String? query}) {
+    return OfflineResponse.emergency(matchedTerms: matchedTerms, query: query);
   }
 
   // ---------------------------------------------------------------------------

@@ -85,14 +85,33 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
     
     final offlineService = OfflineAiService.instance;
     final status = offlineService.modelStatus;
-    if (status == LocalModelStatus.downloading) {
-      return 'Offline AI • Downloading ${(offlineService.downloadProgress * 100).toInt()}%';
-    } else if (status == LocalModelStatus.loading) {
-      return 'Offline AI • Starting';
-    } else if (status == LocalModelStatus.generating) {
-      return 'Offline AI • Thinking';
+    switch (status) {
+      case LocalModelStatus.downloading:
+        return 'Offline AI • Downloading ${(offlineService.downloadProgress * 100).toInt()}%';
+      case LocalModelStatus.verifying:
+        return 'Offline AI • Verifying';
+      case LocalModelStatus.verified:
+        return 'Offline AI • Verified';
+      case LocalModelStatus.compatible:
+        return 'Offline AI • Compatible';
+      case LocalModelStatus.loadable:
+      case LocalModelStatus.ready:
+        return 'Offline AI • Ready';
+      case LocalModelStatus.loading:
+        return 'Offline AI • Starting';
+      case LocalModelStatus.generating:
+        return 'Offline AI • Thinking';
+      case LocalModelStatus.lexiconOnly:
+        return 'Offline AI • Knowledge mode';
+      case LocalModelStatus.checking:
+        return 'Offline AI • Checking';
+      case LocalModelStatus.pending:
+        return 'Offline AI • Download pending';
+      case LocalModelStatus.error:
+        return 'Offline AI • Retry pending';
+      default:
+        return 'AI • Offline';
     }
-    return 'AI • Offline';
   }
 
   Color get _statusColor {
@@ -241,7 +260,10 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
             // Optional Offline Setup Banner
             if (_showSetupCard &&
                 ConnectivityService.instance.currentStatus == NetworkStatus.offline &&
-                OfflineAiService.instance.modelStatus == LocalModelStatus.unavailable) ...[
+                OfflineAiService.instance.modelStatus != LocalModelStatus.ready &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.loaded &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.generating &&
+                OfflineAiService.instance.modelStatus != LocalModelStatus.lexiconOnly) ...[
               OfflineSetupCard(
                 onDismiss: () => setState(() => _showSetupCard = false),
               ),

@@ -3,6 +3,8 @@ import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/structured_clinical_response_card.dart';
+import '../models/clinical_response.dart';
 import '../services/ai_service.dart';
 import '../services/offline_ai_service.dart';
 import '../repositories/offline_medical_repository.dart';
@@ -33,6 +35,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   final _selected = <String>{};
   bool _isAnalyzing = false;
   bool _isRecording = false;
+  ClinicalResponse? _clinicalResult;
+  String? _resultSource;
   SymptomResult? _result;
   final _otherCtrl = TextEditingController();
 
@@ -53,12 +57,15 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
     if (OfflineAiService.instance.isEmergency(combinedQuery)) {
       if (mounted) {
+        final emergencyResp = OfflineAiService.instance.buildEmergencyResponse(combinedQuery);
         setState(() {
           _isAnalyzing = false;
+          _clinicalResult = emergencyResp.structuredResponse ?? ClinicalResponse.emergency(query: combinedQuery);
+          _resultSource = 'Emergency Triage';
           _result = SymptomResult(
             condition: 'Emergency Indicator Detected',
-            advice: OfflineAiService.instance.buildEmergencyResponse(combinedQuery).text,
-            action: 'Please contact local emergency services (108) or go to the nearest emergency department immediately.',
+            advice: emergencyResp.text,
+            action: 'Please contact local emergency services (108 / 112) or go to the nearest emergency department immediately.',
             source: 'Emergency Triage',
           );
         });
@@ -66,7 +73,11 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       return;
     }
 
-    setState(() { _isAnalyzing = true; _result = null; });
+    setState(() {
+      _isAnalyzing = true;
+      _result = null;
+      _clinicalResult = null;
+    });
     
     try {
       final queryText = "I have the following symptoms: $combinedQuery. What could this mean?";
@@ -80,6 +91,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
         setState(() {
           _isAnalyzing = false;
+          _clinicalResult = aiResponse.structuredResponse;
+          _resultSource = 'Online AI';
           _result = SymptomResult(
             condition: conditionText,
             advice: aiResponse.answer ?? 'No detailed advice available.',
@@ -114,16 +127,19 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       await for (final token in offlineStream) {
         buffer.write(token);
       }
-      final qwenResponse = buffer.toString().trim();
+      final offlineText = buffer.toString().trim();
+      const ClinicalResponse? structured = null;
 
       final repo = OfflineMedicalRepository();
       await repo.initialise();
       final fallbackContext = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
-      final finalAdvice = qwenResponse.isNotEmpty ? qwenResponse : fallbackContext;
+      final finalAdvice = offlineText.isNotEmpty ? offlineText : fallbackContext;
       
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
+          _clinicalResult = structured;
+          _resultSource = 'Offline AI';
           _result = SymptomResult(
             condition: 'These symptoms can occur with several conditions. The offline assistant cannot determine the exact cause.',
             advice: finalAdvice,
@@ -277,59 +293,64 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ],
 
             // Result card
-            if (_result != null && !_isAnalyzing) ...[
+            if ((_clinicalResult != null || _result != null) && !_isAnalyzing) ...[
               const SizedBox(height: 24),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 30, end: 0),
                 duration: const Duration(milliseconds: 500),
                 builder: (_, val, child) => Transform.translate(offset: Offset(0, val), child: child),
-                child: GlassCard(
-                  padding: const EdgeInsets.all(24),
-                  borderColor: AppColors.primaryAccent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.monitor_heart_outlined, size: 24, color: AppColors.primaryAccent),
-                          const SizedBox(width: 8),
-                          Text(
-                            context.tr('analysis_result'),
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _resultRow('Result Source', _result!.source),
-                      const SizedBox(height: 12),
-                      _resultRow(context.tr('possible_condition'), _result!.condition, large: true),
-                      const SizedBox(height: 12),
-                      _resultRow(context.tr('advice'), _result!.advice),
-                      const SizedBox(height: 12),
-                      _resultRow(context.tr('suggested_action'), _result!.action),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
+                child: _clinicalResult != null
+                    ? StructuredClinicalResponseCard(
+                        response: _clinicalResult!,
+                        sourceLabel: _resultSource ?? 'Online AI',
+                      )
+                    : GlassCard(
+                        padding: const EdgeInsets.all(24),
+                        borderColor: AppColors.primaryAccent,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.warning_amber_outlined, size: 14, color: Color(0xFF999999)),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                context.tr('medical_disclaimer'),
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
+                            Row(
+                              children: [
+                                const Icon(Icons.monitor_heart_outlined, size: 24, color: AppColors.primaryAccent),
+                                const SizedBox(width: 8),
+                                Text(
+                                  context.tr('analysis_result'),
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _resultRow('Result Source', _result!.source),
+                            const SizedBox(height: 12),
+                            _resultRow(context.tr('possible_condition'), _result!.condition, large: true),
+                            const SizedBox(height: 12),
+                            _resultRow(context.tr('advice'), _result!.advice),
+                            const SizedBox(height: 12),
+                            _resultRow(context.tr('suggested_action'), _result!.action),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_outlined, size: 14, color: Color(0xFF999999)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      context.tr('medical_disclaimer'),
+                                      style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ],

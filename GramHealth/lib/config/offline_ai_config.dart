@@ -56,6 +56,25 @@ class OfflineAiConfig {
   static const int minAndroidApiLevel = 26;
 
   // ────────────────────────────────────────────────────────────
+  // Native Runtime & Hard Safe Mode
+  // ────────────────────────────────────────────────────────────
+
+  /// Hard safe mode: When false, native LLM loading is completely inhibited.
+  /// Model download, verification, and storage proceed normally, but
+  /// Offline AI routes exclusively through the verified Offline Medical Lexicon.
+  static const bool enableLocalLlmRuntime = false;
+
+  /// Whether to run an isolated, minimal native smoke test before attempting
+  /// to load the model for full inference.
+  static const bool runNativeSmokeTest = false;
+
+  /// Native inference backend ('cpu' or 'gpu'). Qwen dynamic_int8 officially targets CPU.
+  static const String preferredBackend = 'cpu';
+
+  /// MediaPipe tasks-genai version.
+  static const String tasksGenaiVersion = '0.10.14';
+
+  // ────────────────────────────────────────────────────────────
   // Offline lexicon
   // ────────────────────────────────────────────────────────────
 
@@ -96,6 +115,14 @@ class OfflineAiConfig {
   // Download / networking
   // ────────────────────────────────────────────────────────────
 
+  /// Whether to automatically start downloading the offline model in the
+  /// background once the user logs in and arrives at the Home Screen.
+  static const bool autoDownloadOfflineModel = true;
+
+  /// Whether to allow downloading the ~489 MB model over mobile data.
+  /// If false, download will pause / remain pending until Wi-Fi is connected.
+  static const bool allowMobileDataDownload = false;
+
   /// HTTP timeout for each chunk download.
   static const Duration downloadChunkTimeout = Duration(seconds: 30);
 
@@ -114,6 +141,15 @@ class OfflineAiConfig {
       'gramhealth_offline_download_progress';
   static const String prefsDownloadedBytes =
       'gramhealth_offline_downloaded_bytes';
+  static const String prefsLastDownloadAttempt =
+      'gramhealth_offline_last_download_attempt';
+  static const String prefsLastSuccessfulVerification =
+      'gramhealth_offline_last_verification';
+  static const String prefsModelPath = 'gramhealth_offline_model_path';
+  static const String prefsModelSha256 = 'gramhealth_offline_model_sha256';
+  static const String prefsModelVersion = 'gramhealth_offline_model_version';
+  static const String prefsExpectedSizeBytes =
+      'gramhealth_offline_expected_size';
 
   // ────────────────────────────────────────────────────────────
   // Connectivity / online fallback

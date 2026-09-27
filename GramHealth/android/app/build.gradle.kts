@@ -51,6 +51,8 @@ flutter {
     source = "../.."
 }
 
+val mediapipeTasksGenaiVersion: String = project.findProperty("mediapipeTasksGenaiVersion") as? String ?: "0.10.14"
+
 dependencies {
-    implementation("com.google.mediapipe:tasks-genai:0.10.14")
+    implementation("com.google.mediapipe:tasks-genai:$mediapipeTasksGenaiVersion")
 }

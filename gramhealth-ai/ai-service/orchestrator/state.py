@@ -24,6 +24,7 @@ class AgentState(TypedDict):
     # Final structured response
     agent_response: Optional[str]
     final_response: Optional[str]
+    structured_response: Optional[Dict[str, Any]] # Unified 9-section structured clinical response
     sources: Optional[List[Any]] # Citations/Metadata
     grounded: Optional[bool]
     confidence: Optional[str]

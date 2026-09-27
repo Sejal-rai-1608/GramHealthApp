@@ -19,6 +19,12 @@ abstract class LocalLlmService {
   Future<bool> isReady();
   Future<LocalModelCompatibility> checkCompatibility();
 
+  /// Minimal isolated native smoke test.
+  Future<Map<String, dynamic>> runSmokeTest({
+    required String modelPath,
+    String testPrompt = 'Say OK',
+  });
+
   /// Stream generated tokens progressively.
   ///
   /// [prompt] is the full user + context prompt.
@@ -121,6 +127,27 @@ class LiteRtLmService implements LocalLlmService {
         supportedAbi: false,
         reason: 'Error checking compatibility: $e',
       );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> runSmokeTest({
+    required String modelPath,
+    String testPrompt = 'Say OK',
+  }) async {
+    if (!Platform.isAndroid) {
+      return {'success': false, 'error': 'Only supported on Android'};
+    }
+    try {
+      final res = await _channel.invokeMethod<Map<dynamic, dynamic>>('runSmokeTest', {
+        'modelPath': modelPath,
+        'testPrompt': testPrompt,
+      });
+      return res?.cast<String, dynamic>() ?? {'success': false, 'error': 'No response from smoke test'};
+    } on PlatformException catch (e) {
+      return {'success': false, 'error': e.message, 'code': e.code};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
     }
   }
 

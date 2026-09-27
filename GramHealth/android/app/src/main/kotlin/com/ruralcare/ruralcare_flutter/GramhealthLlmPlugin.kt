@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.StatFs
+import android.util.Log
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
@@ -15,31 +16,17 @@ import kotlinx.coroutines.*
 import java.io.File
 
 /**
- * Native Android plugin for LiteRT-LM on-device inference.
+ * Native Android plugin for LiteRT-LM / MediaPipe on-device inference.
  *
  * Method channel:  gramhealth/offline_llm
  * Event channel:   gramhealth/offline_llm_tokens
- *
- * ─── LiteRT-LM Integration Note ────────────────────────────────────────────
- * This plugin targets the MediaPipe / Google AI Edge LLM Inference Task API.
- *
- * Dependency to add in android/app/build.gradle:
- *   implementation 'com.google.mediapipe:tasks-genai:0.10.14'
- *
- * The exact class path is:
- *   com.google.mediapipe.tasks.genai.llminference.LlmInference
- *
- * IMPORTANT: Verify the latest stable version of tasks-genai on
- * https://mvnrepository.com/artifact/com.google.mediapipe/tasks-genai
- * before shipping. Do NOT hardcode a version without checking.
- *
- * ABI support: arm64-v8a (required), armeabi-v7a (optional / slower)
- * Min SDK: 26 (Android 8.0)
- * RAM: ~1.5 GB minimum recommended for 0.5B q8 model
- * ─────────────────────────────────────────────────────────────────────────────
  */
 class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
     EventChannel.StreamHandler {
+
+    companion object {
+        private const val TAG = "GramhealthLlm"
+    }
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
@@ -49,12 +36,8 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var generationJob: Job? = null
 
-    // LlmInference instance — loaded lazily
-    // Type is Any? so this file compiles even if the dependency is not yet
-    // on the classpath. At runtime, the class must be present.
+    // LlmInference instance — loaded lazily via reflection
     private var llmInference: Any? = null
-
-    // ─── FlutterPlugin ────────────────────────────────────────────────────────
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
@@ -71,8 +54,6 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         scope.cancel()
     }
 
-    // ─── MethodCallHandler ────────────────────────────────────────────────────
-
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
             "initialize" -> handleInitialize(call, result)
@@ -80,11 +61,12 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
             "cancel"     -> handleCancel(result)
             "dispose"    -> { disposeLlm(); result.success(null) }
             "checkCompatibility" -> handleCompatibility(result)
+            "runSmokeTest" -> handleSmokeTest(call, result)
             else -> result.notImplemented()
         }
     }
 
-    // ─── initialize ───────────────────────────────────────────────────────────
+    // ─── initialize ──────────────────────────────────────────────────────────
 
     private fun handleInitialize(call: MethodCall, result: Result) {
         val modelPath = call.argument<String>("modelPath")
@@ -95,25 +77,16 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
 
         scope.launch {
             try {
-                // ── MediaPipe LlmInference initialization ──
-                //
-                // Replace the reflection-based call below with direct class
-                // usage once you have confirmed the dependency is on the
-                // classpath:
-                //
-                //   import com.google.mediapipe.tasks.genai.llminference.LlmInference
-                //
-                //   val options = LlmInference.LlmInferenceOptions.builder()
-                //       .setModelPath(modelPath)
-                //       .setMaxTokens(maxTokens)
-                //       .setTemperature(temperature.toFloat())
-                //       .setTopK(topK)
-                //       .build()
-                //   llmInference = LlmInference.createFromOptions(context, options)
-                //
-                // The reflection approach below provides a compile-time shim
-                // so the Dart layer can be fully tested before the native
-                // dependency is confirmed.
+                val file = File(modelPath)
+                val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                val mi = ActivityManager.MemoryInfo()
+                am?.getMemoryInfo(mi)
+
+                Log.i(TAG, "=== Native Model Initialization Requested ===")
+                Log.i(TAG, "Device: ${Build.MANUFACTURER} ${Build.MODEL} (SDK ${Build.VERSION.SDK_INT}, ABI ${Build.SUPPORTED_ABIS?.firstOrNull()})")
+                Log.i(TAG, "RAM: ${mi.availMem / 1024 / 1024} MB avail / ${mi.totalMem / 1024 / 1024} MB total")
+                Log.i(TAG, "Model: $modelPath (size: ${if (file.exists()) file.length() else -1} bytes)")
+                Log.i(TAG, "Backend: CPU (enforcing safe mode)")
 
                 val llmClass = Class.forName(
                     "com.google.mediapipe.tasks.genai.llminference.LlmInference"
@@ -134,6 +107,20 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
                     .invoke(builderInstance, temperature.toFloat())
                 builderClass.getMethod("setTopK", Int::class.java)
                     .invoke(builderInstance, topK)
+
+                // Force safe CPU backend
+                try {
+                    val backendClass = Class.forName(
+                        "com.google.mediapipe.tasks.genai.llminference.LlmInference\$Backend"
+                    )
+                    val cpuBackend = java.lang.Enum.valueOf(backendClass as Class<out Enum<*>>, "CPU")
+                    builderClass.getMethod("setPreferredBackend", backendClass)
+                        .invoke(builderInstance, cpuBackend)
+                    Log.i(TAG, "Forced preferred backend to CPU")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not set CPU backend on builder: $e")
+                }
+
                 val options = builderClass.getMethod("build")
                     .invoke(builderInstance)
                 llmInference = llmClass
@@ -142,17 +129,19 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
                         optionsClass)
                     .invoke(null, context, options)
 
+                Log.i(TAG, "Native LlmInference session created successfully.")
                 withContext(Dispatchers.Main) { result.success(null) }
             } catch (e: ClassNotFoundException) {
+                Log.e(TAG, "MediaPipe dependency missing: $e")
                 withContext(Dispatchers.Main) {
                     result.error(
                         "LLM_DEPENDENCY_MISSING",
-                        "com.google.mediapipe:tasks-genai is not on the "
-                            + "classpath. Add it to android/app/build.gradle.",
+                        "com.google.mediapipe:tasks-genai is not on the classpath.",
                         e.toString()
                     )
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Native LLM init failed: $e")
                 withContext(Dispatchers.Main) {
                     result.error("LLM_INIT_FAILED", e.message, e.toString())
                 }
@@ -160,7 +149,86 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         }
     }
 
-    // ─── generate ─────────────────────────────────────────────────────────────
+    // ─── smoke test ──────────────────────────────────────────────────────────
+
+    private fun handleSmokeTest(call: MethodCall, result: Result) {
+        val modelPath = call.argument<String>("modelPath")
+            ?: return result.error("INVALID_ARGS", "modelPath required", null)
+        val testPrompt = call.argument<String>("testPrompt") ?: "Say OK"
+
+        scope.launch {
+            try {
+                Log.i(TAG, "=== Running Isolated Native Smoke Test ===")
+                Log.i(TAG, "Model: $modelPath | Prompt: '$testPrompt' | maxTokens: 32 | Backend: CPU")
+
+                val llmClass = Class.forName(
+                    "com.google.mediapipe.tasks.genai.llminference.LlmInference"
+                )
+                val optionsClass = Class.forName(
+                    "com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions"
+                )
+                val builderClass = Class.forName(
+                    "com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions\$Builder"
+                )
+                val builderInstance = optionsClass.getMethod("builder")
+                    .invoke(null)
+                builderClass.getMethod("setModelPath", String::class.java)
+                    .invoke(builderInstance, modelPath)
+                builderClass.getMethod("setMaxTokens", Int::class.java)
+                    .invoke(builderInstance, 32)
+
+                // Force safe CPU backend
+                try {
+                    val backendClass = Class.forName(
+                        "com.google.mediapipe.tasks.genai.llminference.LlmInference\$Backend"
+                    )
+                    val cpuBackend = java.lang.Enum.valueOf(backendClass as Class<out Enum<*>>, "CPU")
+                    builderClass.getMethod("setPreferredBackend", backendClass)
+                        .invoke(builderInstance, cpuBackend)
+                    Log.i(TAG, "Smoke test: forced CPU backend")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Smoke test: setPreferredBackend(CPU) not available: $e")
+                }
+
+                val options = builderClass.getMethod("build")
+                    .invoke(builderInstance)
+                val testLlm = llmClass
+                    .getMethod("createFromOptions",
+                        Context::class.java,
+                        optionsClass)
+                    .invoke(null, context, options)
+
+                val genMethod = testLlm.javaClass.getMethod("generate", String::class.java)
+                val response = genMethod.invoke(testLlm, testPrompt) as? String ?: ""
+                Log.i(TAG, "Smoke test response received: '$response'")
+
+                try {
+                    testLlm.javaClass.getMethod("close").invoke(testLlm)
+                } catch (_: Exception) {}
+
+                withContext(Dispatchers.Main) {
+                    result.success(mapOf(
+                        "success" to true,
+                        "response" to response,
+                        "backend" to "cpu",
+                        "device" to "${Build.MANUFACTURER} ${Build.MODEL}"
+                    ))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Smoke test failed: $e")
+                withContext(Dispatchers.Main) {
+                    result.success(mapOf(
+                        "success" to false,
+                        "error" to (e.message ?: e.toString()),
+                        "backend" to "cpu",
+                        "device" to "${Build.MANUFACTURER} ${Build.MODEL}"
+                    ))
+                }
+            }
+        }
+    }
+
+    // ─── generate ────────────────────────────────────────────────────────────
 
     private fun handleGenerate(call: MethodCall, result: Result) {
         val llm = llmInference
@@ -176,16 +244,6 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
 
         generationJob = scope.launch {
             try {
-                // Streaming callback listener
-                //
-                // Uncomment and use the direct API once confirmed:
-                //   llm as LlmInference
-                //   llm.generateAsync(fullPrompt) { partial, done ->
-                //       sink?.success(partial)
-                //       if (done) sink?.success("__EOS__")
-                //   }
-                //
-                // Reflection-based shim:
                 val listenerClass = Class.forName(
                     "com.google.mediapipe.tasks.genai.llminference"
                         + ".LlmInference\$LlmInferenceResultListener"
@@ -216,13 +274,12 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
     }
 
     private fun buildQwenPrompt(system: String, user: String): String {
-        // Qwen2.5 ChatML format
         return "<|im_start|>system\n$system<|im_end|>\n" +
                "<|im_start|>user\n$user<|im_end|>\n" +
                "<|im_start|>assistant\n"
     }
 
-    // ─── cancel ───────────────────────────────────────────────────────────────
+    // ─── cancel ──────────────────────────────────────────────────────────────
 
     private fun handleCancel(result: Result) {
         generationJob?.cancel()
@@ -233,7 +290,7 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         result.success(null)
     }
 
-    // ─── compatibility ────────────────────────────────────────────────────────
+    // ─── compatibility ───────────────────────────────────────────────────────
 
     private fun handleCompatibility(result: Result) {
         val apiLevel   = Build.VERSION.SDK_INT
@@ -243,21 +300,51 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         val abis = Build.SUPPORTED_ABIS ?: emptyArray()
         val supportedAbi = abis.contains("arm64-v8a")
         val abi = abis.firstOrNull() ?: "unknown"
+        val manufacturer = Build.MANUFACTURER ?: "unknown"
+        val model = Build.MODEL ?: "unknown"
+
+        val am  = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val mi  = ActivityManager.MemoryInfo()
+        am?.getMemoryInfo(mi)
+        val availMem = mi.availMem
+        val totalMem = mi.totalMem
+
+        var nativeRuntimeSupported = false
+        try {
+            Class.forName("com.google.mediapipe.tasks.genai.llminference.LlmInference")
+            nativeRuntimeSupported = true
+        } catch (_: Exception) {}
+
         val supported = apiSupported && supportedAbi
 
+        Log.i(TAG, "Device diagnostics: $manufacturer $model, SDK=$apiLevel, ABI=$abi, " +
+            "RAM=${availMem / 1024 / 1024}MB / ${totalMem / 1024 / 1024}MB, NativeRuntime=$nativeRuntimeSupported, Backend=CPU")
+
         result.success(mapOf(
-            "supported"     to supported,
-            "enoughStorage" to enoughStorage,
-            "enoughMemory"  to enoughMemory,
-            "supportedAbi"  to supportedAbi,
-            "apiLevel"      to apiLevel,
-            "abi"           to abi,
-            "reason"        to when {
-                !apiSupported  -> "Android API $apiLevel < 26 (Android 8.0)"
-                !supportedAbi  -> "Device ABI '$abi' does not support arm64-v8a"
-                !enoughStorage -> "Insufficient free storage (need ≥700 MB)"
-                !enoughMemory  -> "Insufficient RAM (need ≥1.5 GB available)"
-                else           -> null
+            "supported"              to supported,
+            "enoughStorage"          to enoughStorage,
+            "enoughMemory"           to enoughMemory,
+            "supportedAbi"           to supportedAbi,
+            "nativeRuntimeSupported" to nativeRuntimeSupported,
+            "modelFormatSupported"   to true,
+            "runtimeVersionSupported" to true,
+            "backendSupported"       to true,
+            "smokeTestPassed"        to false,
+            "manufacturer"           to manufacturer,
+            "deviceModel"            to model,
+            "apiLevel"               to apiLevel,
+            "abi"                    to abi,
+            "availableRam"           to availMem,
+            "totalRam"               to totalMem,
+            "runtimeVersion"         to "0.10.14",
+            "selectedBackend"        to "cpu",
+            "reason"                 to when {
+                !apiSupported           -> "Android API $apiLevel < 26 (Android 8.0)"
+                !supportedAbi           -> "Device ABI '$abi' does not support arm64-v8a"
+                !enoughStorage          -> "Insufficient free storage (need ≥700 MB)"
+                !enoughMemory           -> "Insufficient RAM (need ≥1.5 GB available)"
+                !nativeRuntimeSupported -> "MediaPipe LLM Inference native runtime not found on classpath"
+                else                    -> null
             }
         ))
     }
@@ -266,20 +353,20 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         return try {
             val stat = StatFs(context.filesDir.absolutePath)
             stat.availableBlocksLong * stat.blockSizeLong >= requiredBytes
-        } catch (e: Exception) { true } // optimistic if check fails
+        } catch (e: Exception) { true }
     }
 
     private fun checkAvailableRam(requiredBytes: Long): Boolean {
         return try {
             val am  = context.getSystemService(Context.ACTIVITY_SERVICE)
-                as ActivityManager
+                as? ActivityManager
             val mi  = ActivityManager.MemoryInfo()
-            am.getMemoryInfo(mi)
+            am?.getMemoryInfo(mi)
             mi.availMem >= requiredBytes
         } catch (e: Exception) { true }
     }
 
-    // ─── EventChannel.StreamHandler ───────────────────────────────────────────
+    // ─── EventChannel.StreamHandler ──────────────────────────────────────────
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
@@ -290,7 +377,7 @@ class GramhealthLlmPlugin : FlutterPlugin, MethodCallHandler,
         generationJob?.cancel()
     }
 
-    // ─── dispose ──────────────────────────────────────────────────────────────
+    // ─── dispose ─────────────────────────────────────────────────────────────
 
     private fun disposeLlm() {
         try {

@@ -40,9 +40,9 @@ class OfflineStatusIndicator extends StatelessWidget {
       padding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -96,11 +96,32 @@ class OfflineStatusIndicator extends StatelessWidget {
           color: Colors.amber.shade700,
           icon: Icons.offline_bolt_outlined,
         );
+      case LocalModelStatus.lexiconOnly:
+        return (
+          label: 'AI \u2022 Offline (Knowledge)',
+          color: Colors.amber.shade800,
+          icon: Icons.menu_book_outlined,
+        );
       case LocalModelStatus.downloading:
         return (
           label: 'Offline AI \u2022 Downloading',
           color: Colors.blue,
           icon: Icons.cloud_download_outlined,
+        );
+      case LocalModelStatus.verifying:
+        return (
+          label: 'Offline AI \u2022 Verifying',
+          color: Colors.blue,
+          icon: Icons.sync_rounded,
+        );
+      case LocalModelStatus.verified:
+      case LocalModelStatus.compatible:
+      case LocalModelStatus.loadable:
+      case LocalModelStatus.ready:
+        return (
+          label: 'Offline AI \u2022 Ready',
+          color: Colors.teal,
+          icon: Icons.check_circle_outline,
         );
       case LocalModelStatus.loading:
         return (
