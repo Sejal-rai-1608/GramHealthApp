@@ -58,7 +58,26 @@ class IntentRouter:
         query_lower = query.lower()
         
         # 1. Emergency detection (deterministic, never requires Gemini)
-        emergency_keywords = ["severe chest pain", "difficulty breathing", "severe bleeding", "stroke", "heart attack", "emergency", "911"]
+        emergency_keywords = [
+            # English
+            "chest pain", "severe chest pain", "chest tightness", "heart attack", "crushing chest",
+            "difficulty breathing", "trouble breathing", "can't breathe", "cannot breathe", "short of breath", "breathlessness", "choking", "suffocating",
+            "stroke", "face drooping", "arm weakness", "speech difficulty", "sudden numbness",
+            "unconscious", "unresponsive", "fainted", "passed out", "loss of consciousness",
+            "seizure", "convulsion", "fits", "epilepsy attack",
+            "severe bleeding", "heavy bleeding", "blood loss", "uncontrolled bleeding", "coughing blood",
+            "anaphylaxis", "throat swelling", "snake bite", "snakebite", "poisoning", "swallowed poison", "overdose",
+            "suicidal", "suicide", "emergency", "911", "108", "112",
+            # Hindi / Hinglish
+            "saans nahi", "saans lene me", "saans lene mein", "seena dard", "seene mein dard",
+            "behosh", "hosh nahi", "dauraa", "mirgi", "khoon aa raha", "bahut khoon",
+            "zehr khaya", "saanp ne kaata", "dawa zyada le li",
+            # Marathi
+            "chaati madhe dukhat", "chaatit dukhat", "chaatit vedna",
+            "shwas ghyayla tras", "shwas ghetana tras", "shwas lagto", "dam lagto", "shwas yet nahi",
+            "raktasrav", "rakta yet aahe", "saanp chaavla", "saanp chavla", "vinchu chavla",
+            "vishbaadha", "vishbadha", "beshuddh", "beshudh", "aetke yene", "aanchki"
+        ]
         if any(keyword in query_lower for keyword in emergency_keywords):
             result = RouteClassification(
                 intent="emergency",

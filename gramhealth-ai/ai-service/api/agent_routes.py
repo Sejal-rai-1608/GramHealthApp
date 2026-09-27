@@ -5,6 +5,7 @@ import time
 import logging
 from orchestrator import multi_agent_graph
 from rag.models.schemas import Citation
+from models.clinical_response import ClinicalResponseSchema
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/agent", tags=["Agent"])
@@ -23,6 +24,7 @@ class AgentQueryResponse(BaseModel):
     confidence: Optional[str] = Field(None, json_schema_extra={"example": "high"})
     urgency: Optional[str] = Field(None, json_schema_extra={"example": "normal"})
     requires_professional_review: Optional[bool] = Field(None, json_schema_extra={"example": True})
+    structured_response: Optional[ClinicalResponseSchema] = Field(None, description="Unified 9-section structured clinical response")
     
     # Evidence Provenance
     evidence: Optional[Dict[str, List[Any]]] = Field(default_factory=lambda: {"patient": [], "medical": []})
@@ -81,6 +83,7 @@ def query_agent(request: AgentQueryRequest, x_request_id: Optional[str] = Header
             confidence=final_state.get("confidence"),
             urgency=final_state.get("urgency"),
             requires_professional_review=final_state.get("requires_professional_review", False),
+            structured_response=final_state.get("structured_response"),
             evidence={
                 "patient": final_state.get("patient_evidence", []),
                 "medical": final_state.get("medical_evidence", [])

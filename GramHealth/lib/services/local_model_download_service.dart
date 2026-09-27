@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:convert/convert.dart';
@@ -43,7 +41,15 @@ class LocalModelDownloadService {
     int startByte = 0;
     if (await tmpFile.exists()) {
       startByte = await tmpFile.length();
-      _log('Resuming from byte $startByte');
+      if (startByte >= expectedSizeBytes) {
+        _log('Tmp file ($startByte bytes) >= expected ($expectedSizeBytes). Deleting stale tmp.');
+        try {
+          await tmpFile.delete();
+        } catch (_) {}
+        startByte = 0;
+      } else {
+        _log('Resuming from byte $startByte');
+      }
     }
 
     int retries = 0;
@@ -60,6 +66,12 @@ class LocalModelDownloadService {
       } on SocketException catch (e) {
         retries++;
         _log('Network error (attempt $retries): $e');
+        if (retries >= OfflineAiConfig.maxDownloadRetries) rethrow;
+        await Future<void>.delayed(Duration(seconds: 2 * retries));
+        startByte = await tmpFile.exists() ? await tmpFile.length() : 0;
+      } on HttpException catch (e) {
+        retries++;
+        _log('HTTP error (attempt $retries): $e');
         if (retries >= OfflineAiConfig.maxDownloadRetries) rethrow;
         await Future<void>.delayed(Duration(seconds: 2 * retries));
         startByte = await tmpFile.exists() ? await tmpFile.length() : 0;
@@ -93,18 +105,29 @@ class LocalModelDownloadService {
           .send(request)
           .timeout(OfflineAiConfig.downloadChunkTimeout);
 
+      if (response.statusCode == 416) {
+        // Range Not Satisfiable — partial file was invalid or exhausted
+        _log('HTTP 416 Range Not Satisfiable. Resetting tmp file.');
+        try {
+          await tmpFile.delete();
+        } catch (_) {}
+        throw const DownloadHttpException('HTTP 416 Range Not Satisfiable');
+      }
+
       if (response.statusCode != 200 && response.statusCode != 206) {
         throw DownloadHttpException(
           'HTTP ${response.statusCode} from $url',
         );
       }
 
-      final total =
-          (response.contentLength ?? 0) + startByte;
-      var received = startByte;
+      final isRange = response.statusCode == 206;
+      final total = isRange
+          ? (response.contentLength ?? 0) + startByte
+          : (response.contentLength ?? expectedTotal);
+      var received = isRange ? startByte : 0;
 
       final sink = tmpFile.openWrite(
-        mode: startByte > 0 ? FileMode.append : FileMode.write,
+        mode: isRange ? FileMode.append : FileMode.write,
       );
 
       try {
@@ -124,6 +147,19 @@ class LocalModelDownloadService {
     } finally {
       client.close();
     }
+  }
+
+  /// Returns current byte count of downloaded/in-progress model file.
+  Future<int> getDownloadedBytes(String destinationPath) async {
+    final tmpFile = File('$destinationPath.tmp');
+    if (await tmpFile.exists()) {
+      return await tmpFile.length();
+    }
+    final finalFile = File(destinationPath);
+    if (await finalFile.exists()) {
+      return await finalFile.length();
+    }
+    return 0;
   }
 
   // ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ import '../widgets/connectivity_badge.dart';
 import '../widgets/voice_note_dialog.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_ai_service.dart';
+import '../widgets/offline_setup_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -338,6 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                ),
+
+                // Offline AI Background Status / Progress Banner
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: OfflineSetupCard(),
                 ),
 
                 // Active Consultations

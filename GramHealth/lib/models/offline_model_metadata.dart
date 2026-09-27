@@ -101,6 +101,20 @@ class LocalModelCompatibility {
   final bool enoughStorage;
   final bool enoughMemory;
   final bool supportedAbi;
+  final bool nativeRuntimeSupported;
+  final bool modelFormatSupported;
+  final bool runtimeVersionSupported;
+  final bool backendSupported;
+  final bool smokeTestPassed;
+  final String? manufacturer;
+  final String? deviceModel;
+  final int? apiLevel;
+  final String? abi;
+  final int? availableRamBytes;
+  final int? totalRamBytes;
+  final int? availableStorageBytes;
+  final String? runtimeVersion;
+  final String? selectedBackend;
   final String? reason;
 
   const LocalModelCompatibility({
@@ -108,10 +122,50 @@ class LocalModelCompatibility {
     required this.enoughStorage,
     required this.enoughMemory,
     this.supportedAbi = true,
+    this.nativeRuntimeSupported = true,
+    this.modelFormatSupported = true,
+    this.runtimeVersionSupported = true,
+    this.backendSupported = true,
+    this.smokeTestPassed = false,
+    this.manufacturer,
+    this.deviceModel,
+    this.apiLevel,
+    this.abi,
+    this.availableRamBytes,
+    this.totalRamBytes,
+    this.availableStorageBytes,
+    this.runtimeVersion,
+    this.selectedBackend,
     this.reason,
   });
 
-  bool get canProceed => supported && enoughStorage && enoughMemory && supportedAbi;
+  bool get canDownload => supported && supportedAbi && enoughStorage;
+  bool get canLoad =>
+      supported &&
+      enoughStorage &&
+      enoughMemory &&
+      supportedAbi &&
+      nativeRuntimeSupported &&
+      modelFormatSupported &&
+      runtimeVersionSupported &&
+      backendSupported;
+  bool get isReadyForGeneration => canLoad && smokeTestPassed;
+  bool get canProceed => canLoad;
+
+  Map<String, dynamic> get deviceDiagnostics => {
+        'manufacturer': manufacturer,
+        'deviceModel': deviceModel,
+        'apiLevel': apiLevel,
+        'abi': abi,
+        'availableRamBytes': availableRamBytes,
+        'totalRamBytes': totalRamBytes,
+        'availableStorageBytes': availableStorageBytes,
+        'runtimeVersion': runtimeVersion,
+        'selectedBackend': selectedBackend,
+        'canDownload': canDownload,
+        'canLoad': canLoad,
+        'reason': reason,
+      };
 
   factory LocalModelCompatibility.fromMap(Map<dynamic, dynamic> map) {
     return LocalModelCompatibility(
@@ -119,6 +173,20 @@ class LocalModelCompatibility {
       enoughStorage: map['enoughStorage'] as bool? ?? false,
       enoughMemory: map['enoughMemory'] as bool? ?? false,
       supportedAbi: map['supportedAbi'] as bool? ?? true,
+      nativeRuntimeSupported: map['nativeRuntimeSupported'] as bool? ?? true,
+      modelFormatSupported: map['modelFormatSupported'] as bool? ?? true,
+      runtimeVersionSupported: map['runtimeVersionSupported'] as bool? ?? true,
+      backendSupported: map['backendSupported'] as bool? ?? true,
+      smokeTestPassed: map['smokeTestPassed'] as bool? ?? false,
+      manufacturer: map['manufacturer'] as String?,
+      deviceModel: map['deviceModel'] as String?,
+      apiLevel: map['apiLevel'] as int?,
+      abi: map['abi'] as String?,
+      availableRamBytes: map['availableRam'] as int?,
+      totalRamBytes: map['totalRam'] as int?,
+      availableStorageBytes: map['availableStorage'] as int?,
+      runtimeVersion: map['runtimeVersion'] as String?,
+      selectedBackend: map['selectedBackend'] as String?,
       reason: map['reason'] as String?,
     );
   }
@@ -126,5 +194,8 @@ class LocalModelCompatibility {
   @override
   String toString() =>
       'LocalModelCompatibility(supported=$supported, '
-      'storage=$enoughStorage, memory=$enoughMemory, abi=$supportedAbi, reason=$reason)';
+      'device=$manufacturer $deviceModel, '
+      'storage=$enoughStorage, memory=$enoughMemory, abi=$supportedAbi, '
+      'runtime=$nativeRuntimeSupported ($runtimeVersion), backend=$selectedBackend, '
+      'smokeTestPassed=$smokeTestPassed, reason=$reason)';
 }

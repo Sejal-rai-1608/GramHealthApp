@@ -37,12 +37,12 @@ class OfflineAiRouter {
   ///
   /// The caller gets an [OfflineResponse] synchronously describing the decision,
   /// then tokens arrive via the [Stream<String>] if the LLM is used.
-  Future<_RoutingResult> route(String query) async {
+  Future<OfflineRoutingResult> route(String query) async {
     // --- LEVEL 2: Emergency safety ---
     final emergencyTerms = safetyService.matchedEmergencyTerms(query);
     if (emergencyTerms.isNotEmpty) {
       final response = safetyService.buildEmergencyResponse(emergencyTerms);
-      return _RoutingResult(
+      return OfflineRoutingResult(
         response: response,
         stream: Stream.value(response.text),
       );
@@ -57,8 +57,9 @@ class OfflineAiRouter {
     }
 
     final isModelReady =
-        modelManager.status == LocalModelStatus.loaded ||
-        modelManager.status == LocalModelStatus.generating;
+        OfflineAiConfig.enableLocalLlmRuntime &&
+        (modelManager.status == LocalModelStatus.loaded ||
+         modelManager.status == LocalModelStatus.generating);
 
     // --- LEVEL 3: Lexicon + LLM ---
     if (entries.isNotEmpty && isModelReady) {
@@ -83,7 +84,7 @@ class OfflineAiRouter {
         (token) => safetyService.sanitiseGeneratedText(token),
       );
 
-      return _RoutingResult(
+      return OfflineRoutingResult(
         response: OfflineResponse(
           text: '', // filled progressively from stream
           decision: OfflineResponseDecision.medicalLexiconPlusLlm,
@@ -101,13 +102,13 @@ class OfflineAiRouter {
     // --- LEVEL 5: Unavailable / unsupported ---
     if (!isModelReady &&
         modelManager.status == LocalModelStatus.unavailable) {
-      return _RoutingResult(
+      return OfflineRoutingResult(
         response: OfflineResponse.unavailable(),
         stream: Stream.value(OfflineResponse.unavailable().text),
       );
     }
 
-    return _RoutingResult(
+    return OfflineRoutingResult(
       response: OfflineResponse.noInformation(),
       stream: Stream.value(OfflineResponse.noInformation().text),
     );
@@ -117,7 +118,7 @@ class OfflineAiRouter {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  _RoutingResult _buildLexiconOnlyResult(
+  OfflineRoutingResult _buildLexiconOnlyResult(
     List<MedicalLexiconEntry> entries,
   ) {
     final sb = StringBuffer();
@@ -140,7 +141,7 @@ class OfflineAiRouter {
     final text = sb.toString().trim();
     final matchedTerms = entries.map((e) => e.condition).toList();
 
-    return _RoutingResult(
+    return OfflineRoutingResult(
       response: OfflineResponse(
         text: text,
         decision: OfflineResponseDecision.lexiconOnly,
@@ -205,9 +206,9 @@ class OfflineAiRouter {
       'personalised medical advice.';
 }
 
-/// Internal result bundling the decision + token stream.
-class _RoutingResult {
-  const _RoutingResult({
+/// Result bundling the decision + token stream.
+class OfflineRoutingResult {
+  const OfflineRoutingResult({
     required this.response,
     required this.stream,
   });

@@ -11,6 +11,7 @@ class AiResponse {
   final List<String>? sources;
   final String? routingMethod;
   final List<String>? graphPath;
+  final dynamic structuredResponse;
 
   AiResponse({
     required this.query,
@@ -25,6 +26,7 @@ class AiResponse {
     this.sources,
     this.routingMethod,
     this.graphPath,
+    this.structuredResponse,
   });
 
   factory AiResponse.fromJson(Map<String, dynamic> json) {

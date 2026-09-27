@@ -80,11 +80,12 @@ class OfflineAiService {
   // Startup check (non-blocking)
   // ---------------------------------------------------------------------------
 
-  /// Run on app startup. Checks if model is already downloaded and verified.
-  /// Does NOT start a download automatically.
-  Future<void> checkModelOnStartup() async {
+  /// Run on app startup after authentication on Home Screen.
+  /// Checks whether the model is already downloaded and verified.
+  /// If missing and eligible, starts background download automatically.
+  Future<void> checkModelOnStartup({bool autoDownload = true}) async {
     _ensureInit();
-    await _modelManager.checkModelOnStartup();
+    await _modelManager.checkModelOnStartup(autoDownload: autoDownload);
   }
 
   // ---------------------------------------------------------------------------
@@ -109,9 +110,19 @@ class OfflineAiService {
   /// Call when the user opens the AI chat screen.
   Future<void> ensureModelLoaded() async {
     _ensureInit();
+    if (!OfflineAiConfig.enableLocalLlmRuntime) {
+      _log('ensureModelLoaded called but enableLocalLlmRuntime is false. Preserving lexicon-only mode.');
+      return;
+    }
     if (_modelManager.status == LocalModelStatus.ready) {
       await _modelManager.loadModel();
     }
+  }
+
+  /// Run an isolated native smoke test on the model without switching app state.
+  Future<Map<String, dynamic>> runSmokeTest({String prompt = 'Say OK'}) async {
+    _ensureInit();
+    return _modelManager.runNativeSmokeTest(prompt: prompt);
   }
 
   Future<void> unloadModel() async {
@@ -157,7 +168,10 @@ class OfflineAiService {
 
   LocalModelStatus get modelStatus => _modelManager.status;
   double get downloadProgress => _modelManager.downloadProgress;
+  int get downloadedBytes => _modelManager.downloadedBytes;
+  int get expectedBytes => _modelManager.expectedBytes;
   String? get lastError => _modelManager.lastError;
+  String? get statusReason => _modelManager.statusReason;
   OfflineModelMetadata? get modelMetadata => _modelManager.metadata;
   LocalModelCompatibility? get compatibility => _modelManager.compatibility;
 
@@ -170,19 +184,24 @@ class OfflineAiService {
 
   Map<String, dynamic> diagnostics() =>
   {
-    'ai_mode': _isModelUsable() ? 'offline' : 'unavailable',
+    'ai_mode': _isModelUsable()
+        ? 'offline_llm'
+        : (modelStatus == LocalModelStatus.lexiconOnly ? 'offline_lexicon' : 'unavailable'),
+    'enable_local_llm_runtime': OfflineAiConfig.enableLocalLlmRuntime,
     'offline_model': modelStatus.name,
     'lexicon': 'bundled',
     'model_version': modelMetadata?.version ?? 'unknown',
     'model_size': modelMetadata?.sizeMb ?? 'unknown',
     'download_progress':
         '${(downloadProgress * 100).toStringAsFixed(0)}%',
+    'device_diagnostics': compatibility?.deviceDiagnostics ?? {},
     'last_error': lastError ?? 'none',
   };
 
   bool _isModelUsable() =>
-      modelStatus == LocalModelStatus.loaded ||
-      modelStatus == LocalModelStatus.generating;
+      OfflineAiConfig.enableLocalLlmRuntime &&
+      (modelStatus == LocalModelStatus.loaded ||
+       modelStatus == LocalModelStatus.generating);
 
   // ---------------------------------------------------------------------------
   // Helpers

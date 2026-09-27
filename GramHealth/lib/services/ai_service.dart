@@ -26,11 +26,8 @@ class AiService {
     final bool hasAuth = token.isNotEmpty;
     final int queryLen = queryText.length;
 
-    print('[Flutter AI]');
-    print('Request ID: $requestId');
-    print('POST URL: $backendUri');
-    print('query length: $queryLen');
-    print('Authorization present: $hasAuth');
+    print('[AI] ONLINE_REQUEST_STARTED: POST $backendUri');
+    print('[Flutter AI] Request ID: $requestId | query length: $queryLen | Auth present: $hasAuth');
 
     bool isNetworkOrBackendUnavailable = false;
     String? lastError;
@@ -48,12 +45,14 @@ class AiService {
           )
           .timeout(const Duration(seconds: 120));
 
-      final contentType = backendResponse.headers['content-type'] ?? 'unknown';
-      print('[Flutter AI]');
-      print('HTTP status: ${backendResponse.statusCode}');
-      print('response content type: $contentType');
+      // ── Distinguish Auth Errors (401/403) ─────────────────────────
+      if (backendResponse.statusCode == 401 || backendResponse.statusCode == 403) {
+        print('[AI] Authentication error (${backendResponse.statusCode}). DO NOT fallback to offline AI.');
+        throw Exception('Authentication required or session expired (${backendResponse.statusCode}). Please log in again.');
+      }
 
       if (backendResponse.statusCode == 200) {
+        print('[AI] ONLINE_REQUEST_SUCCESS: HTTP 200 from $backendUri');
         final decoded = jsonDecode(backendResponse.body);
         final bool successExists = decoded is Map<String, dynamic> && decoded.containsKey('success');
         final bool dataExists = decoded is Map<String, dynamic> && decoded['data'] != null;
@@ -100,8 +99,9 @@ class AiService {
           backendResponse.statusCode == 504) {
         isNetworkOrBackendUnavailable = true;
         lastError = 'Backend AI service unavailable (${backendResponse.statusCode}): ${backendResponse.body}';
+        print('[AI] ONLINE_REQUEST_FAILED: $lastError');
       } else {
-        // Validation error or client error (e.g. 400, 401, 403, 500)
+        // Validation error or client error (e.g. 400, 422, 500)
         try {
           final error = jsonDecode(backendResponse.body);
           if (error is Map && error['message'] != null) {
@@ -115,12 +115,15 @@ class AiService {
     } on SocketException catch (e) {
       isNetworkOrBackendUnavailable = true;
       lastError = 'Network connection failed: $e';
+      print('[AI] ONLINE_REQUEST_FAILED: $lastError');
     } on TimeoutException catch (e) {
       isNetworkOrBackendUnavailable = true;
       lastError = 'Request timed out: $e';
+      print('[AI] ONLINE_REQUEST_FAILED: $lastError');
     } on http.ClientException catch (e) {
       isNetworkOrBackendUnavailable = true;
       lastError = 'Client network exception: $e';
+      print('[AI] ONLINE_REQUEST_FAILED: $lastError');
     } catch (e) {
       final str = e.toString().toLowerCase();
       if (str.contains('failed to fetch') ||
@@ -129,6 +132,7 @@ class AiService {
           str.contains('clientexception')) {
         isNetworkOrBackendUnavailable = true;
         lastError = e.toString();
+        print('[AI] ONLINE_REQUEST_FAILED: $lastError');
       } else {
         rethrow;
       }
@@ -146,7 +150,8 @@ class AiService {
     // When Node.js backend or network is unreachable, route locally via
     // OfflineAiRouter -> Offline safety -> local lexicon -> local Qwen model.
     if (isNetworkOrBackendUnavailable) {
-      print('[AiService] Online request failed ($lastError). Falling back to Offline AI.');
+      print('[AI] OFFLINE_FALLBACK_STARTED: Falling back to offline AI because online backend is unreachable.');
+      print('[AiService] Reason: $lastError');
 
       try {
         await OfflineAiService.instance.initialise();
@@ -163,7 +168,7 @@ class AiService {
         if (offlineText.isNotEmpty) {
           return AiResponse(
             query: queryText,
-            intent: 'offline_medical',
+            intent: isEmergency ? 'emergency' : 'offline_medical',
             agent: 'offline_ai_router',
             answer: offlineText,
             grounded: true,
@@ -179,7 +184,7 @@ class AiService {
     }
 
     throw Exception(
-      lastError ?? 'AI service is currently unavailable. Please check your connection.',
+      lastError!,
     );
   }
 }
