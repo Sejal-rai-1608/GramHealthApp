@@ -41,7 +41,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     title: const Text('Maintenance Mode', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     subtitle: const Text('Restrict standard user access during system updates', style: TextStyle(fontSize: 12)),
                     value: _maintenanceMode,
-                    activeThumbColor: AppColors.leafGreenPrimary,
+                    activeColor: AppColors.leafGreenPrimary,
                     onChanged: (val) {
                       setState(() {
                         _maintenanceMode = val;
@@ -53,7 +53,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     title: const Text('Auto-Approve Doctors', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     subtitle: const Text('Automatically verify doctor accounts upon registration', style: TextStyle(fontSize: 12)),
                     value: _autoApproveDoctors,
-                    activeThumbColor: AppColors.leafGreenPrimary,
+                    activeColor: AppColors.leafGreenPrimary,
                     onChanged: (val) {
                       setState(() {
                         _autoApproveDoctors = val;
@@ -65,7 +65,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     title: const Text('SMS / WhatsApp Alerts', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     subtitle: const Text('Send mobile reminders for scheduled appointments to patients', style: TextStyle(fontSize: 12)),
                     value: _smsAlerts,
-                    activeThumbColor: AppColors.leafGreenPrimary,
+                    activeColor: AppColors.leafGreenPrimary,
                     onChanged: (val) {
                       setState(() {
                         _smsAlerts = val;

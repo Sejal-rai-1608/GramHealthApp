@@ -8,7 +8,7 @@ import 'package:record/record.dart';
 class OfflineVoiceRecorder extends StatefulWidget {
   final Function(String base64String) onRecordingComplete;
 
-  const OfflineVoiceRecorder({super.key, required this.onRecordingComplete});
+  const OfflineVoiceRecorder({Key? key, required this.onRecordingComplete}) : super(key: key);
 
   @override
   _OfflineVoiceRecorderState createState() => _OfflineVoiceRecorderState();

@@ -325,13 +325,13 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                   Expanded(
                     child: GestureDetector(
                       onTap: _routeToNearestPHC,
-                      child: const GlassCard(
-                        padding: EdgeInsets.all(16),
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            Icon(Icons.location_on, size: 28, color: AppColors.primaryAccent),
-                            SizedBox(height: 8),
-                            Text(
+                            const Icon(Icons.location_on, size: 28, color: AppColors.primaryAccent),
+                            const SizedBox(height: 8),
+                            const Text(
                               'Nearest\nPHC',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
                               textAlign: TextAlign.center,

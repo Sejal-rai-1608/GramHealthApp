@@ -23,9 +23,9 @@ class AdminFacilitiesScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: const [
                   Text(
                     'Rural Health Facilities',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
@@ -80,9 +80,9 @@ class AdminFacilitiesScreen extends StatelessWidget {
                         final fac = facilities[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
+                          leading: CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: Icon(Icons.local_hospital, color: AppColors.leafGreenDeep),
+                            child: const Icon(Icons.local_hospital, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             fac['name']!,

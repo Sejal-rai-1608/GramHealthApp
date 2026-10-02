@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/primary_button.dart';
@@ -122,10 +123,10 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Center(
+              Center(
                 child: Text(
                   'Complete Your Doctor Profile',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -140,7 +141,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               const SizedBox(height: 32),
 
               // Specialization dropdown
-              const Text('Specialization *', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Specialization *', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               const SizedBox(height: 8),
               GlassCard(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -168,7 +169,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               const SizedBox(height: 20),
 
               // Registration number
-              const Text('Medical Registration No. *', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Medical Registration No. *', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               const SizedBox(height: 8),
               _buildField(
                 controller: _regCtrl,
@@ -178,7 +179,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               const SizedBox(height: 20),
 
               // Hospital / PHC
-              const Text('Hospital / PHC / Clinic', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Hospital / PHC / Clinic', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               const SizedBox(height: 4),
               Text('(Optional)', style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.5))),
               const SizedBox(height: 8),

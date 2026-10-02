@@ -24,9 +24,9 @@ class AdminDoctorsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: const [
                   Text(
                     'Doctors Directory',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),

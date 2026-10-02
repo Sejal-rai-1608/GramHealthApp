@@ -8,6 +8,7 @@ enum LocalBackendMode {
 /// Standardised for production deployment on Render and local development:
 /// - In production: Flutter connects to Node.js backend on Render (https://gramhealthapp.onrender.com)
 /// - In local dev: Flutter connects to local Node.js backend via ADB reverse (http://127.0.0.1:3000) or LAN
+/// - Node.js backend is the sole gateway to the Python AI service (no direct client-to-AI calls)
 class AppConfig {
   AppConfig._();
 
@@ -43,6 +44,8 @@ class AppConfig {
 
   // ── API Routes (All routed strictly through Node.js backend) ───────────
   static String get apiHealth         => '$baseUrl/api/health';
+
+  // ── API Routes (All routed strictly through Node.js backend) ───────────
   static String get apiAuth           => '$baseUrl/api/auth';
   static String get apiDoctors        => '$baseUrl/api/doctors';
   static String get apiPatients       => '$baseUrl/api/patients';

@@ -58,9 +58,9 @@ class AdminPrescriptionsScreen extends StatelessWidget {
                         final pres = prescriptions[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
+                          leading: CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: Icon(Icons.description_outlined, color: AppColors.leafGreenDeep),
+                            child: const Icon(Icons.description_outlined, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             'Prescription for ${pres['patient']}',

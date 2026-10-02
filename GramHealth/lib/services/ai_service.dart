@@ -76,7 +76,7 @@ class AiService {
         print('agent: $agent');
         print('routing_method: $routingMethod');
 
-        if (answerExists) {
+        if (answerExists && dataMap != null) {
           final rawAnswer = dataMap['answer'].toString();
           final preview = rawAnswer.length > 80 ? '${rawAnswer.substring(0, 80)}...' : rawAnswer;
           print('answer preview: $preview');
@@ -184,7 +184,7 @@ class AiService {
     }
 
     throw Exception(
-      lastError,
+      lastError!,
     );
   }
 }

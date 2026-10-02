@@ -21,12 +21,12 @@ class AdminPatientsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: const [
                   Text(
                     'Patient Registry',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
@@ -70,9 +70,9 @@ class AdminPatientsScreen extends StatelessWidget {
                         final pat = patients[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
+                          leading: CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: Icon(Icons.person, color: AppColors.leafGreenDeep),
+                            child: const Icon(Icons.person, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             pat['name']!,

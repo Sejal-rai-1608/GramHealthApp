@@ -21,12 +21,12 @@ class AdminAppointmentsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: const [
                   Text(
                     'Appointments Registry',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
@@ -70,9 +70,9 @@ class AdminAppointmentsScreen extends StatelessWidget {
                         final appt = appointments[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
+                          leading: CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: Icon(Icons.calendar_month, color: AppColors.leafGreenDeep),
+                            child: const Icon(Icons.calendar_month, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             '${appt['patient']} ↔ ${appt['doctor']}',

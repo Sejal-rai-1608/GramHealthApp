@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
@@ -18,6 +17,28 @@ class ConnectivityService {
 
   Stream<NetworkStatus> get statusStream => _statusController.stream;
   NetworkStatus get currentStatus => _currentStatus;
+  bool get isOnline => _currentStatus != NetworkStatus.offline;
+
+  /// Returns true if connected via Wi-Fi or Ethernet (unmetered / broadband).
+  Future<bool> isWifiOrEthernet() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      return results.contains(ConnectivityResult.wifi) ||
+          results.contains(ConnectivityResult.ethernet);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Returns true if connected via mobile cellular data.
+  Future<bool> isMobileData() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      return results.contains(ConnectivityResult.mobile);
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Starts listening to network interface changes and pings.
   void initialize() {
@@ -55,9 +76,7 @@ class ConnectivityService {
 
     try {
       final startTime = DateTime.now();
-      // Ping a reliable global endpoint to verify actual internet connectivity 
-      // instead of the local dev backend which might be down.
-      final response = await http.get(Uri.parse('https://dns.google/')).timeout(
+      final response = await http.get(Uri.parse('${AppConfig.baseUrl}/api/health')).timeout(
         const Duration(seconds: 5),
       );
 
@@ -69,14 +88,11 @@ class ConnectivityService {
           _updateStatus(NetworkStatus.online);
         }
       } else {
-        // Even if we don't get 200, if we get a response, we have internet, 
-        // but let's be conservative. If it's a redirect, it might be a captive portal.
-        _updateStatus(NetworkStatus.online); 
+        _updateStatus(NetworkStatus.offline);
       }
     } on TimeoutException {
       _updateStatus(NetworkStatus.weak);
     } catch (e) {
-      // Failed to reach Google, likely truly offline or captive portal block
       _updateStatus(NetworkStatus.offline);
     }
   }

@@ -219,7 +219,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(days[i], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF333333))),
-                                      const Row(children: [
+                                      Row(children: const [
                                         Icon(Icons.access_time, size: 10, color: AppColors.primaryAccent),
                                         SizedBox(width: 4),
                                         Text('09:00 - 05:00 PM', style: TextStyle(fontSize: 11, color: Color(0xFF666666))),

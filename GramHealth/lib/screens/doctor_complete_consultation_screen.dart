@@ -7,7 +7,7 @@ import '../services/prescription_service.dart';
 
 class DoctorCompleteConsultationScreen extends StatefulWidget {
   final String consultationId;
-  const DoctorCompleteConsultationScreen({super.key, required this.consultationId});
+  const DoctorCompleteConsultationScreen({Key? key, required this.consultationId}) : super(key: key);
 
   @override
   State<DoctorCompleteConsultationScreen> createState() =>

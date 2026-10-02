@@ -86,10 +86,10 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFEF5350), width: 1.5),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Icon(Icons.emergency, color: Color(0xFFC62828), size: 20),
                       SizedBox(width: 6),
@@ -104,8 +104,8 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 6),
-                  Text(
+                  const SizedBox(height: 6),
+                  const Text(
                     'These symptoms may require urgent medical attention. Call local emergency services (108 / 112) or go to the nearest emergency department immediately.',
                     style: TextStyle(
                       fontSize: 12,

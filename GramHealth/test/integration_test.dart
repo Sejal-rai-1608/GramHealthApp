@@ -280,13 +280,13 @@ void main() {
     test('TEST 1 & 2 — Fresh install vs existing verified model', () {
       // Test 1: Fresh install (missing model)
       const bool missingModel = false;
-      const bool autoDownloadTriggered = !missingModel;
+      final bool autoDownloadTriggered = !missingModel;
       expect(autoDownloadTriggered, isTrue);
 
       // Test 2: Existing verified model
       const bool existingModel = true;
-      const String status = existingModel ? 'ready' : 'unavailable';
-      const bool reDownloaded = !existingModel;
+      final String status = existingModel ? 'ready' : 'unavailable';
+      final bool reDownloaded = !existingModel;
       expect(status, equals('ready'));
       expect(reDownloaded, isFalse);
     });

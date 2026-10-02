@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'dart:io';
+import 'package:archive/archive.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../config/offline_ai_config.dart';
@@ -277,7 +277,7 @@ class OfflineMedicalLookupService {
     final byteData = await rootBundle.load(path);
     final compressed = byteData.buffer.asUint8List();
 
-    final decompressed = gzip.decode(compressed);
+    final decompressed = GZipDecoder().decodeBytes(compressed);
     final jsonStr = utf8.decode(decompressed);
     final jsonList = jsonDecode(jsonStr) as List<dynamic>;
 

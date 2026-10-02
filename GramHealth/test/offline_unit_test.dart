@@ -151,7 +151,7 @@ void main() {
   });
 
   group('7 & 8. Condition and Symptom Matching', () {
-    const entry = MedicalLexiconEntry(
+    final entry = MedicalLexiconEntry(
       condition: 'Appendicitis',
       aliases: ['appendix pain', 'appendix'],
       symptoms: ['abdominal pain', 'nausea', 'vomiting', 'fever'],
@@ -265,7 +265,7 @@ void main() {
     });
 
     test('verifies OfflineModelMetadata serialization', () {
-      const meta = OfflineModelMetadata(
+      final meta = OfflineModelMetadata(
         modelId: 'qwen2.5-0.5b-litert-q8',
         version: OfflineAiConfig.modelVersion,
         filename: OfflineAiConfig.modelFilename,

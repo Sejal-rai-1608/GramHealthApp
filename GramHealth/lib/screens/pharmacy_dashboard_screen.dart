@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/pharmacy_service.dart';
+import '../services/auth_service.dart';
 import '../utils/auth_guard.dart';
 import '../theme/app_colors.dart';
 
@@ -183,7 +184,7 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
                     subtitle: Text(inStock ? 'In Stock' : 'Out of Stock', style: TextStyle(color: inStock ? Colors.green : Colors.red)),
                     trailing: Switch(
                       value: inStock,
-                      activeThumbColor: Colors.green,
+                      activeColor: Colors.green,
                       onChanged: (val) => _toggleMedicine(med, val),
                     ),
                   ),

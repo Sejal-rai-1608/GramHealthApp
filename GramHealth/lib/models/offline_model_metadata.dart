@@ -92,7 +92,7 @@ class OfflineModelMetadata {
 
   @override
   String toString() =>
-      'OfflineModelMetadata($modelId v$version, $sizeMb, verified=$verified)';
+      'OfflineModelMetadata($modelId v$version, ${sizeMb}, verified=$verified)';
 }
 
 /// Compatibility assessment for loading the local model on this device.
