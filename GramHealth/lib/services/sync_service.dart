@@ -21,14 +21,20 @@ class SyncService {
     _networkSubscription = ConnectivityService.instance.statusStream.listen((status) {
       if (status == NetworkStatus.online || status == NetworkStatus.weak) {
         processQueue();
-        PharmacyService.syncPharmacies().catchError((e) => print('Failed BG Pharmacy Sync $e'));
+        PharmacyService.syncPharmacies().catchError((e) {
+          print('Failed BG Pharmacy Sync $e');
+          return <PharmacyModel>[];
+        });
       }
     });
 
     // Run an initial check if we start the app online
     if (ConnectivityService.instance.currentStatus != NetworkStatus.offline) {
       processQueue();
-      PharmacyService.syncPharmacies().catchError((e) => print('Failed init Pharmacy Sync $e'));
+      PharmacyService.syncPharmacies().catchError((e) {
+        print('Failed init Pharmacy Sync $e');
+        return <PharmacyModel>[];
+      });
     }
   }
 
