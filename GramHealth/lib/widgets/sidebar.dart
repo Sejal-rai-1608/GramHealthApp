@@ -43,9 +43,9 @@ class _SidebarState extends State<Sidebar> {
     final role = AuthGuard.currentUserRole;
     if (role == 'doctor') {
       return [
-        _NavItem('requests', Icons.assignment_ind, 'Accept Consultation'),
-        _NavItem('consultations', Icons.video_camera_front, 'Consultations'),
-        _NavItem('prescriptions', Icons.medication, 'Prescriptions'),
+        const _NavItem('requests', Icons.assignment_ind, 'Accept Consultation'),
+        const _NavItem('consultations', Icons.video_camera_front, 'Consultations'),
+        const _NavItem('prescriptions', Icons.medication, 'Prescriptions'),
       ];
     } else if (role == 'admin') {
       return [

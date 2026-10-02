@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../config/app_config.dart';
 import 'api_client.dart';
 import '../data/local_database.dart';
@@ -80,7 +79,7 @@ class PharmacyService {
       return pharmacies;
     } catch (e) {
       print('Sync Pharmacies failed: $e');
-      throw e;
+      rethrow;
     }
   }
 

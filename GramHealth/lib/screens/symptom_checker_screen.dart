@@ -71,7 +71,11 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                       final isSelected = _selected.contains(s);
                       return GestureDetector(
                         onTap: () => setState(() {
-                          if (isSelected) _selected.remove(s); else _selected.add(s);
+                          if (isSelected) {
+                            _selected.remove(s);
+                          } else {
+                            _selected.add(s);
+                          }
                         }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),

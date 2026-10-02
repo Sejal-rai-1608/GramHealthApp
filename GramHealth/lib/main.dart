@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
+
 import 'l10n/app_language.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
@@ -76,7 +77,7 @@ final _router = GoRouter(
         GoRoute(
             path: 'records',
             builder: (c, s) =>
-                MainShell(child: PatientRecordsScreen())),
+                const MainShell(child: PatientRecordsScreen())),
         GoRoute(
             path: 'profile',
             builder: (c, s) => const MainShell(child: ProfileScreen())),

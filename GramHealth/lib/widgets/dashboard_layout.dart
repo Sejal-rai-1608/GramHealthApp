@@ -18,17 +18,17 @@ class DashboardLayout extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 900;
 
-    final sidebar = Sidebar();
+    const sidebar = Sidebar();
 
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: TopNavbar(title: title, showDrawerButton: !isDesktop),
       ),
-      drawer: (!isDesktop) ? Drawer(child: sidebar) : null,
+      drawer: (!isDesktop) ? const Drawer(child: sidebar) : null,
       body: Row(
         children: [
-          if (isDesktop) SizedBox(width: 250, child: sidebar),
+          if (isDesktop) const SizedBox(width: 250, child: sidebar),
           Expanded(child: Padding(padding: const EdgeInsets.all(16), child: child)),
         ],
       ),

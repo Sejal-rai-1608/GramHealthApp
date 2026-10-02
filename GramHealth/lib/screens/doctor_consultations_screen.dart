@@ -9,7 +9,6 @@ import '../services/consultation_service.dart';
 import '../services/call_service.dart';
 import '../services/medical_record_service.dart';
 import '../services/connectivity_service.dart';
-import '../services/connectivity_service.dart';
 import '../models/medical_record.dart';
 import '../widgets/voice_note_dialog.dart';
 import 'doctor_complete_consultation_screen.dart';
@@ -117,7 +116,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
                   ),
                 ),
-                StatusBadge(status: 'ACTIVE'),
+                const StatusBadge(status: 'ACTIVE'),
               ],
             ),
             if (c.symptoms != null && c.symptoms!.isNotEmpty) ...[
@@ -329,7 +328,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Patient Health Vault', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Patient Health Vault', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text('Fetching linked records securely...', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 16),

@@ -6,6 +6,8 @@ import 'upload_record_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PatientRecordsScreen extends StatefulWidget {
+  const PatientRecordsScreen({super.key});
+
   @override
   _PatientRecordsScreenState createState() => _PatientRecordsScreenState();
 }
@@ -46,7 +48,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open document')),
+        const SnackBar(content: Text('Could not open document')),
       );
     }
   }
@@ -55,15 +57,15 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Medical Vault'),
+        title: const Text('My Medical Vault'),
         actions: [
           IconButton(
-            icon: Icon(Icons.cloud_upload),
+            icon: const Icon(Icons.cloud_upload),
             tooltip: 'Upload Document',
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => UploadRecordScreen()),
+                MaterialPageRoute(builder: (context) => const UploadRecordScreen()),
               );
               if (result == true) {
                 _fetchRecords();
@@ -71,7 +73,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _fetchRecords,
           ),
         ],
@@ -81,14 +83,14 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => UploadRecordScreen()),
+            MaterialPageRoute(builder: (context) => const UploadRecordScreen()),
           );
           if (result == true) {
             _fetchRecords();
           }
         },
-        icon: Icon(Icons.cloud_upload),
-        label: Text('Upload Record'),
+        icon: const Icon(Icons.cloud_upload),
+        label: const Text('Upload Record'),
       ),
     );
   }
@@ -103,11 +105,11 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
             Text(_error!, style: TextStyle(color: Colors.grey.shade700)),
-            SizedBox(height: 16),
-            ElevatedButton(onPressed: _fetchRecords, child: Text('Retry')),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _fetchRecords, child: const Text('Retry')),
           ],
         ),
       );
@@ -118,27 +120,27 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.folder_open, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const Icon(Icons.folder_open, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
             Text('No medical records found.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
-            SizedBox(height: 8),
-            Text('Upload your physical health documents safely.', style: TextStyle(color: Colors.grey)),
-            SizedBox(height: 24),
+            const SizedBox(height: 8),
+            const Text('Upload your physical health documents safely.', style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UploadRecordScreen()),
+                  MaterialPageRoute(builder: (context) => const UploadRecordScreen()),
                 );
                 if (result == true) {
                   _fetchRecords();
                 }
               },
-              icon: Icon(Icons.add),
-              label: Text("Upload Record", style: TextStyle(color: Colors.white)),
+              icon: const Icon(Icons.add),
+              label: const Text("Upload Record", style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
               )
             )
           ],
@@ -153,16 +155,16 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
         final isAbha = record.source == 'ABHA';
 
         return Card(
-          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           elevation: isAbha ? 3 : 1,
           shape: RoundedRectangleBorder(
             side: isAbha ? BorderSide(color: Colors.blue.shade200, width: 2) : BorderSide.none,
             borderRadius: BorderRadius.circular(16),
           ),
           child: ListTile(
-            contentPadding: EdgeInsets.all(16),
+            contentPadding: const EdgeInsets.all(16),
             leading: Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isAbha ? Colors.blue.shade50 : Theme.of(context).primaryColor.withOpacity(0.1),
                 shape: BoxShape.circle,
@@ -172,17 +174,17 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
                 color: isAbha ? Colors.blue.shade700 : Theme.of(context).primaryColor,
               ),
             ),
-            title: Text(record.title ?? 'Untitled Record', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(record.title ?? 'Untitled Record', style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text('Type: ${record.documentType}'),
                 Text('Date: ${record.issuedDate?.toString().substring(0, 10) ?? '-'}'),
                 if (isAbha) 
                   Container(
-                    margin: EdgeInsets.only(top: 8),
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade100,
                       borderRadius: BorderRadius.circular(6),
@@ -191,7 +193,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.verified, size: 14, color: Colors.blue.shade800),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text('Fetched via ABHA', style: TextStyle(color: Colors.blue.shade900, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -212,9 +214,9 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             AppBar(
-                              title: Text('Document View'), 
+                              title: const Text('Document View'), 
                               automaticallyImplyLeading: false,
-                              actions: [CloseButton()],
+                              actions: const [CloseButton()],
                             ),
                             Flexible(child: InteractiveViewer(child: Image.memory(bytes))),
                           ]
@@ -225,7 +227,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
                     _launchUrl(record.fileUrl!);
                   }
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No document attachment found.")));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No document attachment found.")));
                 }
               },
             ),

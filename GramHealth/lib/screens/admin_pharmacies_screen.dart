@@ -23,9 +23,9 @@ class AdminPharmaciesScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Partner Pharmacies',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
@@ -80,9 +80,9 @@ class AdminPharmaciesScreen extends StatelessWidget {
                         final phar = pharmacies[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
+                          leading: const CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: const Icon(Icons.local_pharmacy, color: AppColors.leafGreenDeep),
+                            child: Icon(Icons.local_pharmacy, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             phar['name']!,

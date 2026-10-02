@@ -20,12 +20,12 @@ class AdminConsultationsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Consultations Record',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
@@ -69,9 +69,9 @@ class AdminConsultationsScreen extends StatelessWidget {
                         final cons = consultations[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
+                          leading: const CircleAvatar(
                             backgroundColor: AppColors.leafGreenPale,
-                            child: const Icon(Icons.chat_bubble_outline, color: AppColors.leafGreenDeep),
+                            child: Icon(Icons.chat_bubble_outline, color: AppColors.leafGreenDeep),
                           ),
                           title: Text(
                             '${cons['patient']} with ${cons['doctor']}',

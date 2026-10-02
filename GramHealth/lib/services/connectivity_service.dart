@@ -55,7 +55,9 @@ class ConnectivityService {
 
     try {
       final startTime = DateTime.now();
-      final response = await http.get(Uri.parse('${AppConfig.baseUrl}/api/health')).timeout(
+      // Ping a reliable global endpoint to verify actual internet connectivity 
+      // instead of the local dev backend which might be down.
+      final response = await http.get(Uri.parse('https://dns.google/')).timeout(
         const Duration(seconds: 5),
       );
 
@@ -67,11 +69,14 @@ class ConnectivityService {
           _updateStatus(NetworkStatus.online);
         }
       } else {
-        _updateStatus(NetworkStatus.offline);
+        // Even if we don't get 200, if we get a response, we have internet, 
+        // but let's be conservative. If it's a redirect, it might be a captive portal.
+        _updateStatus(NetworkStatus.online); 
       }
     } on TimeoutException {
       _updateStatus(NetworkStatus.weak);
     } catch (e) {
+      // Failed to reach Google, likely truly offline or captive portal block
       _updateStatus(NetworkStatus.offline);
     }
   }

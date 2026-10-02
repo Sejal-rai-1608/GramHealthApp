@@ -165,10 +165,14 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
                       Text(
-                        context.tr('online_assistant'),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4CAF50)),
+                        _statusSubtitle,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor),
                       ),
                     ],
+                  ),
+                  const Spacer(),
+                  OfflineStatusIndicator(
+                    isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline,
                   ),
                 ],
               ),

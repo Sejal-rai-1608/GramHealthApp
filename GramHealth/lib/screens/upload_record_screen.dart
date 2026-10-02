@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import '../services/medical_record_service.dart';
 
 class UploadRecordScreen extends StatefulWidget {
+  const UploadRecordScreen({super.key});
+
   @override
   _UploadRecordScreenState createState() => _UploadRecordScreenState();
 }
@@ -34,7 +36,7 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
   Future<void> _upload() async {
     if (_formKey.currentState!.validate()) {
       if (_base64Image == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select or capture a document image first.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select or capture a document image first.')));
         return;
       }
       setState(() => _isUploading = true);
@@ -44,7 +46,7 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
           _documentType,
           _base64Image!,
         );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uploaded successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploaded successfully!')));
         Navigator.pop(context, true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload: $e')));
@@ -56,7 +58,7 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Upload Document')),
+      appBar: AppBar(title: const Text('Upload Document')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -66,20 +68,20 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text("Upload a physical document to your health vault", style: TextStyle(fontSize: 16, color: Colors.grey.shade700)),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Document Title',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.title),
                 ),
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _documentType,
-                decoration: InputDecoration(
+                initialValue: _documentType,
+                decoration: const InputDecoration(
                   labelText: 'Document Type',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
@@ -92,7 +94,7 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
                     .toList(),
                 onChanged: (v) => setState(() => _documentType = v!),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               if (_selectedImage != null)
                 Container(
                   height: 200,
@@ -117,32 +119,32 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
                     child: Text('No Document Selected', style: TextStyle(color: Colors.grey.shade600)),
                   ),
                 ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () => _pickImage(ImageSource.camera),
-                    icon: Icon(Icons.camera_alt),
-                    label: Text('Camera'),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
                   ),
                   ElevatedButton.icon(
                     onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: Icon(Icons.photo_library),
-                    label: Text('Gallery'),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
                   ),
                 ],
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _isUploading ? null : _upload,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _isUploading 
-                  ? CircularProgressIndicator(color: Colors.white) 
-                  : Text('Save Record to Vault', style: TextStyle(fontSize: 16)),
+                  ? const CircularProgressIndicator(color: Colors.white) 
+                  : const Text('Save Record to Vault', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),
