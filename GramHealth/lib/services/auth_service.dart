@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import '../data/local_database.dart';
 import 'api_client.dart';
 
 /// Real authentication service that talks to the GramHealth backend.
@@ -77,6 +78,7 @@ class AuthService {
       final token = data['token'] as String;
       final user = data['user'] as Map<String, dynamic>;
 
+      await LocalDatabase.instance.clearAllData();
       await _saveToken(token);
       await _saveUser(user);
 
@@ -174,5 +176,6 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConfig.tokenKey);
     await prefs.remove(AppConfig.userKey);
+    await LocalDatabase.instance.clearAllData();
   }
 }

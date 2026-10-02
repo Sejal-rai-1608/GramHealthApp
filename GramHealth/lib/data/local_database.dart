@@ -184,4 +184,16 @@ class LocalDatabase {
     final results = await db.query(table);
     return results.map((e) => jsonDecode(e['data'] as String) as Map<String, dynamic>).toList();
   }
+
+  /// Wipes all cached database tables to ensure absolute user data isolation on login/logout.
+  Future<void> clearAllData() async {
+    final db = await instance.database;
+    await db.delete('cached_consultations');
+    await db.delete('cached_prescriptions');
+    await db.delete('cached_users');
+    await db.delete('cached_doctors');
+    await db.delete('cached_records');
+    await db.delete('cached_pharmacies');
+    await db.delete('sync_queue');
+  }
 }

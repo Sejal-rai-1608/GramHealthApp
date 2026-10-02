@@ -111,13 +111,7 @@ const listMyMedicalRecords = async (user, query = {}) => {
         })
     ]);
 
-    let allItems = [...items];
-    // For MVP Presentation: Automatically simulating a connection to the ABDM grid.
-    const abhaRecords = generateMockABHARecords(patientProfileId);
-    allItems = [...allItems, ...abhaRecords];
-    allItems.sort((a, b) => new Date(b.issuedDate || b.createdAt) - new Date(a.issuedDate || a.createdAt));
-
-    return { items: allItems, meta: buildMeta(total, page, limit) };
+    return { items, meta: buildMeta(total, page, limit) };
 };
 
 const listDoctorPatientRecords = async (patientProfileId, query = {}) => {
@@ -136,12 +130,7 @@ const listDoctorPatientRecords = async (patientProfileId, query = {}) => {
         })
     ]);
 
-    let allItems = [...items];
-    const abhaRecords = generateMockABHARecords(patientProfileId);
-    allItems = [...allItems, ...abhaRecords];
-    allItems.sort((a, b) => new Date(b.issuedDate || b.createdAt) - new Date(a.issuedDate || a.createdAt));
-
-    return { items: allItems, meta: buildMeta(total, page, limit) };
+    return { items, meta: buildMeta(total, page, limit) };
 };
 
 const uploadPatientRecord = async (user, data) => {
