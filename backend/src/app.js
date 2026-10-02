@@ -13,6 +13,7 @@ const consultationRoutes = require("./routes/consultation.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 const prescriptionRoutes = require("./routes/prescription.routes");
 const pharmacyRoutes = require("./routes/pharmacy.routes");
+const aiRoutes = require("./routes/ai.routes");
 
 const { notFound } = require("./middleware/notFound");
 const { errorHandler } = require("./middleware/errorHandler");
@@ -58,6 +59,7 @@ app.use("/api/consultations", consultationRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/pharmacy", pharmacyRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
