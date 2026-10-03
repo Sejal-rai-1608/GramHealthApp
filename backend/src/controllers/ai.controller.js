@@ -2,16 +2,32 @@ const asyncHandler = require("../utils/asyncHandler");
 const prisma = require("../config/prisma");
 
 /**
- * App Services Context Document
+ * GramHealth Master RAG Knowledge Base
+ * Detailed operational guide for the AI Assistant (दीहाती डॉक्टर)
  */
-const APP_SERVICES_CONTEXT = `
-GramHealth Application Services Overview:
-1. **Teleconsultation & Video Calls**: Instant & scheduled audio/video consultations with verified doctors, specialty search, and digital prescription generation.
-2. **AI Symptom Checker & Chatbot (दीहाती डॉक्टर)**: 24/7 online & offline AI triage, disease prediction, precautions, and home care advice.
-3. **ABHA Health Vault**: Government ABHA ID integration for uploading, storing, and viewing digital medical records & lab test reports.
-4. **Pharmacy & Medicine Finder**: Search local pharmacies, view live stock availability, and place medicine orders.
-5. **ASHA Worker Care System**: Offline-first field data entry and patient monitoring for rural healthcare workers.
-6. **Emergency 24/7 Triage**: Direct red-flag emergency detection linking patients to 108/112 services.
+const GRAMHEALTH_MASTER_KNOWLEDGE_BASE = `
+=== GRAMHEALTH APPLICATION COMPLETE MASTER KNOWLEDGE BASE ===
+
+1. **Teleconsultation & Booking Consultations (डॉक्टर परामर्श / वीडियो कॉल)**:
+   - **How to get a consultation**: Open the GramHealth App -> Tap on 'Find Doctors' or 'Doctor List' -> Select a doctor by specialty (General Physician, Pediatrician, Gynecologist, Neurologist, Cardiologist, etc.) -> Tap 'Request Consultation' or 'Book Appointment' -> Select Video/Audio mode -> Submit request.
+   - **Doctor Accept & Call**: The doctor receives your request in real-time, accepts it, and initiates the secure audio/video call.
+   - **Digital Prescription**: After consultation, the doctor sends a digital prescription directly to your GramHealth Health Vault.
+
+2. **AI Symptom Checker & Chatbot (दीहाती डॉक्टर)**:
+   - 24/7 online & offline AI triage. Analyzes patient symptoms, predicts probable conditions, gives emergency red-flag warnings, and suggests home care remedies or immediate PHC visits.
+
+3. **ABHA Health Vault & Medical Records (डिजिटल स्वास्थ्य कार्ड / ABHA ID)**:
+   - Link government ABHA ID to sync digital health records.
+   - Upload blood reports, X-rays, prescriptions, and lab results under the 'Health Records' screen.
+
+4. **Pharmacy & Medicine Finder (दवा दुकान / दवा खोजें)**:
+   - Go to 'Pharmacy' or 'Medicine Finder' tab -> Search medicine name -> View nearby partner pharmacies with live stock availability and pricing.
+
+5. **ASHA Worker Field System (आशा कार्यकर्ता सेवा)**:
+   - Offline-first field tool allowing ASHA workers to record patient vitals, screen pregnant women/children, and sync data when connected to internet.
+
+6. **24/7 Emergency Triage (आपातकालीन 108/112)**:
+   - Tap 'Emergency' button on the home screen to directly connect with 108/112 ambulance services or nearest PHC/CHC hospital.
 `;
 
 /**
@@ -32,7 +48,7 @@ const queryAi = asyncHandler(async (req, res) => {
   const qLower = queryText.toLowerCase();
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // Extract medical specialty keywords from query
+  // Medical specialty keywords
   const specialties = [
     "neurology", "neurologist",
     "pediatric", "pediatrician", "child",
@@ -42,7 +58,6 @@ const queryAi = asyncHandler(async (req, res) => {
     "orthopedic", "bone",
     "general", "physician"
   ];
-
   const matchedSpecialty = specialties.find(s => qLower.includes(s));
 
   // ── 1. Dynamic Database Context Retrieval ─────────────────────────────────
@@ -64,7 +79,7 @@ const queryAi = asyncHandler(async (req, res) => {
       const nameMatch = qLower.match(/(?:doctor|dr\.?)\s+([a-z0-9]+)/i);
       const nameToken = nameMatch ? nameMatch[1] : null;
 
-      if (nameToken && nameToken.length > 2 && nameToken !== "list" && nameToken !== "details" && nameToken !== "name") {
+      if (nameToken && nameToken.length > 2 && !["list", "details", "name", "available", "show"].includes(nameToken)) {
         doctors = await prisma.doctor.findMany({
           where: {
             OR: [
@@ -78,7 +93,6 @@ const queryAi = asyncHandler(async (req, res) => {
         });
       }
 
-      // If no name match, try specialty match
       if (doctors.length === 0 && matchedSpecialty) {
         doctors = await prisma.doctor.findMany({
           where: {
@@ -92,7 +106,6 @@ const queryAi = asyncHandler(async (req, res) => {
         });
       }
 
-      // If still no doctors found, get all active doctors
       if (doctors.length === 0) {
         doctors = await prisma.doctor.findMany({
           take: 10,
@@ -101,7 +114,7 @@ const queryAi = asyncHandler(async (req, res) => {
       }
 
       if (doctors.length > 0) {
-        const docLines = doctors.map((d, idx) => {
+        const docLines = doctors.map((d) => {
           const docName = d.user?.name ? (d.user.name.startsWith("Dr.") ? d.user.name : `Dr. ${d.user.name}`) : "Doctor";
           const spec = d.specialization || "General Physician";
           const hosp = d.hospitalName || "GramHealth Clinic";
@@ -121,12 +134,10 @@ const queryAi = asyncHandler(async (req, res) => {
         }
 
         dynamicDbContext += `\n[LIVE REGISTERED DOCTORS IN DATABASE]:\n` + docLines.join("\n");
-      } else {
-        doctorSearchResultText = "There are currently no doctors registered in the database. Please check back soon or contact support.";
       }
     }
 
-    // B. Medical Records Context Search
+    // Patient Records Search
     const targetUserId = req.user?.userId || patientId;
     if (
       targetUserId &&
@@ -143,7 +154,6 @@ const queryAi = asyncHandler(async (req, res) => {
       if (patient) {
         dynamicDbContext += "\n[PATIENT HEALTH RECORDS SUMMARY]:\n";
         if (patient.medicalRecords?.length > 0) {
-          dynamicDbContext += `- Medical Records Count: ${patient.medicalRecords.length}\n`;
           patient.medicalRecords.forEach(r => {
             dynamicDbContext += `  • ${r.title || "Record"} (${r.category || "General"}): ${r.description || "No summary"}\n`;
           });
@@ -155,8 +165,9 @@ const queryAi = asyncHandler(async (req, res) => {
   }
 
   let answer = "";
-  let routingMethod = "medical_rules_engine";
+  let routingMethod = "knowledge_engine";
 
+  // ── 2. Primary Execution: Gemini LLM with Full RAG Knowledge Base ──────────
   if (apiKey) {
     const modelEndpoints = [
       "gemini-1.5-flash",
@@ -164,16 +175,16 @@ const queryAi = asyncHandler(async (req, res) => {
       "gemini-1.5-pro"
     ];
 
-    const systemPrompt = `You are GramHealth AI (दीहाती डॉक्टर), an expert rural healthcare assistant and platform guide for India.
-Your goal is to provide accurate, empathetic healthcare triage, disease prediction, application guidance, doctor recommendations, and health record summaries.
+    const systemPrompt = `You are GramHealth AI (दीहाती डॉक्टर), an intelligent healthcare assistant and platform guide for GramHealth India.
+Answer the user's question directly, naturally, and helpfully using the application knowledge base and database context below.
 
-${APP_SERVICES_CONTEXT}
+${GRAMHEALTH_MASTER_KNOWLEDGE_BASE}
 ${dynamicDbContext}
 
-Instructions for your response:
-1. **If asking about Doctors or Specialties (e.g. Neurology, Pediatrics, Cardiology)**: Provide a clear list of matching doctors from the database context provided above.
-2. **If asking about App Services**: Explain GramHealth features (Teleconsultations, ABHA Vault, Pharmacy Finder, AI Triage).
-3. **If asking about Symptoms/Health**: Provide potential causes, warning signs, home remedies, and PHC visit recommendations.
+Guidelines:
+- If the user asks how to do something (e.g. consultation, booking, ABHA, pharmacy, records), explain the exact steps clearly.
+- If the user asks for a doctor or specialty, refer to the live doctors list from the database.
+- Be empathetic, clear, and easy to understand.
 
 User Question: ${queryText}`;
 
@@ -185,12 +196,7 @@ User Question: ${queryText}`;
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: systemPrompt }],
-                },
-              ],
+              contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
             }),
           }
         );
@@ -203,9 +209,6 @@ User Question: ${queryText}`;
             routingMethod = `gemini_${modelName}`;
             break;
           }
-        } else {
-          const errText = await geminiResponse.text();
-          console.warn(`[Backend AI] Model ${modelName} returned status ${geminiResponse.status}: ${errText}`);
         }
       } catch (err) {
         console.error(`[Backend AI] Error calling Gemini endpoint ${modelName}:`, err.message);
@@ -213,16 +216,59 @@ User Question: ${queryText}`;
     }
   }
 
-  // Guaranteed Smart Fallback: Executes if Gemini call fails or API key is absent
+  // ── 3. Universal Natural Language Fallback Engine (Handles Typos & Offline Mode)
   if (!answer) {
-    if (doctorSearchResultText) {
+    // A. Consultation & Booking Queries (handles typos like 'consutation', 'consulation', 'consult', 'booking', 'appointment')
+    if (
+      qLower.includes("consult") ||
+      qLower.includes("consut") ||
+      qLower.includes("consul") ||
+      qLower.includes("appointment") ||
+      qLower.includes("book") ||
+      qLower.includes("video call")
+    ) {
+      answer = `To get a doctor consultation on GramHealth:
+
+1. 📱 Tap on **'Find Doctors'** or **'Doctor List'** from the main dashboard.
+2. 👨‍⚕️ Select a doctor matching your required specialty (e.g., General Physician, Neurologist, Pediatrician).
+3. 📩 Tap **'Request Consultation'** or **'Book Appointment'**.
+4. 📞 Select Video or Audio call mode and submit your request.
+5. 📄 Once the doctor accepts and completes the call, your digital prescription will automatically save to your Health Vault!`;
+    }
+    // B. Doctor Queries
+    else if (doctorSearchResultText) {
       answer = doctorSearchResultText;
-    } else if (qLower.includes("service") || qLower.includes("app") || qLower.includes("feature")) {
-      answer = "GramHealth provides 6 core services:\n1. 🩺 Doctor Teleconsultations\n2. 🤖 AI Symptom Checker & Chatbot\n3. 📂 ABHA Health Record Vault\n4. 💊 Local Pharmacy Finder & Medicine Availability\n5. 👩‍⚕️ ASHA Worker Field System\n6. 🚨 24/7 Emergency Triage (108/112).";
-    } else if (qLower.includes("fever") || qLower.includes("bukhar") || qLower.includes("taap")) {
-      answer = "Fever can be caused by viral infections, flu, or malaria. Please stay hydrated, take rest, and monitor your temperature. If fever exceeds 101°F (38.3°C) or lasts more than 3 days, please consult a physician immediately.";
-    } else {
-      answer = `Hello! I am your GramHealth AI Assistant (दीहाती डॉक्टर). I can help answer health queries, check symptoms, show available doctors, explain app services, and access your health records. How can I assist you today?`;
+    }
+    // C. ABHA & Health Records Queries
+    else if (qLower.includes("abha") || qLower.includes("record") || qLower.includes("report") || qLower.includes("vault")) {
+      answer = `To manage your medical records & ABHA ID:
+
+1. 📂 Open the **'Health Records'** screen from your bottom navigation menu.
+2. 🪪 Tap **'Link ABHA ID'** to sync your official Government ABHA health profile.
+3. 📄 Tap **'Upload Record'** to take a picture of lab tests, prescriptions, or X-rays to store them securely.`;
+    }
+    // D. Pharmacy & Medicine Queries
+    else if (qLower.includes("pharmacy") || qLower.includes("medicine") || qLower.includes("dawa") || qLower.includes("store")) {
+      answer = `To find local pharmacies and medicines:
+
+1. 💊 Tap on the **'Pharmacy'** tab on the home screen.
+2. 🔍 Search for any medicine or brand name.
+3. 📍 View nearby partner pharmacies, live stock availability, and prices.`;
+    }
+    // E. General App Overview Queries
+    else if (qLower.includes("service") || qLower.includes("app") || qLower.includes("feature") || qLower.includes("how to")) {
+      answer = `GramHealth offers 6 core services to help you:
+
+1. 🩺 **Teleconsultations**: Book audio/video calls with verified doctors.
+2. 🤖 **AI Symptom Checker**: 24/7 symptom analysis & health guidance.
+3. 📂 **ABHA Health Vault**: Store and manage digital health records.
+4. 💊 **Pharmacy Finder**: Check local medicine stock & prices.
+5. 👩‍⚕️ **ASHA Worker System**: Rural field care monitoring.
+6. 🚨 **Emergency Triage**: 108/112 ambulance integration.`;
+    }
+    // F. General Greeting Fallback
+    else {
+      answer = `Hello! I am your GramHealth AI Assistant (दीहाती डॉक्टर). You can ask me how to book doctor consultations, check health symptoms, search local pharmacies, or view your medical records!`;
     }
   }
 
