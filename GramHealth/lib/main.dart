@@ -4,45 +4,50 @@ import 'package:go_router/go_router.dart';
 import 'dart:async';
 
 import 'services/offline_ai_service.dart';
+import 'utils/auth_guard.dart';
 
 import 'l10n/app_language.dart';
 import 'theme/app_theme.dart';
-import 'screens/splash_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_shell.dart';
-import 'screens/home_screen.dart';
-import 'screens/doctor_list_screen.dart';
-import 'screens/doctor_details_screen.dart';
-import 'screens/symptom_checker_screen.dart';
-import 'screens/patient_records_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/notifications_screen.dart';
-import 'screens/chatbot_screen.dart';
-import 'screens/teleconsultation_request_screen.dart';
-import 'screens/prescription_list_screen.dart';
-import 'screens/video_call_screen.dart';
-import 'screens/emergency_help_screen.dart';
-import 'screens/doctor_requests_screen.dart';
-import 'screens/doctor_consultations_screen.dart';
-import 'screens/doctor_prescriptions_screen.dart';
-import 'screens/doctor_profile_screen.dart';
-import 'screens/doctor_onboarding_screen.dart';
-import 'screens/admin_dashboard_screen.dart';
-import 'utils/auth_guard.dart';
-import 'screens/admin_users_screen.dart';
-import 'screens/admin_doctors_screen.dart';
-import 'screens/admin_patients_screen.dart';
-import 'screens/admin_appointments_screen.dart';
-import 'screens/admin_consultations_screen.dart';
-import 'screens/admin_prescriptions_screen.dart';
-import 'screens/admin_pharmacies_screen.dart';
-import 'screens/admin_facilities_screen.dart';
-import 'screens/admin_reports_screen.dart';
-import 'screens/admin_settings_screen.dart';
-import 'screens/medicine_availability_screen.dart';
-import 'screens/pharmacy_dashboard_screen.dart';
-import 'screens/health_overview_screen.dart';
+import 'screens/common/splash_screen.dart';
+import 'screens/common/onboarding_screen.dart';
+import 'screens/common/login_screen.dart';
+import 'screens/common/main_shell.dart';
+import 'screens/common/home_screen.dart';
+import 'screens/common/profile_screen.dart';
+import 'screens/common/notifications_screen.dart';
+import 'screens/common/chatbot_screen.dart';
+import 'screens/common/video_call_screen.dart';
+import 'screens/common/emergency_help_screen.dart';
+
+import 'screens/patient/symptom_checker_screen.dart';
+import 'screens/patient/patient_records_screen.dart';
+import 'screens/patient/teleconsultation_request_screen.dart';
+import 'screens/patient/health_overview_screen.dart';
+
+import 'screens/doctor/doctor_list_screen.dart';
+import 'screens/doctor/doctor_details_screen.dart';
+import 'screens/doctor/doctor_requests_screen.dart';
+import 'screens/doctor/doctor_consultations_screen.dart';
+import 'screens/doctor/doctor_prescriptions_screen.dart';
+import 'screens/doctor/doctor_profile_screen.dart';
+import 'screens/doctor/doctor_onboarding_screen.dart';
+
+import 'screens/common/forgot_password_screen.dart';
+import 'screens/pharmacy/prescription_list_screen.dart';
+import 'screens/pharmacy/medicine_availability_screen.dart';
+import 'screens/pharmacy/pharmacy_dashboard_screen.dart';
+
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_users_screen.dart';
+import 'screens/admin/admin_doctors_screen.dart';
+import 'screens/admin/admin_patients_screen.dart';
+import 'screens/admin/admin_appointments_screen.dart';
+import 'screens/admin/admin_consultations_screen.dart';
+import 'screens/admin/admin_prescriptions_screen.dart';
+import 'screens/admin/admin_pharmacies_screen.dart';
+import 'screens/admin/admin_facilities_screen.dart';
+import 'screens/admin/admin_reports_screen.dart';
+import 'screens/admin/admin_settings_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
 
@@ -62,6 +67,7 @@ final _router = GoRouter(
     GoRoute(
         path: '/onboarding', builder: (c, s) => const OnboardingScreen()),
     GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
+    GoRoute(path: '/forgot-password', builder: (c, s) => const ForgotPasswordScreen()),
     // Patient routes (role: patient)
     GoRoute(
       path: '/main',

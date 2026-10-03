@@ -74,21 +74,34 @@ class DoctorService {
       return models;
     }
 
-    String url = '${AppConfig.apiDoctors}?page=$page&limit=$limit';
-    if (specialization != null) url += '&specialization=$specialization';
+    try {
+      String url = '${AppConfig.apiDoctors}?page=$page&limit=$limit';
+      if (specialization != null) url += '&specialization=$specialization';
 
-    final response = await ApiClient.get(url);
-    final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
+      final response = await ApiClient.get(url);
+      final List<dynamic> items = response['data'] as List<dynamic>? ?? [];
 
-    for (var item in items) {
-      if (item is Map<String, dynamic> && item['id'] != null) {
-        await LocalDatabase.instance.cacheData('cached_doctors', item['id'].toString(), item);
+      for (var item in items) {
+        if (item is Map<String, dynamic> && item['id'] != null) {
+          await LocalDatabase.instance.cacheData('cached_doctors', item['id'].toString(), item);
+        }
       }
-    }
 
-    return items
-        .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+      return items
+          .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Fallback to local database cache if network request fails
+      final cached = await LocalDatabase.instance.getAllCachedData('cached_doctors');
+      if (cached.isNotEmpty) {
+        var models = cached.map((e) => DoctorModel.fromJson(e)).toList();
+        if (specialization != null) {
+          models = models.where((d) => d.specialization == specialization).toList();
+        }
+        return models;
+      }
+      rethrow;
+    }
   }
 
   /// Returns a single doctor by ID.

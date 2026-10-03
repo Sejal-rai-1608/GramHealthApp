@@ -170,6 +170,23 @@ class AuthService {
   static Future<void> updateUser(Map<String, dynamic> updated) =>
       _saveUser(updated);
 
+  // ── Reset Password ────────────────────────────────────────────────────────
+
+  /// Resets a user's password given their registered email/phone and new password.
+  static Future<void> resetPassword({
+    required String emailOrPhone,
+    required String newPassword,
+  }) async {
+    await ApiClient.post(
+      '${AppConfig.apiAuth}/reset-password',
+      {
+        'email': emailOrPhone,
+        'newPassword': newPassword,
+      },
+      auth: false,
+    );
+  }
+
   // ── Logout ────────────────────────────────────────────────────────────────
 
   static Future<void> logout() async {
