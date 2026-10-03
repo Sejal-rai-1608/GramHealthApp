@@ -239,7 +239,29 @@ User Question: ${queryText}`;
     else if (doctorSearchResultText) {
       answer = doctorSearchResultText;
     }
-    // C. ABHA & Health Records Queries
+    // C. Stomach & Gastrointestinal Symptom Queries (handles Hindi/Hinglish terms like 'pet main infection', 'pet dard', 'dast', 'loose motion', 'vomit', 'stomach ache')
+    else if (
+      qLower.includes("pet") ||
+      qLower.includes("stomach") ||
+      qLower.includes("infection") ||
+      qLower.includes("dast") ||
+      qLower.includes("loose motion") ||
+      qLower.includes("gastric") ||
+      qLower.includes("acidity") ||
+      qLower.includes("vomit") ||
+      qLower.includes("ulti")
+    ) {
+      answer = `Condition: Stomach Infection / Gastroenteritis (पेट का संक्रमण)
+
+Health Advice & Remedies:
+1. 💧 **Dehydration Prevention**: Drink plenty of clean boiled water, coconut water, or ORS (Oral Rehydration Solution) to maintain electrolyte balance.
+2. 🍚 **Light Diet**: Eat soft, easy-to-digest food such as curd rice (दही-चावल), khichdi (खिचड़ी), bananas, and toast. Avoid oily, spicy, raw, or street food.
+3. 🛌 **Rest**: Rest well to allow your digestive tract to recover.
+
+⚠️ **When to Consult a Doctor Immediately**:
+If you experience high fever (>101°F), severe abdominal cramps, persistent vomiting for >24 hours, or blood in stool, please consult a verified physician or visit your nearest PHC immediately.`;
+    }
+    // D. ABHA & Health Records Queries
     else if (qLower.includes("abha") || qLower.includes("record") || qLower.includes("report") || qLower.includes("vault")) {
       answer = `To manage your medical records & ABHA ID:
 
@@ -247,7 +269,7 @@ User Question: ${queryText}`;
 2. 🪪 Tap **'Link ABHA ID'** to sync your official Government ABHA health profile.
 3. 📄 Tap **'Upload Record'** to take a picture of lab tests, prescriptions, or X-rays to store them securely.`;
     }
-    // D. Pharmacy & Medicine Queries
+    // E. Pharmacy & Medicine Queries
     else if (qLower.includes("pharmacy") || qLower.includes("medicine") || qLower.includes("dawa") || qLower.includes("store")) {
       answer = `To find local pharmacies and medicines:
 
@@ -255,7 +277,7 @@ User Question: ${queryText}`;
 2. 🔍 Search for any medicine or brand name.
 3. 📍 View nearby partner pharmacies, live stock availability, and prices.`;
     }
-    // E. General App Overview Queries
+    // F. General App Overview Queries
     else if (qLower.includes("service") || qLower.includes("app") || qLower.includes("feature") || qLower.includes("how to")) {
       answer = `GramHealth offers 6 core services to help you:
 
@@ -266,7 +288,7 @@ User Question: ${queryText}`;
 5. 👩‍⚕️ **ASHA Worker System**: Rural field care monitoring.
 6. 🚨 **Emergency Triage**: 108/112 ambulance integration.`;
     }
-    // F. General Greeting Fallback
+    // G. General Greeting Fallback
     else {
       answer = `Hello! I am your GramHealth AI Assistant (दीहाती डॉक्टर). You can ask me how to book doctor consultations, check health symptoms, search local pharmacies, or view your medical records!`;
     }
@@ -279,7 +301,14 @@ User Question: ${queryText}`;
     qLower.includes("headache") ||
     qLower.includes("symptom") ||
     qLower.includes("disease") ||
-    qLower.includes("cure");
+    qLower.includes("cure") ||
+    qLower.includes("pet") ||
+    qLower.includes("stomach") ||
+    qLower.includes("infection") ||
+    qLower.includes("dast") ||
+    qLower.includes("loose motion") ||
+    qLower.includes("vomit") ||
+    qLower.includes("thikh");
 
   return res.status(200).json({
     success: true,

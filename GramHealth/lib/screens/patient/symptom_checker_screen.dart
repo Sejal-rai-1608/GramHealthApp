@@ -85,9 +85,19 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
           .timeout(const Duration(seconds: 45));
       
       if (mounted) {
-        final conditionText = (aiResponse.intent != null && aiResponse.intent!.isNotEmpty && aiResponse.intent != 'offline_medical')
-            ? 'Clinical Assessment (${aiResponse.intent})'
-            : 'Clinical Assessment';
+        String conditionText = 'Symptom Assessment';
+        if (aiResponse.structuredResponse?.primaryCondition != null && aiResponse.structuredResponse!.primaryCondition!.isNotEmpty) {
+          conditionText = aiResponse.structuredResponse!.primaryCondition!;
+        } else if (aiResponse.answer != null && aiResponse.answer!.contains('Condition:')) {
+          final match = RegExp(r'Condition:\s*([^\n]+)').firstMatch(aiResponse.answer!);
+          if (match != null) {
+            conditionText = match.group(1)!.trim();
+          }
+        } else if (combinedQuery.toLowerCase().contains('pet') || combinedQuery.toLowerCase().contains('stomach') || combinedQuery.toLowerCase().contains('infection')) {
+          conditionText = 'Stomach Infection / Gastroenteritis (पेट का संक्रमण)';
+        } else if (aiResponse.intent != null && aiResponse.intent != 'symptom_analysis' && aiResponse.intent != 'general_health' && aiResponse.intent != 'offline_medical') {
+          conditionText = aiResponse.intent!;
+        }
 
         setState(() {
           _isAnalyzing = false;
@@ -97,8 +107,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             condition: conditionText,
             advice: aiResponse.answer ?? 'No detailed advice available.',
             action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
-                ? 'Please consult a professional immediately.' 
-                : 'Monitor your symptoms.',
+                ? 'Please consult a doctor if symptoms persist or worsen.' 
+                : 'Monitor your symptoms and maintain hydration.',
             source: 'Online AI',
           );
         });
