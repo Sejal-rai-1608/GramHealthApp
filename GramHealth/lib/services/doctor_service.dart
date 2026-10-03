@@ -15,6 +15,7 @@ class DoctorModel {
   final String? consultationFee;
   final String? bio;
   final String? hospital;
+  final String? phone;
 
   DoctorModel({
     required this.id,
@@ -27,6 +28,7 @@ class DoctorModel {
     this.consultationFee,
     this.bio,
     this.hospital,
+    this.phone,
   });
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,7 @@ class DoctorModel {
       consultationFee: json['consultationFee']?.toString(),
       bio: json['bio']?.toString(),
       hospital: json['hospital']?.toString(),
+      phone: user['phone']?.toString() ?? json['phone']?.toString(),
     );
   }
 

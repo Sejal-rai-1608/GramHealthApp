@@ -263,7 +263,11 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                       title: context.tr('book_appointment'),
                       onPress: () => context.push(
                         '/teleconsultation-request',
-                        extra: {'doctorId': doctor.id, 'doctorName': doctor.name},
+                        extra: {
+                          'doctorId': doctor.id,
+                          'doctorName': doctor.name,
+                          'doctorPhone': doctor.phone,
+                        },
                       ),
                     ),
                   ),

@@ -39,6 +39,7 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   // Doctor info passed via GoRouter extras
   String? _doctorId;
   String _doctorName = '';
+  String? _doctorPhone;
 
   @override
   void didChangeDependencies() {
@@ -47,6 +48,7 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     if (extra is Map<String, dynamic>) {
       _doctorId   = extra['doctorId']   as String?;
       _doctorName = extra['doctorName'] as String? ?? '';
+      _doctorPhone = extra['doctorPhone'] as String?;
     }
   }
 
@@ -360,6 +362,8 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                     ),
                     const SizedBox(height: 16),
                     OfflineVoiceRecorder(
+                      doctorPhone: _doctorPhone,
+                      doctorName: _doctorName,
                       onRecordingComplete: (base64) {
                         setState(() {
                           _voiceNoteBase64 = base64.isEmpty ? null : base64;

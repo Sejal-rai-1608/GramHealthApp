@@ -4,11 +4,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_colors.dart';
 
 class OfflineVoiceRecorder extends StatefulWidget {
   final Function(String base64String) onRecordingComplete;
+  final String? doctorPhone;
+  final String? doctorName;
 
-  const OfflineVoiceRecorder({Key? key, required this.onRecordingComplete}) : super(key: key);
+  const OfflineVoiceRecorder({
+    Key? key,
+    required this.onRecordingComplete,
+    this.doctorPhone,
+    this.doctorName,
+  }) : super(key: key);
 
   @override
   _OfflineVoiceRecorderState createState() => _OfflineVoiceRecorderState();
@@ -61,11 +70,8 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
           _audioPath = path;
         });
 
-        // Convert file to Base64 to bypass missing local upload files if deleted later
         final bytes = await File(path).readAsBytes();
         final base64Audio = base64Encode(bytes);
-        
-        // Pass base64 back with a fake MIME prefix for URL parsing consistency
         widget.onRecordingComplete("data:audio/m4a;base64,$base64Audio");
       }
     } catch (e) {
@@ -81,74 +87,164 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
       setState(() {
         _audioPath = null;
       });
-      widget.onRecordingComplete(""); // Clear
+      widget.onRecordingComplete("");
+    }
+  }
+
+  Future<void> _makeDirectPhoneCall() async {
+    final rawPhone = widget.doctorPhone?.trim();
+    final phoneNum = (rawPhone != null && rawPhone.isNotEmpty) ? rawPhone : '108';
+    final Uri phoneUri = Uri.parse('tel:$phoneNum');
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(phoneUri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Initiating direct phone call to $phoneNum..."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_audioPath != null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.green.shade200),
-        ),
-        child: Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green),
-            const SizedBox(width: 8),
-            const Expanded(child: Text("Voice note recorded securely.", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: _deleteRecording,
-            )
-          ],
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: _isRecording ? _stopRecording : _startRecording,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: _isRecording ? Colors.redAccent.withValues(alpha: 0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _isRecording ? Colors.redAccent : const Color(0xFFEEEEEE),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _isRecording ? Icons.stop_circle : Icons.mic,
-              color: _isRecording ? Colors.redAccent : Colors.blueAccent,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _isRecording ? "Tap to Stop & Save" : "Tap to Record Voice Note",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: _isRecording ? Colors.redAccent : Colors.blueAccent,
+            // 🎙 Audio Recording Button
+            Expanded(
+              child: GestureDetector(
+                onTap: _isRecording ? _stopRecording : _startRecording,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: _isRecording ? Colors.redAccent.withValues(alpha: 0.1) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isRecording ? Colors.redAccent : const Color(0xFFEEEEEE),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isRecording ? Icons.stop_circle : Icons.mic,
+                        color: _isRecording ? Colors.redAccent : Colors.blueAccent,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _isRecording ? "Stop & Save" : "Voice Note",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _isRecording ? Colors.redAccent : Colors.blueAccent,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_isRecording) ...[
+                        const SizedBox(width: 6),
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                        )
+                      ]
+                    ],
+                  ),
+                ),
               ),
             ),
-            if (_isRecording) ...[
-              const SizedBox(width: 12),
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
-              )
-            ]
+            const SizedBox(width: 10),
+
+            // 📞 Direct Phone Call Button (Works Offline via Cellular)
+            Expanded(
+              child: GestureDetector(
+                onTap: _makeDirectPhoneCall,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF25D366),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.phone_in_talk,
+                        color: Color(0xFF1E8E3E),
+                        size: 22,
+                      ),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          "Call Doctor",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E8E3E),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
+
+        if (_audioPath != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Voice note recorded securely.",
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                  onPressed: _deleteRecording,
+                )
+              ],
+            ),
+          ),
+        ]
+      ],
     );
   }
 }
