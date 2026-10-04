@@ -43,7 +43,7 @@ class AuthGuard {
   /// GoRouter redirect callback (synchronous).
   static String? redirect(BuildContext context, GoRouterState state) {
     final location = state.uri.path;
-    final publicRoutes = ['/', '/onboarding', '/login'];
+    final publicRoutes = ['/', '/onboarding', '/login', '/forgot-password'];
     final isPublic = publicRoutes.contains(location);
 
     if (!isLoggedIn && !isPublic) {
