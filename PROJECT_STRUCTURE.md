@@ -2,6 +2,8 @@
 
 Welcome to **GramHealthApp**! This document provides a complete breakdown of the project layout, directory organization, and the exact purpose and working of every file across the **Flutter Mobile/Web Frontend** and **Node.js REST API Backend**.
 
+> Last Synced & Verified: October 2026
+
 ---
 
 ## 🗂️ Overall Repository Layout
