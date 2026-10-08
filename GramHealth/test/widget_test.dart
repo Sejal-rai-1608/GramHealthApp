@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ruralcare_flutter/l10n/app_language.dart';
-import 'package:ruralcare_flutter/screens/login_screen.dart';
+import 'package:ruralcare_flutter/screens/common/login_screen.dart';
 import 'package:ruralcare_flutter/theme/app_theme.dart';
 
 void main() {

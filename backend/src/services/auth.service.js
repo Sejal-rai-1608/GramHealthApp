@@ -68,17 +68,18 @@ const registerUser = async ({ name, email, phone, password, role, address, latit
 
 const loginUser = async ({ email, password }) => {
     const identifier = email ? email.trim() : "";
+
     const user = await prisma.user.findFirst({
         where: {
             OR: [
-                { email: identifier },
+                { email: { equals: identifier, mode: "insensitive" } },
                 { phone: identifier }
             ]
         }
     });
 
     if (!user) {
-        throw new Error("Invalid email/phone or password");
+        throw new ApiError("Invalid email/phone or password", 401, "INVALID_CREDENTIALS");
     }
 
     const passwordMatch = await bcrypt.compare(
@@ -87,7 +88,7 @@ const loginUser = async ({ email, password }) => {
     );
 
     if (!passwordMatch) {
-        throw new Error("Invalid email or password");
+        throw new ApiError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
 
     const token = jwt.sign(
@@ -113,7 +114,41 @@ const loginUser = async ({ email, password }) => {
     };
 };
 
+const resetPassword = async ({ email, phone, newPassword }) => {
+    const identifier = (email || phone || "").trim();
+    if (!identifier || !newPassword) {
+        throw new ApiError("Email/phone and new password are required", 400, "INVALID_INPUT");
+    }
+
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { email: { equals: identifier, mode: "insensitive" } },
+                { phone: identifier }
+            ]
+        }
+    });
+
+    if (!user) {
+        throw new ApiError("User with this email or phone was not found", 404, "USER_NOT_FOUND");
+    }
+
+    if (newPassword.length < 6) {
+        throw new ApiError("New password must be at least 6 characters", 400, "INVALID_PASSWORD");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashedPassword }
+    });
+
+    return { message: "Password updated successfully" };
+};
+
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    resetPassword
 };

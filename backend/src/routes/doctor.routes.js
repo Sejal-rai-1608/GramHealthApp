@@ -27,7 +27,7 @@ router.patch("/me", authenticate, authorize("DOCTOR"), validate(updateDoctor), u
 router.get("/consultations", authenticate, authorize("DOCTOR"), validate(listConsultationsValidator), listDoctorConsultations);
 router.get("/medical-records", authenticate, authorize("DOCTOR"), validate(listMedicalRecordsValidator), listDoctorMedicalRecords);
 router.get("/prescriptions", authenticate, authorize("DOCTOR"), validate(listDoctorPrescriptionsValidator), listDoctorPrescriptions);
-router.get("/", authenticate, authorize("PATIENT", "ASHA", "ADMIN"), validate(listDoctors), listDoctorsCtrl);
-router.get("/:id", authenticate, authorize("PATIENT", "ASHA", "ADMIN"), validate(uuidParam()), getDoctorById);
+router.get("/", authenticate, authorize("PATIENT", "DOCTOR", "PHARMACY", "ASHA", "ADMIN"), validate(listDoctors), listDoctorsCtrl);
+router.get("/:id", authenticate, authorize("PATIENT", "DOCTOR", "PHARMACY", "ASHA", "ADMIN"), validate(uuidParam()), getDoctorById);
 
 module.exports = router;

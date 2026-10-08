@@ -72,7 +72,27 @@ const login = async (req, res) => {
     }
 };
 
+const resetPassword = async (req, res) => {
+    try {
+        const { email, phone, newPassword } = req.body;
+        const result = await authService.resetPassword({ email, phone, newPassword });
+
+        res.status(200).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+
+        res.status(error.statusCode || 400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     register,
-    login
+    login,
+    resetPassword
 };

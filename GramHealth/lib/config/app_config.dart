@@ -26,7 +26,7 @@ class AppConfig {
   static String lanBackendUrl = defaultLanBackendUrl;
 
   /// When true, forces connection to live Render deployment.
-  static bool useProduction = false;
+  static bool useProduction = true;
 
   /// Returns the active local backend URL based on mode.
   static String get localBackendUrl {
