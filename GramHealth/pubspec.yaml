@@ -70,3 +70,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/offline_medical/manifest.json
+    - assets/offline_medical/metadata.json
+    - assets/offline_medical/shards/

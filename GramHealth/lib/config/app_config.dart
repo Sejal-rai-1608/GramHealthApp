@@ -34,6 +34,7 @@ class AppConfig {
       case LocalBackendMode.lan:
         return lanBackendUrl;
       case LocalBackendMode.adbReverse:
+      default:
         return adbReverseBackendUrl;
     }
   }

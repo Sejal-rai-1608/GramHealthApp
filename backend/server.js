@@ -12,8 +12,8 @@ const startServer = async () => {
         console.log("PostgreSQL connected successfully");
         console.log("Prisma connected successfully");
 
-        app.listen(PORT, () => {
-            console.log(`GramHealth server running on port ${PORT}`);
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`GramHealth server running on port ${PORT} (0.0.0.0)`);
         });
 
     } catch (error) {
