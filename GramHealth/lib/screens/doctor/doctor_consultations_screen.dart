@@ -11,6 +11,7 @@ import '../../services/medical_record_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../models/medical_record.dart';
 import '../../widgets/voice_note_dialog.dart';
+import '../../widgets/voice_note_history_dialog.dart';
 import 'doctor_complete_consultation_screen.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -135,71 +136,128 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (c.voiceNoteUrl != null)
+                if (c.voiceNotes.isNotEmpty || c.voiceNoteUrl != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
-                    child: ElevatedButton.icon(
-                      onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
-                      icon: const Icon(Icons.play_circle_fill, size: 16),
-                      label: const Text('Play Voice Note'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orangeAccent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                    child: Row(
+                      children: [
+                        if (c.voiceNoteUrl != null)
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _playVoiceNote(context, c.voiceNoteUrl!),
+                              icon: const Icon(Icons.play_circle_fill, size: 16),
+                              label: const Text('Play Voice Note'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orangeAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        if (c.voiceNoteUrl != null) const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => VoiceNoteHistoryDialog(
+                                  consultationId: c.id,
+                                  patientName: c.patientName,
+                                  voiceNotes: c.voiceNotes,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.history, size: 16),
+                            label: const Text('Voice History'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryAccent,
+                              foregroundColor: AppColors.textDark,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                           if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
-                               showDialog(
-                                 context: context,
-                                 builder: (context) => VoiceNoteDialog(consultationId: c.id),
-                               );
-                           } else {
-                               CallService.startCall(
-                                 consultationId: c.id,
-                                 audioOnly: c.type.toUpperCase() == 'AUDIO',
-                               ).then((_) {
-                                 _complete(c.id);
-                               });
-                           }
-                        },
-                        icon: Icon(
-                          ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                              ? Icons.mic
-                              : (c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam),
-                          size: 16,
-                        ),
-                        label: Text(
-                          ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                              ? 'Voice Note'
-                              : (c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                              ? Colors.orangeAccent
-                              : Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) ...[
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => VoiceNoteDialog(consultationId: c.id),
+                            );
+                          },
+                          icon: const Icon(Icons.mic, size: 16),
+                          label: const Text('Voice Note'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orangeAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showPatientHistory(context, c),
-                        icon: const Icon(Icons.history, size: 16, color: Colors.blueAccent),
-                        label: const Text('History', style: TextStyle(color: Colors.blueAccent)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.blueAccent),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DoctorCompleteConsultationScreen(consultationId: c.id),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.call, size: 16),
+                          label: const Text('Call Patient'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryAccent,
+                            foregroundColor: AppColors.textDark,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            CallService.startCall(
+                              context: context,
+                              consultationId: c.id,
+                              audioOnly: c.type.toUpperCase() == 'AUDIO',
+                            ).then((_) {
+                              _complete(c.id);
+                            });
+                          },
+                          icon: Icon(
+                            c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam,
+                            size: 16,
+                          ),
+                          label: Text(
+                            c.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showPatientHistory(context, c),
+                          icon: const Icon(Icons.history, size: 16, color: Colors.blueAccent),
+                          label: const Text('History', style: TextStyle(color: Colors.blueAccent)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.blueAccent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 8),

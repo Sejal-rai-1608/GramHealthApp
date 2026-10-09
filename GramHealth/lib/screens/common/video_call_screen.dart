@@ -7,7 +7,17 @@ import '../../l10n/app_language.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String doctorId;
-  const VideoCallScreen({super.key, required this.doctorId});
+  final String? doctorName;
+  final String? doctorPhone;
+  final bool isAudioOnly;
+
+  const VideoCallScreen({
+    super.key,
+    required this.doctorId,
+    this.doctorName,
+    this.doctorPhone,
+    this.isAudioOnly = false,
+  });
 
   @override
   State<VideoCallScreen> createState() => _VideoCallScreenState();
@@ -45,7 +55,19 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Widget build(BuildContext context) {
     final doctor = kDoctors.firstWhere(
       (d) => d.id == widget.doctorId,
-      orElse: () => kDoctors.first,
+      orElse: () => Doctor(
+        id: widget.doctorId,
+        name: widget.doctorName ?? 'Dr. Anita Joshi',
+        spec: 'General Physician',
+        exp: '12 yrs',
+        rating: 4.9,
+        reviews: '200+',
+        online: true,
+        image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
+        fee: '₹500',
+        patients: '1.2k+',
+        about: 'Consultation Doctor',
+      ),
     );
 
     return Scaffold(

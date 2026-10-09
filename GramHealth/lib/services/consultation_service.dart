@@ -3,6 +3,32 @@ import '../services/api_client.dart';
 import '../services/sync_service.dart';
 import '../services/connectivity_service.dart';
 import '../data/local_database.dart';
+class VoiceNoteItem {
+  final String id;
+  final String url;
+  final String timestamp;
+
+  VoiceNoteItem({
+    required this.id,
+    required this.url,
+    required this.timestamp,
+  });
+
+  factory VoiceNoteItem.fromJson(Map<String, dynamic> json) {
+    return VoiceNoteItem(
+      id: json['id']?.toString() ?? '',
+      url: json['url']?.toString() ?? json['voiceNoteUrl']?.toString() ?? '',
+      timestamp: json['timestamp']?.toString() ?? json['createdAt']?.toString() ?? 'Recorded Note',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'url': url,
+    'timestamp': timestamp,
+  };
+}
+
 class ConsultationModel {
   final String id;
   final String status;
@@ -11,9 +37,12 @@ class ConsultationModel {
   final String? symptoms;
   final String? scheduledTime;
   final String? doctorId;
+  final String? doctorName;
+  final String? doctorPhone;
   final String? patientId;
   final String? patientName;
   final String? voiceNoteUrl;
+  final List<VoiceNoteItem> voiceNotes;
 
   ConsultationModel({
     required this.id,
@@ -23,15 +52,41 @@ class ConsultationModel {
     this.symptoms,
     this.scheduledTime,
     this.doctorId,
+    this.doctorName,
+    this.doctorPhone,
     this.patientId,
     this.patientName,
     this.voiceNoteUrl,
+    this.voiceNotes = const [],
   });
 
   factory ConsultationModel.fromJson(Map<String, dynamic> json) {
     final patientObj = json['patient'] as Map<String, dynamic>?;
     final patientUser = patientObj?['user'] as Map<String, dynamic>?;
     final patientName = patientUser?['name'] as String?;
+
+    final doctorObj = json['doctor'] as Map<String, dynamic>?;
+    final doctorUser = doctorObj?['user'] as Map<String, dynamic>?;
+    final doctorName = doctorUser?['name'] as String? ?? doctorObj?['name'] as String? ?? json['doctorName'] as String?;
+    final doctorPhone = doctorUser?['phone'] as String? ?? doctorObj?['phone'] as String? ?? json['doctorPhone'] as String?;
+
+    final rawVoiceNoteUrl = json['voiceNoteUrl']?.toString();
+
+    // Parse voiceNotes list if present or normalize legacy single voiceNoteUrl
+    List<VoiceNoteItem> parsedVoiceNotes = [];
+    if (json['voiceNotes'] is List) {
+      parsedVoiceNotes = (json['voiceNotes'] as List)
+          .map((e) => VoiceNoteItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (rawVoiceNoteUrl != null && rawVoiceNoteUrl.isNotEmpty) {
+      parsedVoiceNotes = [
+        VoiceNoteItem(
+          id: '1',
+          url: rawVoiceNoteUrl,
+          timestamp: json['updatedAt']?.toString() ?? json['createdAt']?.toString() ?? 'Recorded Note',
+        ),
+      ];
+    }
 
     return ConsultationModel(
       id: json['id']?.toString() ?? '',
@@ -41,9 +96,12 @@ class ConsultationModel {
       symptoms: json['symptoms']?.toString(),
       scheduledTime: json['scheduledTime']?.toString(),
       doctorId: json['doctorId']?.toString(),
+      doctorName: doctorName,
+      doctorPhone: doctorPhone,
       patientId: json['patientId']?.toString(),
       patientName: patientName,
-      voiceNoteUrl: json['voiceNoteUrl']?.toString(),
+      voiceNoteUrl: rawVoiceNoteUrl,
+      voiceNotes: parsedVoiceNotes,
     );
   }
 }

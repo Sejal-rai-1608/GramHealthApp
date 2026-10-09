@@ -73,6 +73,9 @@ class _VoiceNoteDialogState extends State<VoiceNoteDialog> {
       final base64String = base64Encode(bytes);
       final payloadData = 'data:audio/m4a;base64,$base64String';
 
+      final now = DateTime.now();
+      final formattedTime = '${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
       // Queue the sync event to upload the voice note attached to this consultation
       await SyncService.instance.push(
         entityType: 'voice_note_${widget.consultationId}',
@@ -80,6 +83,7 @@ class _VoiceNoteDialogState extends State<VoiceNoteDialog> {
         endpoint: '${AppConfig.apiConsultations}/${widget.consultationId}/voicenote',
         payload: {
           'voiceNoteUrl': payloadData,
+          'timestamp': formattedTime,
         },
       );
 

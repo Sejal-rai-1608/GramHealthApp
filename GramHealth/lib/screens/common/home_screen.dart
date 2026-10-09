@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/glass_card.dart';
@@ -15,6 +16,8 @@ import '../../widgets/voice_note_dialog.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_ai_service.dart';
 import '../../widgets/offline_setup_card.dart';
+import '../../data/doctors_data.dart';
+import '../../data/local_database.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,6 +59,52 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingConsultations = false);
+    }
+  }
+
+  Future<void> _makeRealDoctorPhoneCall(ConsultationModel c) async {
+    String? phoneNum = c.doctorPhone?.trim();
+    String? docName = c.doctorName?.trim();
+
+    // 1. Try resolving doctor's phone from local database cache if not attached to consultation object
+    if ((phoneNum == null || phoneNum.isEmpty) && c.doctorId != null && c.doctorId!.isNotEmpty) {
+      try {
+        final cached = await LocalDatabase.instance.getCachedData('cached_doctors', c.doctorId!);
+        if (cached != null) {
+          final doc = DoctorModel.fromJson(cached);
+          phoneNum = doc.phone;
+          docName ??= doc.name;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try static list fallback matching doctorId
+    if ((phoneNum == null || phoneNum.isEmpty) && c.doctorId != null && c.doctorId!.isNotEmpty) {
+      final match = kDoctors.firstWhere((d) => d.id == c.doctorId, orElse: () => kDoctors.first);
+      docName ??= match.name;
+    }
+
+    // Fallback emergency helpline if doctor phone not registered
+    phoneNum ??= '108';
+    docName ??= 'Doctor';
+
+    final Uri phoneUri = Uri.parse('tel:$phoneNum');
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(phoneUri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Initiating direct phone call to $docName ($phoneNum)..."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 
@@ -366,70 +415,113 @@ class _HomeScreenState extends State<HomeScreen> {
                         border: Border.all(color: const Color(0xFFEEEEEE)),
                         boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))],
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, color: AppColors.primaryAccent),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  c.reason.isNotEmpty ? c.reason : 'Consultation',
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryAccent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Ready to join',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                child: Icon(c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam, color: AppColors.primaryAccent),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c.reason.isNotEmpty ? c.reason : 'Consultation',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      ConnectivityService.instance.currentStatus == NetworkStatus.offline
+                                          ? 'Offline Consultation'
+                                          : 'Ready to join',
+                                      style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (ConnectivityService.instance.currentStatus != NetworkStatus.offline)
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await CallService.startCall(
+                                      context: context,
+                                      consultationId: c.id,
+                                      audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                      doctorId: c.doctorId,
+                                      doctorName: c.doctorName,
+                                      doctorPhone: c.doctorPhone,
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _activeConsultations.removeWhere((item) => item.id == c.id);
+                                      });
+                                    }
+                                    try {
+                                      await ConsultationService.updateStatus(c.id, 'COMPLETED');
+                                    } catch (_) {}
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: Text(c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                                ),
+                            ],
+                          ),
+                          if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => VoiceNoteDialog(consultationId: c.id),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.mic, size: 16),
+                                    label: const Text('Record Note'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orangeAccent,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await CallService.startCall(
+                                        context: context,
+                                        consultationId: c.id,
+                                        audioOnly: c.type.toUpperCase() == 'AUDIO',
+                                        doctorId: c.doctorId,
+                                        doctorName: c.doctorName,
+                                        doctorPhone: c.doctorPhone,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.call, size: 16),
+                                    label: const Text('Call Doctor'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryAccent,
+                                      foregroundColor: AppColors.textDark,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async {
-                              if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => VoiceNoteDialog(consultationId: c.id),
-                                );
-                              } else {
-                                await CallService.startCall(
-                                  consultationId: c.id,
-                                  audioOnly: c.type.toUpperCase() == 'AUDIO',
-                                );
-                                // Automatically hide the consultation from the dashboard once the call loop finishes
-                                if (mounted) {
-                                  setState(() {
-                                    _activeConsultations.removeWhere((item) => item.id == c.id);
-                                  });
-                                }
-                                // Secretly tell backend we completed it so it doesn't reappear
-                                try {
-                                  await ConsultationService.updateStatus(c.id, 'COMPLETED');
-                                } catch (_) {}
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                                  ? Colors.orangeAccent
-                                  : (c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: Text(
-                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                                  ? 'Record Note'
-                                  : (c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
-                            ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
