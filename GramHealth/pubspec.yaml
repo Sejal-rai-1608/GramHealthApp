@@ -33,6 +33,7 @@ dependencies:
 
   # URL Launcher (for tel: links)
   url_launcher: ^6.2.5
+  flutter_phone_direct_caller: ^2.2.1
 
   # Shimmer loading effect
   shimmer: ^3.0.0

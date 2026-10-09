@@ -1,45 +1,67 @@
-import 'package:jitsi_meet_wrapper/jitsi_meet_wrapper.dart';
-import 'auth_service.dart';
-import 'connectivity_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
+import 'package:go_router/go_router.dart';
+import '../data/local_database.dart';
+import 'doctor_service.dart';
 
 class CallService {
   CallService._();
 
-  /// Joins a Jitsi video or audio call for a given consultation.
-  /// Force falls back to audio-only if [audioOnly] is true.
+  /// Initiates an immediate, real cellular phone call directly to the doctor
+  /// using flutter_phone_direct_caller without redirecting to the dialer keypad screen.
   static Future<void> startCall({
+    required BuildContext context,
     required String consultationId,
     required bool audioOnly,
+    String? doctorId,
+    String? doctorName,
+    String? doctorPhone,
   }) async {
-    try {
-      final status = ConnectivityService.instance.currentStatus;
-      if (status == NetworkStatus.offline) {
-        throw Exception("ERROR_OFFLINE");
+    String? phoneNum = doctorPhone?.trim();
+    final docId = (doctorId != null && doctorId.isNotEmpty) ? doctorId : '1';
+
+    // 1. Resolve doctor phone from local database cache if missing
+    if (phoneNum == null || phoneNum.isEmpty) {
+      try {
+        final cached = await LocalDatabase.instance.getCachedData('cached_doctors', docId);
+        if (cached != null) {
+          final doc = DoctorModel.fromJson(cached);
+          phoneNum = doc.phone?.trim();
+        }
+      } catch (e) {
+        debugPrint('[CallService] Error resolving cached doctor phone: $e');
       }
+    }
 
-      final user = await AuthService.getUser();
-      final userName = user?['name'] as String? ?? 'GramHealth User';
-      final userEmail = user?['email'] as String? ?? '';
+    // 2. Default fallback number if unassigned
+    if (phoneNum == null || phoneNum.isEmpty) {
+      phoneNum = '9876543210';
+    }
 
-      // Force UI-level fallback if network is weak
-      final bool forceAudio = audioOnly || (status == NetworkStatus.weak);
+    debugPrint('[CallService] Initiating direct cellular call to doctor $docId ($phoneNum)...');
 
-      final options = JitsiMeetingOptions(
-        roomNameOrUrl: 'gramhealth_call_$consultationId',
-        serverUrl: 'https://meet.ffmuc.net', // Open source Jitsi instance to bypass meet.jit.si auth restrictions
-        isAudioOnly: forceAudio,
-        isAudioMuted: false,
-        isVideoMuted: forceAudio,
-        userDisplayName: userName,
-        userEmail: userEmail,
-      );
-
-      await JitsiMeetWrapper.joinMeeting(
-        options: options,
-      );
+    try {
+      final bool? res = await FlutterPhoneDirectCaller.callNumber(phoneNum);
+      if (res == false) {
+        debugPrint('[CallService] Direct call returned false or cancelled. Launching in-app fallback screen...');
+        if (context.mounted) {
+          context.push('/video-call/$docId', extra: {
+            'doctorName': doctorName,
+            'doctorPhone': phoneNum,
+            'isAudioOnly': audioOnly,
+          });
+        }
+      }
     } catch (e) {
-      print('Failed to start call: $e');
-      rethrow;
+      debugPrint('[CallService] Direct caller exception: $e. Navigating to in-app call screen.');
+      if (context.mounted) {
+        context.push('/video-call/$docId', extra: {
+          'doctorName': doctorName,
+          'doctorPhone': phoneNum,
+          'isAudioOnly': audioOnly,
+        });
+      }
     }
   }
 }
