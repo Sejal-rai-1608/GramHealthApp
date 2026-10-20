@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../widgets/dashboard_layout.dart';
+import '../../widgets/care_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../theme/app_colors.dart';
 import '../../services/prescription_service.dart';
@@ -39,11 +41,12 @@ class _DoctorPrescriptionsScreenState extends State<DoctorPrescriptionsScreen> {
     return DashboardLayout(
       title: context.tr('prescriptions'),
       child: RefreshIndicator(
+        color: AppColors.teal,
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: AppColors.teal))
             : _error != null
-                ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.redAccent)))
+                ? Center(child: Text('Error: $_error', style: GoogleFonts.manrope(color: AppColors.emergency)))
                 : _buildPrescriptionsList(),
       ),
     );
@@ -52,56 +55,78 @@ class _DoctorPrescriptionsScreenState extends State<DoctorPrescriptionsScreen> {
   Widget _buildPrescriptionsList() {
     if (_prescriptions.isEmpty) {
       return ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         children: const [
           EmptyState(title: 'No Prescriptions', subtitle: 'Prescriptions you write will appear here.')
-        ]
+        ],
       );
     }
-    
+
     final Map<String, List<PrescriptionModel>> grouped = {};
     for (var p in _prescriptions) {
       grouped.putIfAbsent(p.patientName, () => []).add(p);
     }
-    
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       itemCount: grouped.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 16, top: 16),
+            padding: const EdgeInsets.only(bottom: 16, top: 4),
             child: Text(
               context.tr('prescriptions'),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.ink),
             ),
           );
         }
-        
+
         final patientName = grouped.keys.elementAt(index - 1);
         final pList = grouped[patientName]!;
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ExpansionTile(
-            leading: const CircleAvatar(
-              backgroundColor: AppColors.primaryAccent,
-              child: Icon(Icons.person, color: Colors.white),
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: CareCard(
+            padding: EdgeInsets.zero,
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                childrenPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.mint,
+                  child: const Icon(Icons.person, color: AppColors.teal, size: 20),
+                ),
+                title: Text(patientName, style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.ink)),
+                subtitle: Text('${pList.length} prescription(s) provided',
+                    style: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkMuted)),
+                iconColor: AppColors.teal,
+                collapsedIconColor: AppColors.inkFaint,
+                children: [
+                  const Divider(height: 1, color: AppColors.borderLight),
+                  ...pList.map((p) => ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        title: Text('Diagnosis: ${p.diagnosis}',
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
+                        subtitle: Text('Date: ${p.date}', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkMuted)),
+                        trailing: Container(
+                          width: 28, height: 28,
+                          decoration: BoxDecoration(color: AppColors.mintLight, borderRadius: BorderRadius.circular(8)),
+                          child: const Icon(Icons.chevron_right, size: 16, color: AppColors.teal),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => PrescriptionDetailScreen(prescription: p.toDisplayMap()),
+                          ));
+                        },
+                      )),
+                ],
+              ),
             ),
-            title: Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${pList.length} prescription(s) provided'),
-            children: pList.map((p) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
-              title: Text('Diagnosis: ${p.diagnosis}', style: const TextStyle(fontSize: 14)),
-              subtitle: Text('Date: ${p.date}', style: const TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right, size: 16),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => PrescriptionDetailScreen(prescription: p.toDisplayMap()),
-                ));
-              },
-            )).toList(),
           ),
         );
       },

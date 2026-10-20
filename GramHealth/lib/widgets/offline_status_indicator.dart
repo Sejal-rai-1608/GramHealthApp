@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/local_model_status.dart';
 import '../services/offline_ai_service.dart';
+import '../theme/app_colors.dart';
 
-/// Compact inline status chip displayed in the AI chat app bar.
-///
-/// Shows:
-///   Online:       "AI • Online"         (green chip)
-///   Offline:      "AI • Offline"         (amber chip)
-///   Downloading:  "Offline AI • 42%"     (blue progress chip)
-///   Loading:      "Offline AI • Starting" (blue chip)
-///   Error:        "Offline AI • Error"    (red chip)
 class OfflineStatusIndicator extends StatelessWidget {
   const OfflineStatusIndicator({
     super.key,
@@ -34,29 +27,20 @@ class OfflineStatusIndicator extends StatelessWidget {
 
   Widget _buildChip(BuildContext context, LocalModelStatus status) {
     final (:label, :color, :icon) = _resolve(status);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
+          Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: color, fontWeight: FontWeight.w700)),
           if (status == LocalModelStatus.downloading) ..._progressPart(),
         ],
       ),
@@ -64,83 +48,38 @@ class OfflineStatusIndicator extends StatelessWidget {
   }
 
   List<Widget> _progressPart() {
-    final pct =
-        (OfflineAiService.instance.downloadProgress * 100)
-            .toStringAsFixed(0);
+    final pct = (OfflineAiService.instance.downloadProgress * 100).toStringAsFixed(0);
     return [
       const SizedBox(width: 4),
-      Text(
-        '$pct%',
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-      ),
+      Text('$pct%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
     ];
   }
 
-  ({
-    String label,
-    Color color,
-    IconData icon,
-  }) _resolve(LocalModelStatus status) {
+  ({String label, Color color, IconData icon}) _resolve(LocalModelStatus status) {
     if (isOnline) {
-      return (
-        label: 'AI \u2022 Online',
-        color: Colors.green,
-        icon: Icons.cloud_done_outlined,
-      );
+      return (label: 'AI \u2022 Online', color: AppColors.teal, icon: Icons.cloud_done_outlined);
     }
     switch (status) {
       case LocalModelStatus.loaded:
       case LocalModelStatus.generating:
-        return (
-          label: 'AI \u2022 Offline',
-          color: Colors.amber.shade700,
-          icon: Icons.offline_bolt_outlined,
-        );
+        return (label: 'AI \u2022 Offline', color: AppColors.amberDeep, icon: Icons.offline_bolt_outlined);
       case LocalModelStatus.lexiconOnly:
-        return (
-          label: 'AI \u2022 Offline (Knowledge)',
-          color: Colors.amber.shade800,
-          icon: Icons.menu_book_outlined,
-        );
+        return (label: 'AI \u2022 Offline (Knowledge)', color: AppColors.amberDeep, icon: Icons.menu_book_outlined);
       case LocalModelStatus.downloading:
-        return (
-          label: 'Offline AI \u2022 Downloading',
-          color: Colors.blue,
-          icon: Icons.cloud_download_outlined,
-        );
+        return (label: 'Offline AI \u2022 Downloading', color: AppColors.teal, icon: Icons.cloud_download_outlined);
       case LocalModelStatus.verifying:
-        return (
-          label: 'Offline AI \u2022 Verifying',
-          color: Colors.blue,
-          icon: Icons.sync_rounded,
-        );
+        return (label: 'Offline AI \u2022 Verifying', color: AppColors.teal, icon: Icons.sync_rounded);
       case LocalModelStatus.verified:
       case LocalModelStatus.compatible:
       case LocalModelStatus.loadable:
       case LocalModelStatus.ready:
-        return (
-          label: 'Offline AI \u2022 Ready',
-          color: Colors.teal,
-          icon: Icons.check_circle_outline,
-        );
+        return (label: 'Offline AI \u2022 Ready', color: AppColors.teal, icon: Icons.check_circle_outline);
       case LocalModelStatus.loading:
-        return (
-          label: 'Offline AI \u2022 Starting',
-          color: Colors.blue,
-          icon: Icons.hourglass_top_rounded,
-        );
+        return (label: 'Offline AI \u2022 Starting', color: AppColors.teal, icon: Icons.hourglass_top_rounded);
       case LocalModelStatus.error:
-        return (
-          label: 'Offline AI \u2022 Error',
-          color: Colors.red,
-          icon: Icons.error_outline,
-        );
+        return (label: 'Offline AI \u2022 Error', color: AppColors.emergency, icon: Icons.error_outline);
       default:
-        return (
-          label: 'AI \u2022 Offline',
-          color: Colors.grey,
-          icon: Icons.cloud_off_outlined,
-        );
+        return (label: 'AI \u2022 Offline', color: AppColors.inkFaint, icon: Icons.cloud_off_outlined);
     }
   }
 }

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
 
 class MedicalRecordModel {
   final String id;
@@ -31,7 +32,6 @@ class HealthRecordsScreen extends StatefulWidget {
 
 class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   List<MedicalRecordModel> _records = [];
-  bool _isAdmin = false;
   bool _showAddModal = false;
   final _doctorCtrl = TextEditingController();
   final _illnessCtrl = TextEditingController();
@@ -45,14 +45,11 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   }
 
   Future<void> _loadRecords() async {
-    // Stubbed legacy records for layout compatibility.
-    // Use patient_records_screen.dart for actual ABDM backend integration.
     final records = <MedicalRecordModel>[];
     if (mounted) setState(() => _records = records);
   }
 
   void _addRecord() {
-    // Local-only placeholder — real creation via medical-records API can be wired here later
     final newRecord = MedicalRecordModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       date: _dateCtrl.text.isEmpty ? 'Today' : _dateCtrl.text,
@@ -83,99 +80,101 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Mock-only timeline — real ABDM vault lives in the Records tab (PatientRecordsScreen).
+          // This screen is intentionally separate to avoid confusion with the vault.
+          Text('Visit timeline (mock)', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
+            Text('Demo only — use Records tab for ABDM vault',
+                style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.inkMuted)),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => setState(() => _showAddModal = true),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          Column(
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Progress tracker
+              CareCard(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // Mock progress — scoped to this demo timeline, not the vault.
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(context.tr('health_records'),
-                            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                        GestureDetector(
-                          onTap: () => setState(() => _isAdmin = !_isAdmin),
-                          child: Text(
-                            _isAdmin ? context.tr('patient_view') : context.tr('admin_view'),
-                            style: const TextStyle(
-                                fontSize: 13, color: AppColors.primaryAccent, fontWeight: FontWeight.w700),
-                          ),
+                        Text('Demo progress',
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(6)),
+                          child: Text('60%', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
                         ),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () => setState(() => _showAddModal = true),
-                      child: Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryAccent,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.primaryAccent.withValues(alpha: 0.4), blurRadius: 8)],
-                        ),
-                        child: const Icon(Icons.add, color: AppColors.textDark, size: 24),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: const LinearProgressIndicator(
+                        value: 0.6,
+                        minHeight: 6,
+                        backgroundColor: AppColors.borderLight,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.teal),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text('Illustrative only',
+                        style: GoogleFonts.manrope(fontSize: 11, color: AppColors.inkFaint)),
                   ],
                 ),
               ),
-
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
-                  children: [
-                    // Progress tracker
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 4)],
+              const SizedBox(height: 14),
+              if (_records.isEmpty)
+                CareCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(color: AppColors.groundAlt, shape: BoxShape.circle, border: Border.all(color: AppColors.borderLight)),
+                        child: const Icon(Icons.folder_open_rounded, size: 24, color: AppColors.inkFaint),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(context.tr('meeting_progress'),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              const Text('60%',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primaryAccent)),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: const LinearProgressIndicator(
-                              value: 0.6,
-                              minHeight: 8,
-                              backgroundColor: Color(0xFFEEEEEE),
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryAccent),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(context.tr('remaining_links'),
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF999999))),
-                        ],
-                      ),
-                    ),
-
-                    // Records with timeline
-                    ...List.generate(_records.length, (i) => _buildRecordRow(i)),
-                  ],
-                ),
-              ),
+                      const SizedBox(height: 12),
+                       Text('No timeline records', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                       const SizedBox(height: 6),
+                       Text('Add a demo visit here, or open the Records tab for real ABDM vault documents.',
+                           textAlign: TextAlign.center,
+                           style: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkMuted, height: 1.5)),
+                    ],
+                  ),
+                )
+              else
+                ...List.generate(_records.length, (i) => _buildRecordRow(i)),
             ],
           ),
-
-          // Add modal overlay
           if (_showAddModal)
             GestureDetector(
               onTap: () => setState(() => _showAddModal = false),
@@ -186,15 +185,15 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                   onTap: () {},
                   child: Container(
                     margin: const EdgeInsets.all(24),
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(24),
+                    child: CareCard(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(context.tr('add_new_record'),
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                          const SizedBox(height: 20),
+                              style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                          const SizedBox(height: 16),
                           _formField(context.tr('doctor_name'), 'e.g. Dr. Rajesh', _doctorCtrl),
                           _formField(context.tr('illness_reason'), 'e.g. Fever', _illnessCtrl),
                           Row(
@@ -204,28 +203,24 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                               Expanded(child: _formField(context.tr('time'), '10:00 AM', _timeCtrl)),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              GestureDetector(
-                                onTap: () => setState(() => _showAddModal = false),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  child: Text(context.tr('cancel'), style: const TextStyle(fontSize: 15, color: Color(0xFF999999))),
-                                ),
+                              TextButton(
+                                onPressed: () => setState(() => _showAddModal = false),
+                                child: Text(context.tr('cancel'), style: GoogleFonts.manrope(fontSize: 13, color: AppColors.inkMuted, fontWeight: FontWeight.w700)),
                               ),
-                              GestureDetector(
-                                onTap: _addRecord,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryAccent,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(context.tr('save_record'),
-                                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark, fontSize: 14)),
+                              const SizedBox(width: 8),
+                              FilledButton(
+                                onPressed: _addRecord,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.teal,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
+                                  elevation: 0,
                                 ),
+                                child: Text(context.tr('save_record'), style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
                               ),
                             ],
                           ),
@@ -243,117 +238,74 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
 
   Widget _buildRecordRow(int i) {
     final record = _records[i];
-    final isFirst = i == 0;
-    final isLast = i == _records.length - 1;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Timeline
-          SizedBox(
-            width: 30,
-            child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: CareCard(
+        onTap: () => context.push('/health-overview'),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (!isFirst) Expanded(child: Container(width: 2, color: const Color(0xFFDDDDDD))),
-                Container(
-                  width: 16, height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryAccent, width: 2),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 6, height: 6,
-                      decoration: const BoxDecoration(color: AppColors.primaryAccent, shape: BoxShape.circle),
-                    ),
-                  ),
-                ),
-                if (!isLast) Expanded(child: Container(width: 2, color: const Color(0xFFDDDDDD))),
+                Text(record.date, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.inkFaint)),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.inkFaint),
               ],
             ),
-          ),
-
-          // Card
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.push('/health-overview'),
-              child: Container(
-                margin: const EdgeInsets.only(left: 8, bottom: 16),
-                child: GlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(record.date,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF888888))),
-                          const Icon(Icons.chevron_right, size: 18, color: Color(0xFFAAAAAA)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(record.doctor,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            borderRadius: BorderRadius.circular(8)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(context.tr('diagnosis'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF666666))),
-                            Text(record.diagnosis, style: const TextStyle(fontSize: 13, color: AppColors.textDark)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.description_outlined, size: 14, color: AppColors.primaryAccent),
-                          const SizedBox(width: 6),
-                          Expanded(child: Text(record.prescription,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF555555)))),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+            const SizedBox(height: 4),
+            Text(record.doctor, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: AppColors.groundAlt, borderRadius: BorderRadius.circular(10)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(context.tr('diagnosis'), style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.inkFaint)),
+                  const SizedBox(height: 2),
+                  Text(record.diagnosis, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.ink)),
+                ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.description_outlined, size: 14, color: AppColors.teal),
+                const SizedBox(width: 6),
+                Expanded(child: Text(record.prescription, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkMuted))),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _formField(String label, String hint, TextEditingController ctrl) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF666666))),
-        const SizedBox(height: 6),
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.secondaryBg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TextField(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.inkSoft)),
+          const SizedBox(height: 6),
+          TextField(
             controller: ctrl,
+            style: GoogleFonts.manrope(fontSize: 14, color: AppColors.ink),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-              border: InputBorder.none,
+              hintStyle: GoogleFonts.manrope(color: AppColors.inkFaint, fontSize: 13),
+              filled: true,
+              fillColor: AppColors.groundAlt,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.tealDeep, width: 1.4)),
             ),
-            style: const TextStyle(fontSize: 14),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

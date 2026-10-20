@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
+import 'package:google_fonts/google_fonts.dart';
 
-import 'services/offline_ai_service.dart';
 import 'utils/auth_guard.dart';
 
 import 'l10n/app_language.dart';
@@ -21,6 +20,7 @@ import 'screens/common/emergency_help_screen.dart';
 
 import 'screens/patient/symptom_checker_screen.dart';
 import 'screens/patient/patient_records_screen.dart';
+import 'screens/patient/upload_record_screen.dart';
 import 'screens/patient/teleconsultation_request_screen.dart';
 import 'screens/patient/health_overview_screen.dart';
 
@@ -31,6 +31,9 @@ import 'screens/doctor/doctor_consultations_screen.dart';
 import 'screens/doctor/doctor_prescriptions_screen.dart';
 import 'screens/doctor/doctor_profile_screen.dart';
 import 'screens/doctor/doctor_onboarding_screen.dart';
+import 'screens/doctor/doctor_patients_screen.dart';
+import 'screens/doctor/doctor_appointments_screen.dart';
+import 'screens/doctor/doctor_settings_screen.dart';
 
 import 'screens/common/forgot_password_screen.dart';
 import 'screens/pharmacy/prescription_list_screen.dart';
@@ -43,17 +46,29 @@ import 'screens/admin/admin_doctors_screen.dart';
 import 'screens/admin/admin_patients_screen.dart';
 import 'screens/admin/admin_appointments_screen.dart';
 import 'screens/admin/admin_consultations_screen.dart';
-import 'screens/admin/admin_prescriptions_screen.dart';
+import 'screens/admin/admin_asha_workers_screen.dart';
 import 'screens/admin/admin_pharmacies_screen.dart';
 import 'screens/admin/admin_facilities_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
 import 'screens/admin/admin_settings_screen.dart';
+import 'screens/pharmacy/pharmacy_dashboard_screen.dart';
+import 'screens/pharmacy/pharmacy_stock_screen.dart';
+import 'screens/pharmacy/pharmacy_nearby_screen.dart';
+import 'screens/pharmacy/prescription_list_screen.dart';
+import 'screens/pharmacy/medicine_availability_screen.dart';
+import 'screens/doctor/doctor_appointments_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Manrope is bundled in assets (assets/fonts/*.ttf). Never fetch fonts at
+  // runtime: the app must render correctly on first launch, offline, and on
+  // low-end devices with a weak connection.
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   await AuthGuard.init(); // Restore session from secure storage
   ConnectivityService.instance.initialize();
   SyncService.instance.initialize();
@@ -110,6 +125,15 @@ final _router = GoRouter(
             path: 'profile',
             builder: (c, s) => const DoctorProfileScreen()),
         GoRoute(
+            path: 'patients',
+            builder: (c, s) => const DoctorPatientsScreen()),
+        GoRoute(
+            path: 'appointments',
+            builder: (c, s) => const DoctorAppointmentsScreen()),
+        GoRoute(
+            path: 'settings',
+            builder: (c, s) => const DoctorSettingsScreen()),
+        GoRoute(
             path: 'onboarding',
             builder: (c, s) => const DoctorOnboardingScreen()),
       ],
@@ -134,30 +158,42 @@ final _router = GoRouter(
             path: 'appointments',
             builder: (c, s) => const AdminAppointmentsScreen()),
         GoRoute(
-            path: 'consultations',
-            builder: (c, s) => const AdminConsultationsScreen()),
+          path: 'consultations',
+          builder: (c, s) => const AdminConsultationsScreen()),
         GoRoute(
-            path: 'prescriptions',
-            builder: (c, s) => const AdminPrescriptionsScreen()),
+          path: 'pharmacies',
+          builder: (c, s) => const AdminPharmaciesScreen()),
         GoRoute(
-            path: 'pharmacies',
-            builder: (c, s) => const AdminPharmaciesScreen()),
+          path: 'healthcare-facilities',
+          builder: (c, s) => const AdminFacilitiesScreen()),
         GoRoute(
-            path: 'healthcare-facilities',
-            builder: (c, s) => const AdminFacilitiesScreen()),
+          path: 'asha-workers',
+          builder: (c, s) => const AdminAshaWorkersScreen()),
         GoRoute(
-            path: 'reports',
-            builder: (c, s) => const AdminReportsScreen()),
+          path: 'reports',
+          builder: (c, s) => const AdminReportsScreen()),
         GoRoute(
-            path: 'settings',
-            builder: (c, s) => const AdminSettingsScreen()),
+          path: 'settings',
+          builder: (c, s) => const AdminSettingsScreen()),
       ],
     ),
     // Pharmacy routes (role: pharmacy)
     GoRoute(
-      path: '/pharmacy/dashboard',
+      path: '/pharmacy',
       builder: (c, s) => const PharmacyDashboardScreen(),
+      routes: [
+        GoRoute(
+          path: 'dashboard',
+          builder: (c, s) => const PharmacyDashboardScreen()),
+        GoRoute(
+          path: 'stock',
+          builder: (c, s) => const PharmacyStockScreen()),
+        GoRoute(
+          path: 'nearby',
+          builder: (c, s) => const PharmacyNearbyScreen()),
+      ],
     ),
+
     // Shared push routes
     GoRoute(
         path: '/notifications',
@@ -196,6 +232,9 @@ final _router = GoRouter(
     GoRoute(
         path: '/health-overview',
         builder: (c, s) => const HealthOverviewScreen()),
+    GoRoute(
+        path: '/upload-record',
+        builder: (c, s) => const UploadRecordScreen()),
   ],
 );
 

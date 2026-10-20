@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_icon_button.dart';
 import '../../widgets/offline_status_indicator.dart';
 import '../../widgets/offline_setup_card.dart';
 import '../../models/local_model_status.dart';
@@ -14,17 +15,10 @@ import '../../services/offline_ai_service.dart';
 class Message {
   final String id;
   final String text;
-  final String sender; // 'user' or 'ai'
+  final String sender;
   final DateTime timestamp;
   final bool isOffline;
-
-  Message({
-    required this.id,
-    required this.text,
-    required this.sender,
-    required this.timestamp,
-    this.isOffline = false,
-  });
+  Message({required this.id, required this.text, required this.sender, required this.timestamp, this.isOffline = false});
 }
 
 class ChatBotScreen extends StatefulWidget {
@@ -41,32 +35,26 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   StreamSubscription<LocalModelStatus>? _modelSub;
   StreamSubscription<NetworkStatus>? _connSub;
   bool _showSetupCard = true;
+  bool _sending = false;
 
   @override
   void initState() {
     super.initState();
     unawaited(OfflineAiService.instance.ensureModelLoaded());
-
-    _modelSub = OfflineAiService.instance.statusStream.listen((_) {
-      if (mounted) setState(() {});
-    });
-    _connSub = ConnectivityService.instance.statusStream.listen((_) {
-      if (mounted) setState(() {});
-    });
+    _modelSub = OfflineAiService.instance.statusStream.listen((_) { if (mounted) setState(() {}); });
+    _connSub = ConnectivityService.instance.statusStream.listen((_) { if (mounted) setState(() {}); });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_messages.isEmpty) {
-      _messages.add(
-        Message(
-          id: '1',
-          text: "${context.tr('greeting')} ${context.tr('dihati_assistant')}. ${context.tr('ask_health')}",
-          sender: 'ai',
-          timestamp: DateTime.now(),
-        ),
-      );
+      _messages.add(Message(
+        id: '1',
+        text: "${context.tr('greeting')} ${context.tr('dihati_assistant')}. ${context.tr('ask_health')}",
+        sender: 'ai',
+        timestamp: DateTime.now(),
+      ));
     }
   }
 
@@ -82,98 +70,53 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   String get _statusSubtitle {
     final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
     if (isOnline) return 'AI • Online';
-    
-    final offlineService = OfflineAiService.instance;
-    final status = offlineService.modelStatus;
-    switch (status) {
-      case LocalModelStatus.downloading:
-        return 'Offline AI • Downloading ${(offlineService.downloadProgress * 100).toInt()}%';
-      case LocalModelStatus.verifying:
-        return 'Offline AI • Verifying';
-      case LocalModelStatus.verified:
-        return 'Offline AI • Verified';
-      case LocalModelStatus.compatible:
-        return 'Offline AI • Compatible';
-      case LocalModelStatus.loadable:
-      case LocalModelStatus.ready:
-        return 'Offline AI • Ready';
-      case LocalModelStatus.loading:
-        return 'Offline AI • Starting';
-      case LocalModelStatus.generating:
-        return 'Offline AI • Thinking';
-      case LocalModelStatus.lexiconOnly:
-        return 'Offline AI • Knowledge mode';
-      case LocalModelStatus.checking:
-        return 'Offline AI • Checking';
-      case LocalModelStatus.pending:
-        return 'Offline AI • Download pending';
-      case LocalModelStatus.error:
-        return 'Offline AI • Retry pending';
-      default:
-        return 'AI • Offline';
+    final svc = OfflineAiService.instance;
+    final s = svc.modelStatus;
+    switch (s) {
+      case LocalModelStatus.downloading: return 'Offline • Downloading ${(svc.downloadProgress * 100).toInt()}%';
+      case LocalModelStatus.verifying: return 'Offline • Verifying';
+      case LocalModelStatus.lexiconOnly: return 'Offline • Knowledge mode';
+      case LocalModelStatus.ready: return 'Offline • Ready';
+      case LocalModelStatus.loading: return 'Offline • Starting';
+      case LocalModelStatus.generating: return 'Offline • Thinking';
+      case LocalModelStatus.checking: return 'Offline • Checking';
+      case LocalModelStatus.pending: return 'Offline • Waiting for Wi‑Fi';
+      case LocalModelStatus.error: return 'Offline • Retry pending';
+      default: return 'AI • Offline';
     }
   }
 
-  Color get _statusColor {
-    final isOnline = ConnectivityService.instance.currentStatus != NetworkStatus.offline;
-    return isOnline ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
-  }
+  Color get _statusColor => ConnectivityService.instance.currentStatus != NetworkStatus.offline ? AppColors.onlineGreen : AppColors.offlineOrange;
 
   Future<void> _handleSend() async {
     final text = _inputCtrl.text.trim();
-    if (text.isEmpty) return;
-
-    final userMsg = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: text,
-      sender: 'user',
-      timestamp: DateTime.now(),
-    );
-
+    if (text.isEmpty || _sending) return;
     setState(() {
-      _messages.add(userMsg);
+      _sending = true;
+      _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), text: text, sender: 'user', timestamp: DateTime.now()));
       _inputCtrl.clear();
     });
-
     _scrollToBottom();
-
     try {
-      final aiResponse = await AiService.query(text);
-      
+      final r = await AiService.query(text);
       if (!mounted) return;
-      
-      String responseText = aiResponse.answer ?? "I'm sorry, I couldn't understand that.";
-      if (aiResponse.urgency == 'emergency') {
-        responseText = "🚨 EMERGENCY 🚨\n$responseText";
-      } else if (aiResponse.requiresProfessionalReview == true) {
-        responseText = "⚠️ Please consult a professional.\n$responseText";
+      String out = r.answer ?? "I'm sorry, I couldn't understand that.";
+      if (r.urgency == 'emergency') {
+        out = "🚨 EMERGENCY 🚨\n$out";
+      } else if (r.requiresProfessionalReview == true) {
+        out = "⚠️ Please consult a professional.\n$out";
       }
-
-      final bool isOffline = (aiResponse.agent == 'offline_ai_router') ||
-          (aiResponse.routingMethod?.contains('offline') ?? false);
-
-      final aiMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: responseText,
-        sender: 'ai',
-        timestamp: DateTime.now(),
-        isOffline: isOffline,
-      );
-      
+      final isOffline = (r.agent == 'offline_ai_router') || (r.routingMethod?.contains('offline') ?? false);
       setState(() {
-        _messages.add(aiMsg);
+        _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), text: out, sender: 'ai', timestamp: DateTime.now(), isOffline: isOffline));
+        _sending = false;
       });
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      final errorMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: "Sorry, I encountered an error: ${e.toString()}",
-        sender: 'ai',
-        timestamp: DateTime.now(),
-      );
       setState(() {
-        _messages.add(errorMsg);
+        _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), text: "Sorry, I encountered an error: $e", sender: 'ai', timestamp: DateTime.now()));
+        _sending = false;
       });
       _scrollToBottom();
     }
@@ -182,11 +125,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: AppMotion.route, curve: AppMotion.standard);
       }
     });
   }
@@ -194,227 +133,186 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
-      body: SafeArea(
-        child: Column(
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => context.pop(),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
+        ),
+        leadingWidth: 56,
+        title: Row(
           children: [
-            // Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(color: Color(0x0D000000), blurRadius: 10, offset: Offset(0, 4)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.secondaryBg,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.chevron_left, size: 24, color: AppColors.textDark),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.insights, size: 20, color: AppColors.primaryAccent),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.tr('dihati_assistant'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                        ),
-                        Text(
-                          _statusSubtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  OfflineStatusIndicator(
-                    isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline,
-                  ),
-                ],
-              ),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(9)),
+              child: const Icon(Icons.smart_toy_outlined, size: 16, color: AppColors.teal),
             ),
-
-            // Optional Offline Setup Banner
-            if (_showSetupCard &&
-                ConnectivityService.instance.currentStatus == NetworkStatus.offline &&
-                OfflineAiService.instance.modelStatus != LocalModelStatus.ready &&
-                OfflineAiService.instance.modelStatus != LocalModelStatus.loaded &&
-                OfflineAiService.instance.modelStatus != LocalModelStatus.generating &&
-                OfflineAiService.instance.modelStatus != LocalModelStatus.lexiconOnly) ...[
-              OfflineSetupCard(
-                onDismiss: () => setState(() => _showSetupCard = false),
-              ),
-            ],
-
-            // Messages
+            const SizedBox(width: 10),
             Expanded(
-              child: ListView.builder(
-                controller: _scrollCtrl,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  final isUser = msg.sender == 'user';
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Row(
-                      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!isUser) ...[
-                          Container(
-                            width: 28,
-                            height: 28,
-                            margin: const EdgeInsets.only(right: 8, top: 4),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primaryAccent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.memory, size: 14, color: Colors.white),
-                          ),
-                        ],
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: isUser ? AppColors.textDark : Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(20),
-                                topRight: const Radius.circular(20),
-                                bottomLeft: Radius.circular(isUser ? 20 : 4),
-                                bottomRight: Radius.circular(isUser ? 4 : 20),
-                              ),
-                              boxShadow: const [
-                                BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2)),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                              children: [
-                                if (!isUser) ...[
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 6),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: msg.isOffline
-                                          ? const Color(0xFFFF9800).withValues(alpha: 0.15)
-                                          : const Color(0xFF4CAF50).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      msg.isOffline ? 'AI • Offline' : 'AI • Online',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: msg.isOffline ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                Text(
-                                  msg.text,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isUser ? Colors.white : AppColors.textDark,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "${msg.timestamp.hour.toString().padLeft(2, '0')}:${msg.timestamp.minute.toString().padLeft(2, '0')}",
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: isUser ? Colors.white60 : Colors.black38,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Input Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                borderRadius: 24,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _inputCtrl,
-                        maxLines: 4,
-                        minLines: 1,
-                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                        decoration: InputDecoration(
-                          hintText: context.tr('ask_health'),
-                          hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFAAAAAA)),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        ),
-                        onSubmitted: (_) => _handleSend(),
-                      ),
-                    ),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _inputCtrl,
-                      builder: (context, value, child) {
-                        final hasText = value.text.trim().isNotEmpty;
-                        return GestureDetector(
-                          onTap: hasText ? _handleSend : null,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: hasText ? AppColors.primaryAccent : const Color(0xFFCCCCCC),
-                            ),
-                            child: const Icon(Icons.send, size: 20, color: Colors.white),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(context.tr('dihati_assistant'), maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                  Row(
+                    children: [
+                      Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle)),
+                      const SizedBox(width: 5),
+                      Text(_statusSubtitle, style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor)),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: OfflineStatusIndicator(isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_showSetupCard &&
+              ConnectivityService.instance.currentStatus == NetworkStatus.offline &&
+              ![LocalModelStatus.ready, LocalModelStatus.loaded, LocalModelStatus.generating, LocalModelStatus.lexiconOnly]
+                  .contains(OfflineAiService.instance.modelStatus))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: OfflineSetupCard(onDismiss: () => setState(() => _showSetupCard = false)),
+            ),
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              itemCount: _messages.length,
+              itemBuilder: (_, i) {
+                final m = _messages[i];
+                final isUser = m.sender == 'user';
+                return Align(
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!isUser)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            margin: const EdgeInsets.only(right: 8, top: 2),
+                            decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
+                            child: const Icon(Icons.smart_toy_rounded, size: 14, color: Colors.white),
+                          ),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(14, 11, 14, 8),
+                            decoration: BoxDecoration(
+                              color: isUser ? AppColors.ink : AppColors.surface,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(isUser ? 16 : 4),
+                                bottomRight: Radius.circular(isUser ? 4 : 16),
+                              ),
+                              border: Border.all(color: isUser ? AppColors.ink : AppColors.borderLight),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                if (!isUser)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: m.isOffline ? AppColors.offlineWash : AppColors.onlineWash,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(m.isOffline ? 'Offline' : 'Online',
+                                        style: GoogleFonts.manrope(fontSize: 9, fontWeight: FontWeight.w700, color: m.isOffline ? AppColors.offlineOrange : AppColors.onlineGreen)),
+                                  ),
+                                Text(m.text, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: isUser ? Colors.white : AppColors.ink, height: 1.45)),
+                                const SizedBox(height: 6),
+                                Text("${m.timestamp.hour.toString().padLeft(2, '0')}:${m.timestamp.minute.toString().padLeft(2, '0')}",
+                                    style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w500, color: isUser ? Colors.white70 : AppColors.inkFaint)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Input — opaque, focused border
+          Container(
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 12 + MediaQuery.of(context).padding.bottom * 0.3),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: const Border(top: BorderSide(color: AppColors.borderLight)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _inputCtrl,
+                    maxLines: 4,
+                    minLines: 1,
+                    style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
+                    decoration: InputDecoration(
+                      hintText: context.tr('ask_health'),
+                      hintStyle: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkFaint),
+                      filled: true,
+                      fillColor: AppColors.groundAlt,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.lg), borderSide: const BorderSide(color: AppColors.borderLight)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.lg), borderSide: const BorderSide(color: AppColors.borderLight)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.lg), borderSide: const BorderSide(color: AppColors.tealDeep, width: 1.5)),
+                    ),
+                    onSubmitted: (_) => _handleSend(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _inputCtrl,
+                  builder: (_, v, __) {
+                    final hasText = v.text.trim().isNotEmpty;
+                    return GestureDetector(
+                      onTap: hasText && !_sending ? _handleSend : null,
+                      child: AnimatedContainer(
+                        duration: AppMotion.state,
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: hasText ? AppColors.teal : AppColors.borderLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: _sending
+                            ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

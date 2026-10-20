@@ -1,122 +1,163 @@
 import 'package:flutter/material.dart';
-import '../../widgets/dashboard_layout.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/status_badge.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class AdminUsersScreen extends StatelessWidget {
+import '../../services/admin_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/dashboard_layout.dart';
+import '../../widgets/role_async_view.dart';
+import '../../widgets/search_bar.dart';
+import '../../l10n/app_language.dart';
+
+/// All registered accounts, straight from `GET /api/users`.
+class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> users = [
-      {'name': 'Ramesh Patel', 'role': 'Patient', 'email': 'ramesh@gmail.com', 'status': 'Active'},
-      {'name': 'Dr. Alok Sharma', 'role': 'Doctor', 'email': 'alok.sharma@gramhealth.org', 'status': 'Active'},
-      {'name': 'Sita Verma', 'role': 'Patient', 'email': 'sita.v@gmail.com', 'status': 'Active'},
-      {'name': 'Dr. Priya Mehta', 'role': 'Doctor', 'email': 'priya.m@gramhealth.org', 'status': 'Active'},
-      {'name': 'Vikram Singh', 'role': 'Admin', 'email': 'vikram.admin@gramhealth.org', 'status': 'Active'},
-    ];
+  State<AdminUsersScreen> createState() => _AdminUsersScreenState();
+}
 
+class _AdminUsersScreenState extends State<AdminUsersScreen> {
+  final _searchCtrl = TextEditingController();
+  String _role = 'ALL';
+  String _query = '';
+
+  static final _roles = [
+    ('ALL', 'All roles'),
+    ('PATIENT', 'Patients'),
+    ('DOCTOR', 'Doctors'),
+    ('ADMIN', 'Admins'),
+    ('PHARMACY', 'Pharmacy'),
+    ('ASHA', 'ASHA'),
+  ];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return DashboardLayout(
-      title: 'User Management',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: context.tr('nav_users'),
+      child: RoleAsyncView<List<AdminUser>>(
+        loader: () => AdminService.getUsers(
+          role: _role == 'ALL' ? null : _role,
+          search: _query.isEmpty ? null : _query,
+        ),
+        isEmpty: false,
+        builder: (context, users) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Users List',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              RoleSectionHeader(
+                title: context.tr('console_registered_accounts'),
+                subtitle: context.tr('console_registered_accounts_sub'),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: CareSearchField(
+                      controller: _searchCtrl,
+                      hint: context.tr('console_search_name'),
+                      onChanged: (v) => setState(() => _query = v.trim()),
+                    ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Manage all registered system users',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  ),
+                  const SizedBox(width: 12),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add User'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.leafGreenPrimary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _roles.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final r = _roles[i];
+                    final selected = _role == r.$1;
+                    return GestureDetector(
+                      onTap: () => setState(() => _role = r.$1),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.mint : AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(
+                            color: selected ? AppColors.tealPale : AppColors.borderLight,
+                          ),
+                        ),
+                        child: Text(
+                          r.$2,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? AppColors.tealDeep : AppColors.inkSoft,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search users by name or email...',
-                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 20),
-                        border: InputBorder.none,
+              const SizedBox(height: 16),
+              if (users.isEmpty)
+                CareCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_search_rounded,
+                          size: 20, color: AppColors.inkFaint),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _query.isEmpty
+                              ? 'No accounts registered yet.'
+                              : 'No accounts match "$_query".',
+                          style: GoogleFonts.manrope(
+                              fontSize: 13, color: AppColors.inkMuted),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: users.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final user = users[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.leafGreenPale,
-                            child: Text(
-                              user['name']![0],
-                              style: const TextStyle(color: AppColors.leafGreenDeep, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          title: Text(
-                            user['name']!,
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          ),
-                          subtitle: Text(
-                            '${user['role']} • ${user['email']}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              StatusBadge(status: user['status']!),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined, color: AppColors.textMuted),
-                                onPressed: () {},
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                )
+              else
+                ...users.map((u) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: RoleListRow(
+                        initials: u.initials,
+                        title: u.name,
+                        subtitle: '${u.email.isEmpty ? 'No email' : u.email} · ${u.phone}',
+                        trailingWidget: _roleChip(u.role),
+                      ),
+                    )),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _roleChip(String role) {
+    final color = switch (role) {
+      'ADMIN' => AppColors.coralDeep,
+      'DOCTOR' => AppColors.tealDeep,
+      'PHARMACY' => AppColors.amberDeep,
+      'ASHA' => AppColors.tealBright,
+      _ => AppColors.inkSoft,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        role,
+        style: GoogleFonts.manrope(
+            fontSize: 11, fontWeight: FontWeight.w800, color: color),
       ),
     );
   }

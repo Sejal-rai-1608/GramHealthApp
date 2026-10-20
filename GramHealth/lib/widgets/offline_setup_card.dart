@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/offline_ai_config.dart';
 import '../models/local_model_status.dart';
 import '../services/offline_ai_service.dart';
+import '../theme/app_colors.dart';
 
 /// Non-blocking status / progress card displaying the offline AI background lifecycle.
 ///
@@ -75,10 +76,10 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _status == LocalModelStatus.downloading
-                ? const Color(0xFF1A73E8).withValues(alpha: 0.3)
-                : const Color(0xFFEEEEEE),
+                ? AppColors.teal.withValues(alpha: 0.3)
+                : AppColors.borderLight,
           ),
-          color: Colors.white,
+          color: AppColors.surface,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -93,7 +94,7 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
                   decoration: BoxDecoration(
                     color: _status == LocalModelStatus.error
                         ? Colors.orange.withValues(alpha: 0.1)
-                        : const Color(0xFF1A73E8).withValues(alpha: 0.1),
+                        : AppColors.mint,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -103,7 +104,7 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
                     size: 20,
                     color: _status == LocalModelStatus.error
                         ? Colors.orange.shade800
-                        : const Color(0xFF1A73E8),
+                        : AppColors.teal,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -116,7 +117,7 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF202124),
+                          color: AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -149,8 +150,8 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
                 child: LinearProgressIndicator(
                   value: _progress > 0 ? _progress : null,
                   minHeight: 6,
-                  backgroundColor: const Color(0xFFE8F0FE),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1A73E8)),
+                  backgroundColor: AppColors.mint,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.teal),
                 ),
               ),
               const SizedBox(height: 6),
@@ -181,8 +182,8 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
                 borderRadius: BorderRadius.circular(4),
                 child: const LinearProgressIndicator(
                   minHeight: 4,
-                  backgroundColor: Color(0xFFE8F0FE),
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A73E8)),
+                  backgroundColor: AppColors.mint,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.teal),
                 ),
               ),
             ] else if (_status == LocalModelStatus.pending) ...[
@@ -190,20 +191,20 @@ class _OfflineSetupCardState extends State<OfflineSetupCard> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: AppColors.mintLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.wifi_rounded, size: 14, color: Colors.blue.shade700),
+                    Icon(Icons.wifi_rounded, size: 14, color: AppColors.teal),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         OfflineAiService.instance.statusReason ??
                             'Download pending — will begin automatically',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
-                          color: Colors.blue.shade900,
+                          color: AppColors.tealDeep,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

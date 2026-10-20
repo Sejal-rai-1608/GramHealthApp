@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../services/api_client.dart';
 import '../../services/consultation_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/care_icon_button.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/offline_voice_recorder.dart';
 import '../../services/connectivity_service.dart';
@@ -18,17 +20,13 @@ class TeleconsultationRequestScreen extends StatefulWidget {
 }
 
 class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestScreen> {
-  final List<String> _reasons = ['General Fever', 'Cough & Cold', 'Skin Issue', 'Stomach Pain', 'Other'];
-  final List<String> _timeSlots = [
-    'Morning (9 AM - 12 PM)',
-    'Afternoon (1 PM - 4 PM)',
-    'Evening (5 PM - 8 PM)',
-  ];
+  final List<String> _reasons = const ['General Fever', 'Cough & Cold', 'Skin Issue', 'Stomach Pain', 'Other'];
+  final List<String> _timeSlots = const ['Morning (9 AM - 12 PM)', 'Afternoon (1 PM - 4 PM)', 'Evening (5 PM - 8 PM)'];
 
   String _selectedReason = 'General Fever';
-  final TextEditingController _symptomsCtrl = TextEditingController();
+  final _symptomsCtrl = TextEditingController();
   String _selectedTime = 'Morning (9 AM - 12 PM)';
-  String _selectedType = 'VIDEO'; // VIDEO or AUDIO
+  String _selectedType = 'VIDEO';
   bool _isSubmitted = false;
   bool _isSubmitting = false;
   String? _voiceNoteBase64;
@@ -36,7 +34,6 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   NetworkStatus _networkStatus = NetworkStatus.online;
   StreamSubscription? _netSub;
 
-  // Doctor info passed via GoRouter extras
   String? _doctorId;
   String _doctorName = '';
   String? _doctorPhone;
@@ -46,7 +43,7 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     super.didChangeDependencies();
     final extra = GoRouterState.of(context).extra;
     if (extra is Map<String, dynamic>) {
-      _doctorId   = extra['doctorId']   as String?;
+      _doctorId = extra['doctorId'] as String?;
       _doctorName = extra['doctorName'] as String? ?? '';
       _doctorPhone = extra['doctorPhone'] as String?;
     }
@@ -56,15 +53,12 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   void initState() {
     super.initState();
     _networkStatus = ConnectivityService.instance.currentStatus;
-    _netSub = ConnectivityService.instance.statusStream.listen((status) {
-      if (mounted) {
-        setState(() {
-          _networkStatus = status;
-          if (status == NetworkStatus.weak && _selectedType == 'VIDEO') {
-             _selectedType = 'AUDIO';
-          }
-        });
-      }
+    _netSub = ConnectivityService.instance.statusStream.listen((s) {
+      if (!mounted) return;
+      setState(() {
+        _networkStatus = s;
+        if (s == NetworkStatus.weak && _selectedType == 'VIDEO') _selectedType = 'AUDIO';
+      });
     });
   }
 
@@ -81,9 +75,7 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     try {
       await ConsultationService.createConsultation(
         reason: _selectedReason,
-        symptoms: _symptomsCtrl.text.trim().isEmpty
-            ? null
-            : _symptomsCtrl.text.trim(),
+        symptoms: _symptomsCtrl.text.trim().isEmpty ? null : _symptomsCtrl.text.trim(),
         scheduledTime: _selectedTime,
         doctorId: _doctorId,
         type: _networkStatus == NetworkStatus.offline ? 'OFFLINE' : _selectedType,
@@ -91,27 +83,13 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
       );
       if (!mounted) return;
       setState(() => _isSubmitted = true);
-      Future.delayed(const Duration(milliseconds: 2000), () {
-        if (mounted) context.pop();
-      });
+      Future.delayed(const Duration(milliseconds: 1800), () { if (mounted) context.pop(); });
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: AppColors.emergency, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), margin: const EdgeInsets.all(16)));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Network error. Please try again.'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Network error. Please try again.'), backgroundColor: AppColors.emergency, behavior: SnackBarBehavior.floating));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -121,42 +99,21 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   Widget build(BuildContext context) {
     if (_isSubmitted) {
       return Scaffold(
-        backgroundColor: AppColors.primaryAccent,
+        backgroundColor: AppColors.teal,
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(40),
+            padding: const EdgeInsets.all(32),
             child: Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x33000000), blurRadius: 20, offset: Offset(0, 10)),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadii.xl)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryAccent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check, size: 40, color: Colors.white),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    context.tr('request_done'),
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    context.tr('urgent_success_msg'),
-                    style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.7), height: 1.4),
-                    textAlign: TextAlign.center,
-                  ),
+                  Container(width: 64, height: 64, decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle), child: const Icon(Icons.check_rounded, size: 32, color: AppColors.surface)),
+                  const SizedBox(height: 16),
+                  Text(context.tr('request_done'), style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                  const SizedBox(height: 8),
+                  Text(context.tr('urgent_success_msg'), textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.5)),
                 ],
               ),
             ),
@@ -166,272 +123,152 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     }
 
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
-      body: SafeArea(
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => context.pop(),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
+        ),
+        leadingWidth: 56,
+        title: Text('Request consultation', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.ink)),
+        centerTitle: false,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(color: Color(0x0D000000), blurRadius: 10, offset: Offset(0, 4)),
-                ],
-              ),
+            // Doctor header — single CareCard
+            CareCard(
+              padding: const EdgeInsets.all(14),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.secondaryBg,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.chevron_left, size: 24, color: AppColors.textDark),
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.tealPale)),
+                    child: const Icon(Icons.person_rounded, size: 22, color: AppColors.teal),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_doctorName.isNotEmpty ? 'Dr. $_doctorName' : 'Any available doctor', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink, height: 1.2)),
+                        const SizedBox(height: 2),
+                        Text(_doctorId != null ? 'Assigned on request' : 'We will match you to the next available doctor', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkMuted)),
+                      ],
                     ),
                   ),
-                  Text(
-                    context.tr('send_request'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                  const SizedBox(width: 40),
                 ],
               ),
             ),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+            const SizedBox(height: 18),
+            _sectionLabel(context.tr('reason_for_consultation')),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: _reasons.map((r) {
+                final sel = _selectedReason == r;
+                return CareChip(label: r, selected: sel, onTap: () => setState(() => _selectedReason = r));
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+            _sectionLabel(_networkStatus == NetworkStatus.offline ? 'Offline — voice note required' : 'Consultation type'),
+            const SizedBox(height: 10),
+            if (_networkStatus == NetworkStatus.offline)
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.amberWash, borderRadius: BorderRadius.circular(AppRadii.lg), border: Border.all(color: AppColors.amberPale)),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Doctor Summary
-                    GlassCard(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person, size: 24, color: AppColors.primaryAccent),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _doctorName.isNotEmpty ? 'Dr. $_doctorName' : context.tr('spec_gp'),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                              ),
-                              Text(
-                                _doctorId != null ? context.tr('spec_gp') : context.tr('send_request'),
-                                style: TextStyle(fontSize: 13, color: AppColors.textDark.withValues(alpha: 0.6)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Reasons
-                    Text(
-                      context.tr('reason_for_consultation'),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _reasons.map((r) {
-                        final isSel = _selectedReason == r;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedReason = r),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isSel ? AppColors.primaryAccent : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSel ? AppColors.primaryAccent : const Color(0xFFEEEEEE),
-                              ),
-                              boxShadow: const [
-                                BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2)),
-                              ],
-                            ),
-                            child: Text(
-                              r,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isSel ? AppColors.textDark : const Color(0xFF666666),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Consultation Type (Adaptive Bandwidth)
-                    Text(
-                      _networkStatus == NetworkStatus.offline 
-                          ? 'Offline Mode Active' 
-                          : context.tr('consultation_type'),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_networkStatus == NetworkStatus.offline)
-                       Container(
-                         padding: const EdgeInsets.all(16),
-                         decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16)),
-                         child: Text("You are completely offline. You must record a voice note below instead of requesting a live call. We will automatically send it to the doctor when your internet returns.", style: TextStyle(color: Colors.orange.shade800)),
-                       )
-                    else 
-                    Row(
-                      children: [
-                        if (_networkStatus != NetworkStatus.weak)
-                           Expanded(
-                             child: GestureDetector(
-                               onTap: () => setState(() => _selectedType = 'VIDEO'),
-                               child: _buildTypeCard(
-                                 title: 'Video Call',
-                                 subtitle: 'High Network Required',
-                                 icon: Icons.videocam,
-                                 isSelected: _selectedType == 'VIDEO',
-                               ),
-                             ),
-                           ),
-                        if (_networkStatus != NetworkStatus.weak) const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedType = 'AUDIO'),
-                            child: _buildTypeCard(
-                              title: 'Audio Call',
-                              subtitle: 'Low Bandwidth (Rural App)',
-                              icon: Icons.call,
-                              isSelected: _selectedType == 'AUDIO',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Symptoms
-
-                    Text(
-                      context.tr('describe_symptoms'),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
-                    ),
-                    const SizedBox(height: 12),
-                    GlassCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _symptomsCtrl,
-                              maxLines: 4,
-                              minLines: 3,
-                              style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                              decoration: InputDecoration(
-                                hintText: context.tr('other_symptoms'),
-                                hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    OfflineVoiceRecorder(
-                      doctorPhone: _doctorPhone,
-                      doctorName: _doctorName,
-                      onRecordingComplete: (base64) {
-                        setState(() {
-                          _voiceNoteBase64 = base64.isEmpty ? null : base64;
-                        });
-                      }
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Time slots
-                    Text(
-                      context.tr('preferred_time'),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
-                    ),
-                    const SizedBox(height: 12),
-                    ...List.generate(_timeSlots.length, (i) {
-                      final slot = _timeSlots[i];
-                      final isSel = _selectedTime == slot;
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedTime = slot),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isSel ? AppColors.primaryAccent.withValues(alpha: 0.08) : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSel ? AppColors.primaryAccent : const Color(0xFFEEEEEE),
-                            ),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2)),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSel ? Icons.check_circle : Icons.radio_button_unchecked,
-                                size: 20,
-                                color: isSel ? AppColors.primaryAccent : const Color(0xFFCCCCCC),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                slot,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                  color: isSel ? AppColors.textDark : const Color(0xFF555555),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 20),
-
-                    _isSubmitting
-                        ? const Center(child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: CircularProgressIndicator(),
-                          ))
-                        : PrimaryButton(
-                            title: context.tr('send_request'),
-                            onPress: _handleSubmit,
-                            width: double.infinity,
-                          ),
+                    Container(width: 28, height: 28, decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.mic_rounded, size: 14, color: AppColors.surface)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text('You are offline. Record a voice note below — we will send it automatically when you are back online.', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.amberDeep, height: 1.5))),
                   ],
                 ),
+              )
+            else
+              Row(
+                children: [
+                  if (_networkStatus != NetworkStatus.weak)
+                    Expanded(child: _typeCard(title: 'Video', subtitle: 'High network', icon: Icons.videocam_rounded, selected: _selectedType == 'VIDEO', onTap: () => setState(() => _selectedType = 'VIDEO'))),
+                  if (_networkStatus != NetworkStatus.weak) const SizedBox(width: 10),
+                  Expanded(child: _typeCard(title: 'Audio', subtitle: 'Low bandwidth', icon: Icons.call_rounded, selected: _selectedType == 'AUDIO', onTap: () => setState(() => _selectedType = 'AUDIO'))),
+                ],
               ),
+            const SizedBox(height: 18),
+            _sectionLabel(context.tr('describe_symptoms')),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadii.lg), border: Border.all(color: AppColors.borderLight)),
+              child: TextField(
+                controller: _symptomsCtrl,
+                maxLines: 4, minLines: 3,
+                style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.ink),
+                decoration: InputDecoration(
+                  hintText: context.tr('other_symptoms'),
+                  hintStyle: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.inkFaint),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OfflineVoiceRecorder(doctorPhone: _doctorPhone, doctorName: _doctorName, onRecordingComplete: (b64) => setState(() => _voiceNoteBase64 = b64.isEmpty ? null : b64)),
+            const SizedBox(height: 18),
+            _sectionLabel(context.tr('preferred_time')),
+            const SizedBox(height: 10),
+            ..._timeSlots.map((slot) {
+              final sel = _selectedTime == slot;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedTime = slot),
+                  child: AnimatedContainer(
+                    duration: AppMotion.state,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                    decoration: BoxDecoration(
+                      color: sel ? AppColors.mint : AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                      border: Border.all(color: sel ? AppColors.tealPale : AppColors.borderLight),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22, height: 22,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: sel ? AppColors.teal : AppColors.surface, border: Border.all(color: sel ? AppColors.teal : AppColors.border)),
+                          child: sel ? const Icon(Icons.check_rounded, size: 12, color: AppColors.surface) : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(slot, style: GoogleFonts.manrope(fontSize: 13, fontWeight: sel ? FontWeight.w700 : FontWeight.w500, color: sel ? AppColors.tealDeep : AppColors.ink)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 18),
+            if (_isSubmitting)
+              const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator(color: AppColors.teal)))
+            else
+              PrimaryButton(title: context.tr('send_request'), onPress: _handleSubmit, width: double.infinity),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.lock_outline_rounded, size: 12, color: AppColors.inkFaint),
+                const SizedBox(width: 6),
+                Expanded(child: Text('Your request is private and shared only with the assigned clinician.', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkFaint, height: 1.4))),
+              ],
             ),
           ],
         ),
@@ -439,23 +276,32 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     );
   }
 
-  Widget _buildTypeCard({required String title, required String subtitle, required IconData icon, required bool isSelected}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primaryAccent : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isSelected ? AppColors.primaryAccent : const Color(0xFFEEEEEE)),
-        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 28, color: isSelected ? Colors.white : AppColors.primaryAccent),
-          const SizedBox(height: 8),
-          Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.textDark)),
-          const SizedBox(height: 4),
-          Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: isSelected ? Colors.white70 : Colors.grey[500])),
-        ],
+  Widget _sectionLabel(String text) => Text(text, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.1));
+
+  Widget _typeCard({required String title, required String subtitle, required IconData icon, required bool selected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.state,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.ink : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(color: selected ? AppColors.ink : AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            Container(width: 36, height: 36, decoration: BoxDecoration(color: selected ? AppColors.surface.withValues(alpha: 0.14) : AppColors.mint, borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: selected ? AppColors.surface : AppColors.teal)),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? AppColors.surface : AppColors.ink)),
+                Text(subtitle, style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, color: selected ? AppColors.surface.withValues(alpha: 0.7) : AppColors.inkMuted)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

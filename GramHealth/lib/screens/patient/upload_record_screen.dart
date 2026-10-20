@@ -1,153 +1,272 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/medical_record_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_icon_button.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/primary_button.dart';
 
 class UploadRecordScreen extends StatefulWidget {
+  const UploadRecordScreen({super.key});
+
   @override
-  _UploadRecordScreenState createState() => _UploadRecordScreenState();
+  State<UploadRecordScreen> createState() => _UploadRecordScreenState();
 }
 
 class _UploadRecordScreenState extends State<UploadRecordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
+  final _titleCtrl = TextEditingController();
   String _documentType = 'PRESCRIPTION';
   bool _isUploading = false;
   File? _selectedImage;
   String? _base64Image;
-  final MedicalRecordService _recordService = MedicalRecordService();
+  final _recordService = MedicalRecordService();
 
   Future<void> _pickImage(ImageSource source) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: source, imageQuality: 50);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      final base64String = base64Encode(bytes);
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: source, imageQuality: 55);
+    if (img != null) {
+      final bytes = await img.readAsBytes();
       setState(() {
-        _selectedImage = File(image.path);
-        _base64Image = 'data:image/jpeg;base64,$base64String';
+        _selectedImage = File(img.path);
+        _base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
       });
     }
   }
 
   Future<void> _upload() async {
-    if (_formKey.currentState!.validate()) {
-      if (_base64Image == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select or capture a document image first.')));
-        return;
-      }
-      setState(() => _isUploading = true);
-      try {
-        await _recordService.uploadManualRecord(
-          _titleController.text,
-          _documentType,
-          _base64Image!,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uploaded successfully!')));
-        Navigator.pop(context, true);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload: $e')));
-        setState(() => _isUploading = false);
-      }
+    if (!_formKey.currentState!.validate()) return;
+    if (_base64Image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please capture or select a document image.', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+          backgroundColor: AppColors.emergency,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
     }
+    setState(() => _isUploading = true);
+    try {
+      await _recordService.uploadManualRecord(_titleCtrl.text.trim(), _documentType, _base64Image!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Record saved to your vault', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.surface)),
+          backgroundColor: AppColors.tealDeep,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      if (!mounted) return;
+      context.pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppColors.emergency));
+      setState(() => _isUploading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Upload Document')),
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.pop(context),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
+        ),
+        leadingWidth: 56,
+        title: Text('Upload document', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
+        centerTitle: false,
+      ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text("Upload a physical document to your health vault", style: TextStyle(fontSize: 16, color: Colors.grey.shade700)),
-              SizedBox(height: 24),
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Document Title',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.title),
+              CareCard(
+                color: AppColors.mintLight,
+                borderColor: AppColors.tealPale,
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(width: 36, height: 36, decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.shield_outlined, size: 18, color: AppColors.surface)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Private health vault', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                          const SizedBox(height: 2),
+                          Text('Encrypted, visible only to you and your assigned clinician.', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
-              SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _documentType,
-                decoration: InputDecoration(
-                  labelText: 'Document Type',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.category),
+              const SizedBox(height: 16),
+              Text('Document details', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink)),
+              const SizedBox(height: 10),
+              CareCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Document title *', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.inkSoft)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _titleCtrl,
+                      style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Blood test — Jan 2026',
+                        hintStyle: GoogleFonts.manrope(fontSize: 13, color: AppColors.inkFaint),
+                        prefixIcon: const Icon(Icons.title_rounded, size: 18, color: AppColors.inkFaint),
+                        filled: true,
+                        fillColor: AppColors.groundAlt,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.tealDeep, width: 1.5)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    Text('Document type', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.inkSoft)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      value: _documentType,
+                      style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.category_outlined, size: 18, color: AppColors.inkFaint),
+                        filled: true,
+                        fillColor: AppColors.groundAlt,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      items: const ['PRESCRIPTION', 'LAB_REPORT', 'X_RAY', 'OTHER']
+                          .map((t) => DropdownMenuItem(value: t, child: Text(t.replaceAll('_', ' '))))
+                          .toList(),
+                      onChanged: (v) => setState(() => _documentType = v!),
+                    ),
+                  ],
                 ),
-                items: ['PRESCRIPTION', 'LAB_REPORT', 'X_RAY', 'OTHER']
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type.replaceAll('_', ' ')),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _documentType = v!),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
+              // Preview
               if (_selectedImage != null)
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: FileImage(_selectedImage!),
-                      fit: BoxFit.cover,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadii.lg),
+                  child: Container(
+                    height: 220,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.borderLight), borderRadius: BorderRadius.circular(AppRadii.lg)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.lg - 1),
+                      child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity),
                     ),
                   ),
                 )
               else
                 Container(
-                  height: 200,
+                  height: 160,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.borderLight),
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
                   ),
-                  child: Center(
-                    child: Text('No Document Selected', style: TextStyle(color: Colors.grey.shade600)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.groundAlt, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.image_outlined, color: AppColors.inkMuted)),
+                      const SizedBox(height: 10),
+                      Text('No document selected', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.inkMuted)),
+                      const SizedBox(height: 4),
+                      Text('Take a photo or choose from gallery', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkFaint)),
+                    ],
                   ),
                 ),
-              SizedBox(height: 16),
+              const SizedBox(height: 14),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.camera),
-                    icon: Icon(Icons.camera_alt),
-                    label: Text('Camera'),
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.camera),
+                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                        label: Text('Camera', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.ink,
+                          side: const BorderSide(color: AppColors.borderLight),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
+                          backgroundColor: AppColors.surface,
+                        ),
+                      ),
+                    ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: Icon(Icons.photo_library),
-                    label: Text('Gallery'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_outlined, size: 18),
+                        label: Text('Gallery', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.ink,
+                          side: const BorderSide(color: AppColors.borderLight),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
+                          backgroundColor: AppColors.surface,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _isUploading ? null : _upload,
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isUploading 
-                  ? CircularProgressIndicator(color: Colors.white) 
-                  : Text('Save Record to Vault', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 20),
+              if (_isUploading)
+                const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator(color: AppColors.teal)))
+              else
+                PrimaryButton(title: 'Save to vault', icon: Icons.lock_rounded, onPress: _upload, width: double.infinity),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 12, color: AppColors.inkFaint),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text('Offline? We save it securely on your device and sync when you are back online.',
+                        style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkFaint, height: 1.4)),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-      ),
       ),
     );
   }

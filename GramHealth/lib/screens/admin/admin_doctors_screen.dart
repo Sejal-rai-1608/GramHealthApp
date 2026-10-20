@@ -1,119 +1,124 @@
 import 'package:flutter/material.dart';
-import '../../widgets/dashboard_layout.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/status_badge.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class AdminDoctorsScreen extends StatelessWidget {
+import '../../services/admin_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/dashboard_layout.dart';
+import '../../widgets/role_async_view.dart';
+import '../../widgets/search_bar.dart';
+import '../../l10n/app_language.dart';
+
+/// All doctors, straight from `GET /api/doctors`.
+class AdminDoctorsScreen extends StatefulWidget {
   const AdminDoctorsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> doctors = [
-      {'name': 'Dr. Alok Sharma', 'specialty': 'General Physician', 'status': 'Verified', 'experience': '12 yrs'},
-      {'name': 'Dr. Priya Mehta', 'specialty': 'Pediatrician', 'status': 'Verified', 'experience': '8 yrs'},
-      {'name': 'Dr. Rajesh Patel', 'specialty': 'Cardiologist', 'status': 'Pending Verification', 'experience': '15 yrs'},
-      {'name': 'Dr. Sunita Rao', 'specialty': 'Dermatologist', 'status': 'Verified', 'experience': '6 yrs'},
-    ];
+  State<AdminDoctorsScreen> createState() => _AdminDoctorsScreenState();
+}
 
+class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return DashboardLayout(
-      title: 'Doctor Management',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: context.tr('nav_doctors'),
+      child: RoleAsyncView<List<AdminDoctor>>(
+        loader: AdminService.getDoctors,
+        builder: (context, doctors) {
+          final filtered = _query.isEmpty
+              ? doctors
+              : doctors
+                  .where((d) =>
+                      d.name.toLowerCase().contains(_query.toLowerCase()) ||
+                      d.displaySpecialization
+                          .toLowerCase()
+                          .contains(_query.toLowerCase()) ||
+                      (d.hospitalName ?? '')
+                          .toLowerCase()
+                          .contains(_query.toLowerCase()))
+                  .toList();
+
+          final onboarded = doctors.where((d) => d.isOnboarded).length;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Doctors Directory',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Verify credentials and manage doctor listings',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  ),
-                ],
+              RoleSectionHeader(
+                title: context.tr('console_doctors_on_platform'),
+                subtitle: '$onboarded of ${doctors.length} have a complete profile.',
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Doctor'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.leafGreenPrimary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                ),
+              CareSearchField(
+                controller: _searchCtrl,
+                hint: context.tr('console_search_doctor'),
+                onChanged: (v) => setState(() => _query = v.trim()),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search doctors by name or specialty...',
-                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 20),
-                        border: InputBorder.none,
+              const SizedBox(height: 16),
+              if (filtered.isEmpty)
+                CareCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.medical_information_outlined,
+                          size: 20, color: AppColors.inkFaint),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          doctors.isEmpty
+                              ? 'No doctors registered yet.'
+                              : 'No doctors match "$_query".',
+                          style: GoogleFonts.manrope(
+                              fontSize: 13, color: AppColors.inkMuted),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: doctors.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final doc = doctors[index];
-                        final isPending = doc['status'] == 'Pending Verification';
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: isPending ? AppColors.warning.withValues(alpha: 0.2) : AppColors.leafGreenPale,
-                            child: const Icon(Icons.medical_services, color: AppColors.leafGreenDeep),
-                          ),
-                          title: Text(
-                            doc['name']!,
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          ),
-                          subtitle: Text(
-                            '${doc['specialty']} • ${doc['experience']} Exp',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              StatusBadge(status: doc['status']!),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                                onPressed: () {},
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                )
+              else
+                ...filtered.map((d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: RoleListRow(
+                        initials: d.initials,
+                        title: d.name,
+                        subtitle: [
+                          d.displaySpecialization,
+                          if (d.hospitalName != null && d.hospitalName!.isNotEmpty)
+                            d.hospitalName!,
+                          d.phone,
+                        ].join(' · '),
+                        trailingWidget: d.isOnboarded
+                            ? _pill('Verified profile', AppColors.tealDeep, AppColors.mint)
+                            : _pill('Onboarding pending', AppColors.amberDeep,
+                                AppColors.amberChipBg),
+                        onTap: () => context.go('/doctor-details/${d.id}'),
+                      ),
+                    )),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _pill(String label, Color fg, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.manrope(
+            fontSize: 11, fontWeight: FontWeight.w800, color: fg),
       ),
     );
   }

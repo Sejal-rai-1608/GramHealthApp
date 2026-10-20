@@ -1,0 +1,11 @@
+# Machine-local editor and agent tooling
+.vscode/
+.codex/
+
+# Skill binaries and helper scripts (docs are tracked, executables are not)
+.agents/skills/*/scripts/
+
+# Local overrides
+*.local.json
+.env
+.env.*

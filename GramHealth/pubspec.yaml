@@ -66,11 +66,31 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  sqflite_common_ffi: ^2.3.4
+  path_provider_platform_interface: ^2.1.2
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/fonts/
     - assets/offline_medical/manifest.json
     - assets/offline_medical/metadata.json
     - assets/offline_medical/shards/
+
+  # Manrope bundled locally so the app never fetches fonts at runtime.
+  # These are the exact static instances google_fonts resolves, so
+  # GoogleFonts.manrope() renders identically with no network round-trip.
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Manrope-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Manrope-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Manrope-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Manrope-ExtraBold.ttf
+          weight: 800

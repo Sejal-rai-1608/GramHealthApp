@@ -1,108 +1,112 @@
 import 'package:flutter/material.dart';
-import '../../widgets/dashboard_layout.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/status_badge.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../services/admin_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/dashboard_layout.dart';
+import '../../widgets/role_async_view.dart';
+import '../../widgets/status_badge.dart';
+import '../../l10n/app_language.dart';
+
+/// Consultations grouped by calendar day.
+///
+/// The backend has no appointments collection, so the appointment view is
+/// built from real consultation timestamps rather than invented rows.
 class AdminAppointmentsScreen extends StatelessWidget {
   const AdminAppointmentsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> appointments = [
-      {'patient': 'Ramesh Patel', 'doctor': 'Dr. Alok Sharma', 'date': '2026-08-28', 'time': '10:00 AM', 'status': 'Scheduled'},
-      {'patient': 'Sita Verma', 'doctor': 'Dr. Priya Mehta', 'date': '2026-08-28', 'time': '11:30 AM', 'status': 'Completed'},
-      {'patient': 'Mohan Lal', 'doctor': 'Dr. Alok Sharma', 'date': '2026-08-29', 'time': '09:15 AM', 'status': 'Pending'},
-      {'patient': 'Gita Bai', 'doctor': 'Dr. Priya Mehta', 'date': '2026-08-29', 'time': '02:00 PM', 'status': 'Cancelled'},
-    ];
-
     return DashboardLayout(
-      title: 'Appointments Management',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: context.tr('nav_schedule'),
+      child: RoleAsyncView<List<AdminConsultation>>(
+        loader: AdminService.getConsultations,
+        builder: (context, items) {
+          final grouped = AdminService.appointmentsFromConsultations(items);
+          final keys = grouped.keys.toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Appointments Registry',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Monitor schedules and statuses of consultations',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  ),
-                ],
+              RoleSectionHeader(
+                title: context.tr('nav_schedule'),
+                subtitle: context.tr('console_pipeline_sub'),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search by patient or doctor name...',
-                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 20),
-                        border: InputBorder.none,
+              if (keys.isEmpty)
+                CareCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_outlined,
+                          size: 20, color: AppColors.inkFaint),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(context.tr('console_nothing_scheduled'),
+                            style: GoogleFonts.manrope(
+                                fontSize: 13, color: AppColors.inkMuted)),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: appointments.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final appt = appointments[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.leafGreenPale,
-                            child: const Icon(Icons.calendar_month, color: AppColors.leafGreenDeep),
-                          ),
-                          title: Text(
-                            '${appt['patient']} ↔ ${appt['doctor']}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          ),
-                          subtitle: Text(
-                            'Date: ${appt['date']} • Time: ${appt['time']}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
+                )
+              else
+                ...keys.map((day) => Padding(
+                      padding: const EdgeInsets.only(bottom: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              StatusBadge(status: appt['status']!),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                                onPressed: () {},
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.mint,
+                                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                                ),
+                                child: Text(
+                                  _label(day),
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.tealDeep),
+                                ),
                               ),
+                              const SizedBox(width: 8),
+                              Text('${grouped[day]!.length} consultation(s)',
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 12, color: AppColors.inkFaint)),
                             ],
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                          const SizedBox(height: 10),
+                          ...grouped[day]!.map((c) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: RoleListRow(
+                                  initials: c.patientInitials,
+                                  title: c.patientName ?? 'Unknown patient',
+                                  subtitle:
+                                      '${c.type} · ${c.hasDoctor ? (c.doctorName ?? 'Assigned doctor') : 'Waiting for a doctor'}',
+                                  trailingWidget: StatusBadge(status: c.status),
+                                ),
+                              )),
+                        ],
+                      ),
+                    )),
+            ],
+          );
+        },
       ),
     );
   }
+
+  String _label(String iso) {
+    if (iso == 'Unscheduled') return iso;
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) return iso;
+    return '${parsed.day} ${_months[parsed.month - 1]} ${parsed.year}';
+  }
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
 }

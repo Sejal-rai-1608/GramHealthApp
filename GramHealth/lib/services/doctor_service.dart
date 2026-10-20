@@ -4,31 +4,39 @@ import '../services/connectivity_service.dart';
 import '../data/local_database.dart';
 
 /// Model matching the backend Doctor + User join response.
+///
+/// The backend returns: id, userId, specialization, registrationNumber,
+/// hospitalName, createdAt, updatedAt, and a nested `user` object.
+/// It does **not** return rating, availability, fee, experience or a bio,
+/// so those stay null and the UI hides them rather than showing a fake 0.0
+/// rating or a misleading "Offline" badge.
 class DoctorModel {
   final String id;
   final String name;
   final String specialization;
-  final int experienceYears;
-  final double rating;
-  final bool isAvailable;
+  final int? experienceYears;
+  final double? rating;
+  final bool? isAvailable;
   final String? profileImageUrl;
   final String? consultationFee;
   final String? bio;
   final String? hospital;
   final String? phone;
+  final String? registrationNumber;
 
   DoctorModel({
     required this.id,
     required this.name,
     required this.specialization,
-    required this.experienceYears,
-    required this.rating,
-    required this.isAvailable,
+    this.experienceYears,
+    this.rating,
+    this.isAvailable,
     this.profileImageUrl,
     this.consultationFee,
     this.bio,
     this.hospital,
     this.phone,
+    this.registrationNumber,
   });
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
@@ -37,23 +45,26 @@ class DoctorModel {
       id: json['id']?.toString() ?? '',
       name: user['name']?.toString() ?? json['name']?.toString() ?? 'Unknown Doctor',
       specialization: json['specialization']?.toString() ?? 'General Physician',
-      experienceYears: (json['experienceYears'] as num?)?.toInt() ?? 0,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      isAvailable: json['isAvailable'] as bool? ?? false,
+      experienceYears: (json['experienceYears'] as num?)?.toInt(),
+      rating: (json['rating'] as num?)?.toDouble(),
+      isAvailable: json['isAvailable'] as bool?,
       profileImageUrl: json['profileImageUrl']?.toString(),
       consultationFee: json['consultationFee']?.toString(),
       bio: json['bio']?.toString(),
-      hospital: json['hospital']?.toString(),
+      hospital: (json['hospitalName'] ?? json['hospital'])?.toString(),
       phone: user['phone']?.toString() ?? json['phone']?.toString(),
+      registrationNumber: json['registrationNumber']?.toString(),
     );
   }
 
   // Compatibility getters so existing widgets work without changes
   String get spec => specialization;
-  String get exp => '$experienceYears yrs';
+  String get exp =>
+      experienceYears == null ? '—' : '$experienceYears yrs';
   String get reviews => '—';
-  bool get online => isAvailable;
-  String get image => profileImageUrl ?? 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400';
+  bool get online => isAvailable == true;
+  String get image => profileImageUrl ??
+      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400';
   String get fee => consultationFee != null ? '₹$consultationFee' : '—';
   String get patients => '—';
   String get about => bio ?? 'No bio available.';

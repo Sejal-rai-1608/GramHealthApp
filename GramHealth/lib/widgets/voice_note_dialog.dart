@@ -110,7 +110,7 @@ class _VoiceNoteDialogState extends State<VoiceNoteDialog> {
           const SizedBox(height: 24),
           if (_isRecording) const Icon(Icons.mic, size: 48, color: Colors.redAccent),
           if (!_isRecording && _recordedFilePath == null) const Icon(Icons.mic_none, size: 48, color: Colors.grey),
-          if (!_isRecording && _recordedFilePath != null) const Icon(Icons.check_circle, size: 48, color: AppColors.leafGreenPrimary),
+          if (!_isRecording && _recordedFilePath != null) const Icon(Icons.check_circle, size: 48, color: AppColors.teal),
           const SizedBox(height: 24),
           if (_recordedFilePath == null)
             ElevatedButton(
@@ -123,14 +123,14 @@ class _VoiceNoteDialogState extends State<VoiceNoteDialog> {
               child: Text(_isRecording ? 'Stop Recording' : 'Start Recording'),
             )
           else ...[
-             const Text('Recording ready.', style: TextStyle(color: AppColors.leafGreenPrimary)),
+             const Text('Recording ready.', style: TextStyle(color: AppColors.teal)),
              const SizedBox(height: 12),
              _isSaving 
                ? const CircularProgressIndicator()
                : ElevatedButton(
                   onPressed: _submitVoiceNote,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryAccent,
+                    backgroundColor: AppColors.teal,
                     foregroundColor: AppColors.textDark,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),

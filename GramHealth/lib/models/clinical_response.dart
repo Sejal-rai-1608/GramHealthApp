@@ -179,6 +179,14 @@ class ClinicalResponse {
   final bool requiresProfessionalReview;
   final bool emergency;
 
+  /// The leading differential, used as the headline condition in the
+  /// symptom checker and chatbot summary.
+  String? get primaryCondition {
+    if (possibleConditions.isEmpty) return null;
+    final name = possibleConditions.first.name.trim();
+    return name.isEmpty ? null : name;
+  }
+
   static const String standardDisclaimer =
       'This information is for general health guidance and is not a medical diagnosis. '
       'Please consult a qualified healthcare professional for personal medical advice.';

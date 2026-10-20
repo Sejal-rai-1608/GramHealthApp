@@ -1,9 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// GlassCard replicates the expo-blur GlassCard component using
-/// BackdropFilter + ImageFilter.blur for the glassmorphism effect.
+/// Legacy GlassCard — kept as compatibility shim.
+/// New code should use [CareCard]. This wrapper renders the Clear Careway
+/// opaque surface so old call-sites do not break visually.
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -28,32 +28,19 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? 24.0;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: sigmaX, sigmaY: sigmaY),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: backgroundColor ?? AppColors.glassBackground,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: borderColor ?? AppColors.glassBorder,
-              width: 1,
-            ),
-            boxShadow: boxShadow ??
-                const [
-                  BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-          ),
-          child: child,
+    final radius = borderRadius ?? AppRadii.lg;
+    return Container(
+      padding: padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? AppColors.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: borderColor ?? AppColors.borderLight,
+          width: 1,
         ),
+        boxShadow: boxShadow ?? const [AppColors.shadowLow],
       ),
+      child: child,
     );
   }
 }

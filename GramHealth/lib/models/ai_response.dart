@@ -1,3 +1,5 @@
+import 'clinical_response.dart';
+
 class AiResponse {
   final String query;
   final String? intent;
@@ -11,7 +13,7 @@ class AiResponse {
   final List<String>? sources;
   final String? routingMethod;
   final List<String>? graphPath;
-  final dynamic structuredResponse;
+  final ClinicalResponse? structuredResponse;
 
   AiResponse({
     required this.query,
@@ -43,6 +45,23 @@ class AiResponse {
       sources: (json['sources'] as List<dynamic>?)?.map((e) => e as String).toList(),
       routingMethod: json['routing_method'] as String?,
       graphPath: (json['graph_path'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      // The backend sends the nine-section clinical payload as
+      // `structured_response`. Without parsing it here the clinical card
+      // would never render for an online AI answer.
+      structuredResponse: _parseStructured(json),
     );
+  }
+
+  static ClinicalResponse? _parseStructured(Map<String, dynamic> json) {
+    final raw = json['structured_response'] ?? json['structuredResponse'];
+    if (raw is ClinicalResponse) return raw;
+    if (raw is Map<String, dynamic>) {
+      try {
+        return ClinicalResponse.fromJson(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 }

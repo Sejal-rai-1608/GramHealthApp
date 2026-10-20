@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../services/consultation_service.dart';
@@ -178,12 +177,12 @@ class _VoiceNoteHistoryDialogState extends State<VoiceNoteHistoryDialog> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: isThisPlaying
-                              ? AppColors.primaryAccent.withValues(alpha: 0.1)
+                              ? AppColors.teal.withValues(alpha: 0.1)
                               : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isThisPlaying
-                                ? AppColors.primaryAccent
+                                ? AppColors.teal
                                 : Colors.grey.shade200,
                             width: isThisPlaying ? 1.5 : 1.0,
                           ),
@@ -195,7 +194,7 @@ class _VoiceNoteHistoryDialogState extends State<VoiceNoteHistoryDialog> {
                                 CircleAvatar(
                                   radius: 18,
                                   backgroundColor: isThisPlaying
-                                      ? AppColors.primaryAccent
+                                      ? AppColors.teal
                                       : Colors.orangeAccent,
                                   child: Icon(
                                     isThisPlaying ? Icons.multitrack_audio : Icons.mic,
@@ -244,7 +243,7 @@ class _VoiceNoteHistoryDialogState extends State<VoiceNoteHistoryDialog> {
                                         ? Icons.pause_circle_filled
                                         : Icons.play_circle_fill,
                                     color: isThisPlaying
-                                        ? AppColors.primaryAccent
+                                        ? AppColors.teal
                                         : Colors.orangeAccent,
                                     size: 34,
                                   ),
@@ -259,7 +258,7 @@ class _VoiceNoteHistoryDialogState extends State<VoiceNoteHistoryDialog> {
                                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                                 ),
                                 child: Slider(
-                                  activeColor: AppColors.primaryAccent,
+                                  activeColor: AppColors.teal,
                                   inactiveColor: Colors.grey.shade300,
                                   value: _position.inSeconds.toDouble().clamp(
                                         0.0,
