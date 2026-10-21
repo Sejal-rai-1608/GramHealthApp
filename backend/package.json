@@ -23,6 +23,7 @@
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.2.0",
     "pg": "^8.23.0",
     "prisma": "^7.9.1",
     "uuid": "^14.0.2"

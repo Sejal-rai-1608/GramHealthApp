@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
 const ApiError = require("../utils/ApiError");
+const { sendOtpEmail } = require("./email.service");
 
 const registerUser = async ({ name, email, phone, password, role, address, latitude, longitude }) => {
     const existingUser = await prisma.user.findFirst({
@@ -182,9 +183,18 @@ const forgotPassword = async ({ emailOrPhone }) => {
         }
     });
 
-    // TODO: Send OTP via email/SMS
-    // For now, log it (in production, use email/SMS service)
-    console.log(`[OTP] Reset code for ${user.email || user.phone}: ${otp}`);
+    // Send OTP via email if user has email
+    if (user.email) {
+      try {
+        await sendOtpEmail(user.email, otp, user.name || "User");
+      } catch (emailError) {
+        console.error("[AuthService] Failed to send OTP email:", emailError);
+        // Don't fail the request if email fails - OTP is still stored
+      }
+    } else {
+      // For phone numbers, log OTP (integrate SMS service in production)
+      console.log(`[OTP] Reset code for ${user.phone}: ${otp}`);
+    }
 
     return { message: "If the email/phone is registered, a reset code has been sent" };
 };
