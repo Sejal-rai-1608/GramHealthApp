@@ -22,10 +22,12 @@ const createTransporter = () => {
     tls: {
       rejectUnauthorized: process.env.NODE_ENV === "production"
     },
-    // Connection timeouts for Render/network issues
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000,
-    socketTimeout: 10000
+    // Longer timeouts for Render network
+    connectionTimeout: 30000, // 30 seconds
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+    // Force IPv4 (sometimes helps on cloud)
+    family: 4
   });
 };
 
