@@ -3,7 +3,7 @@ const nodemailer = require("nodemailer");
 const createTransporter = () => {
   const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
   const port = parseInt((process.env.SMTP_PORT || "587").trim());
-  const secure = port === 465;
+  const secure = port === 465 || process.env.SMTP_SECURE === "true";
   const user = (process.env.SMTP_USER || "").trim();
   const pass = (process.env.SMTP_PASS || "").trim();
 
