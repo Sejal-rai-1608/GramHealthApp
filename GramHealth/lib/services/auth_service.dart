@@ -179,7 +179,7 @@ class AuthService {
     await ApiClient.post(
       '${AppConfig.apiAuth}/forgot-password',
       {
-        'email': emailOrPhone,
+        'emailOrPhone': emailOrPhone,
       },
       auth: false,
     );
@@ -194,9 +194,9 @@ class AuthService {
     required String newPassword,
   }) async {
     await ApiClient.post(
-      '${AppConfig.apiAuth}/reset-password',
+      '${AppConfig.apiAuth}/reset-password/token',
       {
-        'email': emailOrPhone,
+        'emailOrPhone': emailOrPhone,
         'otp': otp,
         'newPassword': newPassword,
       },
