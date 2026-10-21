@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "langchain-architecture": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/llm-application-dev/skills/langchain-architecture/SKILL.md",
+      "computedHash": "9caed89066c283fec912b551e87075f8b6addc421c4a232d8ae0bb0af5a95846"
+    },
+    "llm-integration": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/llm-integration/SKILL.md",
+      "computedHash": "73f44436284a37fc291449be8dcb5c1bf121aaca150ced32c747ca5d8dd0e80f"
+    },
+    "python-backend": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/python-backend/SKILL.md",
+      "computedHash": "1106ca92762e10d35c5256ff5153c5876d6dbdd6b2a03c03b218274533c51e60"
+    },
+    "rag-implementation": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/llm-application-dev/skills/rag-implementation/SKILL.md",
+      "computedHash": "305766e72769b5531ec77e3653f9546d04e4be7d6e170580f1fb32ba6b843743"
+    },
+    "rag-retrieval": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/rag-retrieval/SKILL.md",
+      "computedHash": "494f5a66fba53c345947f94a4e5a45dc1fd98dcb8f8555862447d4e8199830b3"
+    },
+    "testing-llm": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "skillPath": "plugins/ork/skills/testing-llm/SKILL.md",
+      "computedHash": "497041f54d9dafcc13c6326985d7bf988bd0a9b7f5af51f103c33bb74c9556af"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+name: ruralcare_flutter
+description: RuralCare - Smart Healthcare for Rural Communities
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Icons
+  font_awesome_flutter: ^10.7.0
+
+  # Images
+  cached_network_image: ^3.3.1
+
+  # Maps
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  archive: ^3.3.0
+
+  # URL Launcher (for tel: links)
+  url_launcher: ^6.2.5
+  flutter_phone_direct_caller: ^2.2.1
+
+  # Shimmer loading effect
+  shimmer: ^3.0.0
+
+  # HTTP client for backend API calls
+  http: ^1.2.2
+
+  # Secure token storage (JWT)
+  flutter_secure_storage: ^9.2.2
+
+  # Session data (role, name, etc.)
+  shared_preferences: ^2.5.5
+
+  cupertino_icons: ^1.0.8
+  jitsi_meet_wrapper: ^0.2.0+1
+  sqflite: ^2.4.2+1
+  path_provider: ^2.1.6
+  uuid: ^4.6.0
+  connectivity_plus: ^7.3.1
+  image_picker: ^1.2.3
+  record: ^6.2.1
+  audioplayers: ^6.7.1
+  geolocator: ^14.0.2
+  geocoding: ^5.0.0
+
+  path: any
+  crypto: any
+  convert: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/offline_medical/manifest.json
+    - assets/offline_medical/metadata.json
+    - assets/offline_medical/shards/
