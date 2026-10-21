@@ -215,7 +215,6 @@ const resetPasswordWithToken = async ({ emailOrPhone, otp, newPassword }) => {
         throw new ApiError("New password must be at least 6 characters", 400, "INVALID_PASSWORD");
     }
 
-    const identifier = (emailOrPhone || "").trim();
     const user = await prisma.user.findFirst({
         where: {
             OR: [
