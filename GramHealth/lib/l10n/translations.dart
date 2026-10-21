@@ -241,6 +241,12 @@ const Map<String, Map<String, String>> kTranslations = {
     'describe_symptoms': 'Describe your Symptoms',
     'preferred_time': 'Preferred Time Slot',
     'send_request': 'Send Teleconsultation Request',
+    'chat_history': 'Chat History',
+    'new_chat': 'New conversation',
+    'new_chat_started': 'Started a new conversation',
+    'no_chat_history': 'No conversations yet',
+    'no_chat_history_hint': 'Your chats with the AI assistant are saved here on this device.',
+    'messages': 'messages',
   },
 
   'hi': {
@@ -486,6 +492,12 @@ const Map<String, Map<String, String>> kTranslations = {
     'describe_symptoms': 'लक्षणों का विवरण दें',
     'preferred_time': 'पसंदीदा समय स्लॉट',
     'send_request': 'टेलीकंसल्टेशन अनुरोध भेजें',
+    'chat_history': 'चैट इतिहास',
+    'new_chat': 'नई बातचीत',
+    'new_chat_started': 'नई बातचीत शुरू की गई',
+    'no_chat_history': 'अभी कोई बातचीत नहीं',
+    'no_chat_history_hint': 'AI सहायक से आपकी बातचीत इसी डिवाइस में सहेजी जाती है।',
+    'messages': 'संदेश',
   },
 
   'mr': {
@@ -731,6 +743,12 @@ const Map<String, Map<String, String>> kTranslations = {
     'describe_symptoms': 'लक्षणांचे वर्णन करा',
     'preferred_time': 'पसंतीची वेळ',
     'send_request': 'ऑनलाइन सल्ल्याची विनंती पाठवा',
+    'chat_history': 'संवाद इतिहास',
+    'new_chat': 'नवीन संवाद',
+    'new_chat_started': 'नवीन संवाद सुरू केला',
+    'no_chat_history': 'अद्याप संवाद नाही',
+    'no_chat_history_hint': 'AI सहाय्यकाशी आपले संवाद याच डिव्हाइसवर जतन केले जातात.',
+    'messages': 'संदेश',
   },
 
   'gu': {
@@ -976,5 +994,11 @@ const Map<String, Map<String, String>> kTranslations = {
     'describe_symptoms': 'લક્ષણોનું વર્ણન કરો',
     'preferred_time': 'પસંદગીનો સમય',
     'send_request': 'ઓનલાઇન પરામર્શ વિનંતી મોકલો',
+    'chat_history': 'ચાટ ઇતિહાસ',
+    'new_chat': 'નવી વાતચીત',
+    'new_chat_started': 'નવી વાતચીત શરૂ કરવામાં આવી',
+    'no_chat_history': 'હજી કોઈ વાતચીત નથી',
+    'no_chat_history_hint': 'AI સહાયક સાથેની તમારી વાતચીત આ જ ડિવાઇસ પર સાચવાય છે.',
+    'messages': 'સંદેશા',
   },
 };

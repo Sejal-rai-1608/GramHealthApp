@@ -24,10 +24,50 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
+  }
+
+  /// Chat history tables. Chat conversations are stored as rows (not the
+  /// generic JSON blob used by the domain caches) so that a conversation can
+  /// be loaded back in chronological order and trimmed without decoding every
+  /// message.
+  static const String conversationsTable = 'cached_conversations';
+  static const String chatMessagesTable = 'cached_chat_messages';
+
+  Future<void> _createChatTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $conversationsTable(
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        title TEXT,
+        created_at TEXT,
+        last_message_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $chatMessagesTable(
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT,
+        user_id TEXT,
+        role TEXT,
+        content TEXT,
+        is_offline INTEGER DEFAULT 0,
+        urgency TEXT,
+        intent TEXT,
+        routing_method TEXT,
+        requires_review INTEGER DEFAULT 0,
+        created_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
+      ON $chatMessagesTable(conversation_id, created_at)
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -48,12 +88,17 @@ class LocalDatabase {
       ''');
     }
     if (oldVersion < 4) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS cached_pharmacies(
-          id TEXT PRIMARY KEY,
-          data TEXT
-        )
-      ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cached_pharmacies(
+        id TEXT PRIMARY KEY,
+        data TEXT
+      )
+    ''');
+
+    await _createChatTables(db);
+  }
+    if (oldVersion < 5) {
+      await _createChatTables(db);
     }
   }
 
@@ -185,8 +230,14 @@ class LocalDatabase {
     return results.map((e) => jsonDecode(e['data'] as String) as Map<String, dynamic>).toList();
   }
 
-  /// Wipes all cached database tables to ensure absolute user data isolation on login/logout.
-  Future<void> clearAllData() async {
+  /// Wipes all cached database tables to ensure absolute user data isolation on
+  /// login/logout.
+  ///
+  /// Chat history is scoped per user id. When [preserveChatForUserId] is
+  /// supplied, only the conversations and messages belonging to that user are
+  /// kept — everything belonging to any other account on the device is
+  /// removed. Passing null (logout) removes all chat history as well.
+  Future<void> clearAllData({String? preserveChatForUserId}) async {
     final db = await instance.database;
     await db.delete('cached_consultations');
     await db.delete('cached_prescriptions');
@@ -195,5 +246,21 @@ class LocalDatabase {
     await db.delete('cached_records');
     await db.delete('cached_pharmacies');
     await db.delete('sync_queue');
+
+    if (preserveChatForUserId != null) {
+      await db.delete(
+        chatMessagesTable,
+        where: 'user_id IS NULL OR user_id != ?',
+        whereArgs: [preserveChatForUserId],
+      );
+      await db.delete(
+        conversationsTable,
+        where: 'user_id IS NULL OR user_id != ?',
+        whereArgs: [preserveChatForUserId],
+      );
+    } else {
+      await db.delete(chatMessagesTable);
+      await db.delete(conversationsTable);
+    }
   }
 }

@@ -11,7 +11,17 @@ class AiService {
   /// When false, offline fallback activates if online requests fail due to network/backend issues.
   static const bool debugForceOnlineAi = false;
 
-  static Future<AiResponse> query(String queryText, {String? patientId}) async {
+  /// Sends a question to the GramHealth AI assistant.
+  ///
+  /// [history] carries the previous turns of the current conversation
+  /// (`[{'role': 'user'|'assistant', 'content': '...'}]`) so the backend can
+  /// answer with conversational context. It is optional — callers such as the
+  /// symptom checker send a single standalone question.
+  static Future<AiResponse> query(
+    String queryText, {
+    String? patientId,
+    List<Map<String, dynamic>>? history,
+  }) async {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('Not authenticated');
 
@@ -20,6 +30,7 @@ class AiService {
     final backendBody = <String, dynamic>{
       'query': queryText,
       if (patientId != null) 'patientId': patientId,
+      if (history != null && history.isNotEmpty) 'history': history,
     };
 
     final requestId = 'req-${DateTime.now().millisecondsSinceEpoch}-${(queryText.hashCode.abs() % 100000).toString().padLeft(5, '0')}';
