@@ -147,6 +147,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     placeholder: 'Enter 6-digit code',
                     controller: _otpCtrl,
                     keyboardType: TextInputType.number,
+                    maxLength: 6,
                   ),
                   const SizedBox(height: 16),
                   CustomInput(

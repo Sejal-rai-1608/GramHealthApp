@@ -119,7 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     label: 'Email or Phone Number',
                     placeholder: 'Enter registered email or phone',
                     controller: _emailPhoneCtrl,
-                    keyboardType: TextInputType.emailAddress,
+                    keyboardType: TextInputType.text,
                   ),
                   const SizedBox(height: 24),
 
