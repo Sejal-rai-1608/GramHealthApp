@@ -1,16 +1,18 @@
 const nodemailer = require("nodemailer");
 
 const createTransporter = () => {
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT || "587");
+  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+  const port = parseInt((process.env.SMTP_PORT || "587").trim());
   const secure = port === 465;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = (process.env.SMTP_PASS || "").trim();
 
   if (!user || !pass) {
     console.warn("[EmailService] SMTP credentials not configured. Emails will be logged instead of sent.");
     return null;
   }
+
+  console.log(`[EmailService] Creating transporter: ${host}:${port} (secure: ${secure}) user: ${user ? 'SET' : 'MISSING'}`);
 
   return nodemailer.createTransport({
     host,
