@@ -5,6 +5,7 @@ const { canTransitionConsultationStatus } = require("../utils/consultationStatus
 const { CONSULTATION_RISK_LEVELS } = require("../constants/consultation");
 const { getProfileIdForRole, requireProfile } = require("../utils/profile");
 const aiService = require("./ai.service");
+const { v4: uuidv4 } = require("uuid");
 
 const USER_SELECT = { id: true, name: true, phone: true, email: true };
 
@@ -12,6 +13,16 @@ const CONSULTATION_INCLUDE = {
     patient: { include: { user: { select: USER_SELECT } } },
     doctor: { include: { user: { select: USER_SELECT } } },
     ashaWorker: { include: { user: { select: USER_SELECT } } }
+};
+
+const JITSI_DOMAIN = process.env.JITSI_DOMAIN || "meet.jit.si";
+const JITSI_SERVER_URL = `https://${JITSI_DOMAIN}`;
+
+const generateJitsiRoomName = (consultationId) => {
+    const prefix = "gramhealth";
+    const shortId = consultationId.replace(/-/g, "").substring(0, 12);
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    return `${prefix}-${shortId}-${randomSuffix}`;
 };
 
 const getConsultationOr404 = async (id) => {
@@ -395,7 +406,20 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
         );
     }
 
-    const data = { status: "ACTIVE", doctorId: profileId };
+    // Generate Jitsi room name if not already set
+    let jitsiRoomName = consultation.jitsiRoomName;
+    let jitsiServerUrl = consultation.jitsiServerUrl;
+    if (!jitsiRoomName) {
+        jitsiRoomName = generateJitsiRoomName(id);
+        jitsiServerUrl = JITSI_SERVER_URL;
+    }
+
+    const data = { 
+        status: "ACTIVE", 
+        doctorId: profileId,
+        jitsiRoomName,
+        jitsiServerUrl
+    };
 
     if (notes !== undefined) {
         data.notes = notes;

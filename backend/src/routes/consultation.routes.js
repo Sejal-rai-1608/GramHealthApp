@@ -19,7 +19,8 @@ const {
     acceptConsultation,
     completeConsultation,
     assignDoctor,
-    addVoiceNote
+    addVoiceNote,
+    getJitsiMeetingDetails
 } = require("../controllers/consultation.controller");
 
 const router = express.Router();
@@ -27,6 +28,7 @@ const router = express.Router();
 router.post("/", authenticate, authorize("PATIENT", "ASHA"), validate(createConsultationValidator), createConsultation);
 router.get("/", authenticate, authorize("PATIENT", "DOCTOR", "ASHA", "ADMIN"), validate(listConsultationsValidator), listConsultations);
 router.get("/:id", authenticate, authorize("PATIENT", "DOCTOR", "ASHA", "ADMIN"), validate(consultationParam), getConsultationById);
+router.get("/:id/jitsi", authenticate, authorize("PATIENT", "DOCTOR", "ASHA", "ADMIN"), validate(consultationParam), getJitsiMeetingDetails);
 router.patch("/:id/status", authenticate, authorize("PATIENT", "DOCTOR", "ASHA", "ADMIN"), validate(updateStatusValidator), updateStatus);
 router.patch("/:id/accept", authenticate, authorize("DOCTOR"), validate(acceptConsultationValidator), acceptConsultation);
 router.patch("/:id/complete", authenticate, authorize("DOCTOR"), validate(completeConsultationValidator), completeConsultation);

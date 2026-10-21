@@ -9,6 +9,7 @@ import '../../services/consultation_service.dart';
 import '../../services/call_service.dart';
 import '../../services/medical_record_service.dart';
 import '../../services/connectivity_service.dart';
+import '../../services/auth_service.dart';
 import '../../models/medical_record.dart';
 import '../../widgets/voice_note_dialog.dart';
 import '../../widgets/voice_note_history_dialog.dart';
@@ -222,11 +223,14 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     ] else ...[
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
+                            final doctorName = await AuthService.getUserName();
                             CallService.startCall(
                               context: context,
                               consultationId: c.id,
                               audioOnly: c.type.toUpperCase() == 'AUDIO',
+                              doctorName: doctorName,
+                              userRole: 'doctor',
                             ).then((_) {
                               _complete(c.id);
                             });

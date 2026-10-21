@@ -72,6 +72,33 @@ const login = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const { emailOrPhone } = req.body;
+
+        if (!emailOrPhone) {
+            return res.status(400).json({
+                success: false,
+                message: "Email or phone is required"
+            });
+        }
+
+        const result = await authService.forgotPassword({ emailOrPhone });
+
+        res.status(200).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+
+        res.status(error.statusCode || 400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 const resetPassword = async (req, res) => {
     try {
         const { email, phone, newPassword } = req.body;
@@ -91,8 +118,37 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const resetPasswordWithToken = async (req, res) => {
+    try {
+        const { emailOrPhone, otp, newPassword } = req.body;
+
+        if (!emailOrPhone || !otp || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Email/phone, OTP and new password are required"
+            });
+        }
+
+        const result = await authService.resetPasswordWithToken({ emailOrPhone, otp, newPassword });
+
+        res.status(200).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error("Reset password with token error:", error);
+
+        res.status(error.statusCode || 400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
-    resetPassword
+    resetPassword,
+    forgotPassword,
+    resetPasswordWithToken
 };

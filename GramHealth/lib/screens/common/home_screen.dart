@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/glass_card.dart';
@@ -16,8 +15,6 @@ import '../../widgets/voice_note_dialog.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_ai_service.dart';
 import '../../widgets/offline_setup_card.dart';
-import '../../data/doctors_data.dart';
-import '../../data/local_database.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,52 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingConsultations = false);
-    }
-  }
-
-  Future<void> _makeRealDoctorPhoneCall(ConsultationModel c) async {
-    String? phoneNum = c.doctorPhone?.trim();
-    String? docName = c.doctorName?.trim();
-
-    // 1. Try resolving doctor's phone from local database cache if not attached to consultation object
-    if ((phoneNum == null || phoneNum.isEmpty) && c.doctorId != null && c.doctorId!.isNotEmpty) {
-      try {
-        final cached = await LocalDatabase.instance.getCachedData('cached_doctors', c.doctorId!);
-        if (cached != null) {
-          final doc = DoctorModel.fromJson(cached);
-          phoneNum = doc.phone;
-          docName ??= doc.name;
-        }
-      } catch (_) {}
-    }
-
-    // 2. Try static list fallback matching doctorId
-    if ((phoneNum == null || phoneNum.isEmpty) && c.doctorId != null && c.doctorId!.isNotEmpty) {
-      final match = kDoctors.firstWhere((d) => d.id == c.doctorId, orElse: () => kDoctors.first);
-      docName ??= match.name;
-    }
-
-    // Fallback emergency helpline if doctor phone not registered
-    phoneNum ??= '108';
-    docName ??= 'Doctor';
-
-    final Uri phoneUri = Uri.parse('tel:$phoneNum');
-
-    try {
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(phoneUri);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Initiating direct phone call to $docName ($phoneNum)..."),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 
@@ -450,6 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (ConnectivityService.instance.currentStatus != NetworkStatus.offline)
                                 ElevatedButton(
                                   onPressed: () async {
+                                    final patientName = await AuthService.getUserName();
                                     await CallService.startCall(
                                       context: context,
                                       consultationId: c.id,
@@ -457,6 +409,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       doctorId: c.doctorId,
                                       doctorName: c.doctorName,
                                       doctorPhone: c.doctorPhone,
+                                      patientName: patientName,
+                                      userRole: 'patient',
                                     );
                                     if (mounted) {
                                       setState(() {
@@ -501,6 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () async {
+                                      final patientName = await AuthService.getUserName();
                                       await CallService.startCall(
                                         context: context,
                                         consultationId: c.id,
@@ -508,6 +463,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                         doctorId: c.doctorId,
                                         doctorName: c.doctorName,
                                         doctorPhone: c.doctorPhone,
+                                        patientName: patientName,
+                                        userRole: 'patient',
                                       );
                                     },
                                     icon: const Icon(Icons.call, size: 16),
