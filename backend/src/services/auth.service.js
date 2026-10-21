@@ -186,10 +186,16 @@ const forgotPassword = async ({ emailOrPhone }) => {
     // Send OTP via email if user has email
     if (user.email) {
       try {
-        await sendOtpEmail(user.email, otp, user.name || "User");
+        const emailResult = await sendOtpEmail(user.email, otp, user.name || "User");
+        if (emailResult.success) {
+          console.log(`[AuthService] OTP email sent successfully to ${user.email}: ${emailResult.messageId || 'dev mode'}`);
+        } else {
+          console.error(`[AuthService] OTP email failed to send to ${user.email}:`, emailResult.error);
+          console.log(`[AuthService] OTP for ${user.email} (check logs): ${otp}`);
+        }
       } catch (emailError) {
         console.error("[AuthService] Failed to send OTP email:", emailError);
-        // Don't fail the request if email fails - OTP is still stored
+        console.log(`[AuthService] OTP for ${user.email} (check logs): ${otp}`);
       }
     } else {
       // For phone numbers, log OTP (integrate SMS service in production)

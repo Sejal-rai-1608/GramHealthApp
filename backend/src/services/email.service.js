@@ -27,7 +27,7 @@ const sendOtpEmail = async (email, otp, name = "User") => {
   const transporter = createTransporter();
 
   if (!transporter) {
-    console.log(`[EmailService] [DEV MODE] OTP for ${email}: ${otp}`);
+    console.log(`[EmailService] [DEV MODE] SMTP not configured. OTP for ${email}: ${otp}`);
     return { success: true, devMode: true };
   }
 
@@ -76,13 +76,8 @@ If you didn't request this, please ignore this email or contact support if you h
   `;
 
   try {
-    const transporter = createTransporter();
+    console.log(`[EmailService] Sending OTP email to ${email} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
     
-    if (!transporter) {
-      console.log(`[EmailService] [DEV MODE] OTP for ${email}: ${otp}`);
-      return { success: true, devMode: true };
-    }
-
     const info = await transporter.sendMail({
       from: `"GramHealth" <${process.env.SMTP_USER}>`,
       to: email,
@@ -95,8 +90,9 @@ If you didn't request this, please ignore this email or contact support if you h
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("[EmailService] Failed to send OTP email:", error);
+    console.error("[EmailService] Error details:", error.message, error.code, error.response);
     // Don't throw - we don't want to break the forgot password flow if email fails
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, code: error.code, response: error.response };
   }
 };
 
