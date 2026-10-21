@@ -35,7 +35,7 @@ const GRAMHEALTH_MASTER_KNOWLEDGE_BASE = `
  * POST /api/ai/query
  */
 const queryAi = asyncHandler(async (req, res) => {
-  const { query, patientId } = req.body;
+  const { query, patientId, history } = req.body;
 
   if (!query || typeof query !== "string" || !query.trim()) {
     return res.status(400).json({
@@ -166,6 +166,7 @@ const queryAi = asyncHandler(async (req, res) => {
 
   let answer = "";
   let routingMethod = "knowledge_engine";
+  let contextTurnCount = 0;
 
   // ── 2. Primary Execution: Gemini LLM with Full RAG Knowledge Base ──────────
   if (apiKey) {
@@ -185,30 +186,85 @@ Guidelines:
 - If the user asks how to do something (e.g. consultation, booking, ABHA, pharmacy, records), explain the exact steps clearly.
 - If the user asks for a doctor or specialty, refer to the live doctors list from the database.
 - Be empathetic, clear, and easy to understand.
+- The conversation history below is context only. Always ground your answer in the current question and the live context above; never let an earlier turn override what the current evidence says.`;
 
-User Question: ${queryText}`;
+    // ── Conversation history → multi-turn Gemini `contents` ────────────────
+    const MAX_HISTORY_MESSAGES = 12;
+    const MAX_HISTORY_MESSAGE_CHARS = 2000;
+
+    const historyTurns = (Array.isArray(history) ? history : [])
+      .filter(
+        (h) =>
+          h &&
+          (h.role === "user" || h.role === "assistant" || h.role === "model") &&
+          typeof h.content === "string" &&
+          h.content.trim()
+      )
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((h) => ({
+        role: h.role === "user" ? "user" : "model",
+        content: h.content.trim().slice(0, MAX_HISTORY_MESSAGE_CHARS),
+      }));
+
+    // Gemini requires the turns to alternate between user and model. Merge
+    // consecutive same-role turns and drop any leading model turn.
+    const contents = [];
+    for (const turn of historyTurns) {
+      const last = contents[contents.length - 1];
+      if (last && last.role === turn.role) {
+        last.parts[0].text += `\n\n${turn.content}`;
+      } else {
+        contents.push({ role: turn.role, parts: [{ text: turn.content }] });
+      }
+    }
+    contextTurnCount = contents.length;
+    while (contents.length > 0 && contents[0].role === "model") {
+      contents.shift();
+    }
+    contents.push({ role: "user", parts: [{ text: queryText }] });
+
+    // Legacy single-turn body, used only if the multi-turn payload is rejected.
+    const legacyContents = [
+      { role: "user", parts: [{ text: `${systemPrompt}\n\nUser Question: ${queryText}` }] },
+    ];
+
+    const postToGemini = async (modelName, body) => {
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      if (!geminiResponse.ok) {
+        const errText = await geminiResponse.text().catch(() => "");
+        console.error(
+          `[Backend AI] ${modelName} returned ${geminiResponse.statusCode}: ${errText.slice(0, 300)}`
+        );
+        return null;
+      }
+      const geminiData = await geminiResponse.json();
+      return geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    };
 
     for (const modelName of modelEndpoints) {
       try {
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-            }),
-          }
-        );
+        let generatedText = await postToGemini(modelName, {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { temperature: 0.4, topP: 0.9, maxOutputTokens: 1200 },
+        });
 
-        if (geminiResponse.ok) {
-          const geminiData = await geminiResponse.json();
-          const generatedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (generatedText) {
-            answer = generatedText.trim();
-            routingMethod = `gemini_${modelName}`;
-            break;
-          }
+        if (!generatedText) {
+          // Retry without systemInstruction/history (single-turn legacy shape).
+          generatedText = await postToGemini(modelName, { contents: legacyContents });
+        }
+
+        if (generatedText) {
+          answer = generatedText.trim();
+          routingMethod = `gemini_${modelName}`;
+          break;
         }
       } catch (err) {
         console.error(`[Backend AI] Error calling Gemini endpoint ${modelName}:`, err.message);
@@ -322,6 +378,7 @@ If you experience high fever (>101°F), severe abdominal cramps, persistent vomi
       urgency: "routine",
       requires_professional_review: isMedicalSymptomQuery,
       routing_method: routingMethod,
+      context_turns: contextTurnCount,
     },
   });
 });

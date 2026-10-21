@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/care_icon_button.dart';
 
 class EmergencyHelpScreen extends StatefulWidget {
   const EmergencyHelpScreen({super.key});
@@ -20,27 +21,27 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
   List<Map<String, String>> _contacts = [];
   bool _isLocating = false;
 
-  final List<Map<String, String>> _firstAidGuides = [
+  final List<Map<String, dynamic>> _firstAidGuides = [
     {
       'title': 'Snakebite',
-      'icon': '🐍',
-      'content': '1. Keep victim calm and still.\n2. Do NOT cut or suck the wound.\n3. Wash with soap or water.\n4. Apply restrictive bandage above the bite limit venom flow.\n5. Seek hospital immediately (SOS).'
+      'icon': Icons.warning_amber_rounded,
+      'content': '1. Keep victim calm and still.\n2. Do NOT cut or suck the wound.\n3. Wash with soap or water.\n4. Apply restrictive bandage above the bite to limit venom flow.\n5. Seek hospital immediately (SOS).',
     },
     {
       'title': 'Severe Burns',
-      'icon': '🔥',
-      'content': '1. Remove from heat source.\n2. Cool with mild running water for 20 mins.\n3. Do NOT apply ice, creams, or oils.\n4. Cover loosely with sterile film or clean cloth.\n5. Call emergency line.'
+      'icon': Icons.local_fire_department_rounded,
+      'content': '1. Remove from heat source.\n2. Cool with mild running water for 20 mins.\n3. Do NOT apply ice, creams, or oils.\n4. Cover loosely with sterile film or clean cloth.\n5. Call emergency line.',
     },
     {
       'title': 'CPR',
-      'icon': '❤️',
-      'content': '1. Check responsiveness and breathing.\n2. Call SOS/Ambulance.\n3. Push hard and fast in center of chest (100-120 beats/min).\n4. Allow chest to rise completely between compressions.'
+      'icon': Icons.monitor_heart_rounded,
+      'content': '1. Check responsiveness and breathing.\n2. Call SOS/Ambulance.\n3. Push hard and fast in center of chest (100–120/min).\n4. Allow chest to rise completely between compressions.',
     },
     {
       'title': 'Poisoning',
-      'icon': '☠️',
-      'content': '1. Move person to fresh air if inhaled.\n2. Do NOT induce vomiting unless told to do so.\n3. If swallowed, call poison control immediately.\n4. Keep poison container nearby for doctors.'
-    }
+      'icon': Icons.science_rounded,
+      'content': '1. Move person to fresh air if inhaled.\n2. Do NOT induce vomiting unless told to.\n3. If swallowed, call poison control immediately.\n4. Keep poison container nearby for doctors.',
+    },
   ];
 
   @override
@@ -51,10 +52,10 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
 
   Future<void> _loadContacts() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('ice_contacts');
+    final data = prefs.getString('ice_contacts');
     if (data != null) {
-      List<dynamic> json = jsonDecode(data);
-      _contacts = json.map((e) => Map<String, String>.from(e)).toList();
+      final list = jsonDecode(data) as List;
+      _contacts = list.map((e) => Map<String, String>.from(e as Map)).toList();
     } else {
       _contacts = [
         {'name': 'Ambulance', 'relation': 'Emergency Response', 'phone': '102'},
@@ -73,351 +74,316 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
 
   Future<void> _handleCall(String number) async {
     final uri = Uri.parse('tel:$number');
-    try {
-      await launchUrl(uri);
-    } catch (_) {}
+    try { await launchUrl(uri); } catch (_) {}
   }
 
   Future<void> _triggerSOS() async {
     setState(() => _isLocating = true);
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location is disabled');
-      }
-      LocationPermission p = await Geolocator.checkPermission();
+      if (!await Geolocator.isLocationServiceEnabled()) throw Exception('Location is disabled');
+      var p = await Geolocator.checkPermission();
       if (p == LocationPermission.denied) {
         p = await Geolocator.requestPermission();
-        if (p == LocationPermission.denied || p == LocationPermission.deniedForever) {
-          throw Exception('Permission denied');
-        }
+        if (p == LocationPermission.denied || p == LocationPermission.deniedForever) throw Exception('Permission denied');
       }
-      Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
       final mapsLink = "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}";
-      final message = Uri.encodeComponent("EMERGENCY! I need immediate help. I am at this location: $mapsLink");
-
-      // Extract custom contacts, or fallback to 102/108
-      String phones = _contacts.map((c) => c['phone']).join(',');
-      final uri = Uri.parse("sms:$phones?body=$message");
-      await launchUrl(uri);
+      final msg = Uri.encodeComponent("EMERGENCY! I need immediate help. I am at: $mapsLink");
+      final phones = _contacts.map((c) => c['phone']).join(',');
+      await launchUrl(Uri.parse("sms:$phones?body=$msg"));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to trigger SOS: $e')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to trigger SOS: $e')));
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
   }
 
   Future<void> _routeToNearestPHC() async {
-    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=hospital+clinic+PHC");
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await launchUrl(Uri.parse("https://www.google.com/maps/search/?api=1&query=hospital+clinic+PHC"), mode: LaunchMode.externalApplication);
   }
 
   void _showAddContactDialog() {
     final nameCtrl = TextEditingController();
     final relCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Emergency Contact'),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+        title: Text('Add emergency contact', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name (e.g., Son)')),
-            TextField(controller: relCtrl, decoration: const InputDecoration(labelText: 'Relationship')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number'), keyboardType: TextInputType.phone),
+            TextField(controller: nameCtrl, decoration: _inputDeco('Name')),
+            const SizedBox(height: 10),
+            TextField(controller: relCtrl, decoration: _inputDeco('Relationship')),
+            const SizedBox(height: 10),
+            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: _inputDeco('Phone number')),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.manrope(color: AppColors.inkMuted))),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.teal),
             onPressed: () {
               if (nameCtrl.text.isNotEmpty && phoneCtrl.text.isNotEmpty) {
                 _saveContact(nameCtrl.text, relCtrl.text, phoneCtrl.text);
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Save Contact'),
-          )
+            child: Text('Save', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
   }
 
-  void _showFirstAidDialog(Map<String, String> guide) {
+  InputDecoration _inputDeco(String label) => InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkMuted),
+        filled: true,
+        fillColor: AppColors.groundAlt,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.borderLight)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.borderLight)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.tealDeep, width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+  void _showFirstAidDialog(Map<String, dynamic> guide) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Text(guide['icon']!, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 8),
-            Text(guide['title']!),
-          ],
-        ),
-        content: Text(guide['content']!, style: const TextStyle(fontSize: 15, height: 1.4)),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+        title: Row(children: [
+          Icon(guide['icon'] as IconData, size: 20, color: AppColors.teal),
+          const SizedBox(width: 8),
+          Text(guide['title'] as String, style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.ink)),
+        ]),
+        content: Text(guide['content'] as String, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.6)),
         actions: [
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.teal),
             onPressed: () => Navigator.pop(ctx),
-            style: TextButton.styleFrom(foregroundColor: AppColors.primaryAccent),
-            child: const Text('Understood'),
+            child: Text('Understood', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
           ),
         ],
-      )
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 100),
-          child: Column(
-            children: [
-              // Top Bar
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.secondaryBg,
-                      ),
-                      child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => context.pop(),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
+        ),
+        leadingWidth: 56,
+        title: Text('Emergency help', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.emergency)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          children: [
+            // SOS — one dominant emergency signal
+            GestureDetector(
+              onTap: _isLocating ? null : _triggerSOS,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.emergencyWash,
+                  border: Border.all(color: AppColors.emergencyPale, width: 1),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 156,
+                    height: 156,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.emergency),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isLocating)
+                          const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                        else
+                          const Icon(Icons.emergency_share_rounded, size: 32, color: Colors.white),
+                        const SizedBox(height: 8),
+                        Text('SEND SOS\n+ GPS', textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2, letterSpacing: 0.6)),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 10),
-
-              // Header
-              const Icon(Icons.error_outline, size: 48, color: AppColors.emergency),
-              const SizedBox(height: 12),
-              Text(
-                context.tr('emergency_help'),
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.emergency),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'One-tap lifeline features and offline emergency guides.',
-                style: TextStyle(fontSize: 14, color: AppColors.textDark.withOpacity(0.6)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-
-              // SOS SMS Module
-              GestureDetector(
-                onTap: _isLocating ? null : _triggerSOS,
-                child: Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.emergency.withOpacity(0.1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.emergency.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Center(
+            ),
+            const SizedBox(height: 10),
+            Text('Shares your live location via SMS to your emergency contacts.',
+                textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.inkMuted, height: 1.4)),
+            const SizedBox(height: 22),
+            // First-aid
+            Align(alignment: Alignment.centerLeft, child: Text('First-aid guides — works offline', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink))),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 96,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _firstAidGuides.length,
+                itemBuilder: (_, i) {
+                  final g = _firstAidGuides[i];
+                  return GestureDetector(
+                    onTap: () => _showFirstAidDialog(g),
                     child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.emergency,
+                      width: 112,
+                      margin: EdgeInsets.only(right: i == _firstAidGuides.length - 1 ? 0 : 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: AppColors.borderLight),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _isLocating 
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Icon(Icons.emergency_share, size: 40, color: Colors.white),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'SEND SOS\n+ GPS',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: 1),
-                            textAlign: TextAlign.center,
-                          ),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(color: AppColors.mintLight, borderRadius: BorderRadius.circular(10)),
+                          child: Icon(g['icon'] as IconData, size: 20, color: AppColors.teal),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(g['title'] as String, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.ink)),
                         ],
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-              const SizedBox(height: 32),
-
-              // Offline First-Aid Section
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Offline First-Aid Guides',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _firstAidGuides.length,
-                  itemBuilder: (context, index) {
-                    final guide = _firstAidGuides[index];
-                    return GestureDetector(
-                      onTap: () => _showFirstAidDialog(guide),
-                      child: Container(
-                        width: 120,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primaryAccent.withOpacity(0.3))
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(guide['icon']!, style: const TextStyle(fontSize: 32)),
-                            const SizedBox(height: 8),
-                            Text(guide['title']!, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Options Grid (Call & Route)
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _handleCall('108'),
-                      child: GlassCard(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.medical_services, size: 28, color: AppColors.emergency),
-                            const SizedBox(height: 8),
-                            Text(
-                              context.tr('emergency_response'),
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _routeToNearestPHC,
-                      child: GlassCard(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.location_on, size: 28, color: AppColors.primaryAccent),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Nearest\nPHC',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Dynamic Emergency Contacts
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    context.tr('emergency_contacts'),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                  TextButton.icon(
-                    onPressed: _showAddContactDialog,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add ICE'),
-                  )
-                ],
-              ),
-              const SizedBox(height: 12),
-              GlassCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: _contacts.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final contact = entry.value;
-                    return Column(
-                      children: [
-                        _buildContactItem(contact['name'] ?? '', contact['relation'] ?? '', contact['phone'] ?? ''),
-                        if (idx < _contacts.length - 1)
-                          const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0x0D000000)),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactItem(String name, String relation, String phone) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(height: 18),
+            Row(
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                Expanded(
+                  child: CareCard(
+                    onTap: () => _handleCall('108'),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(color: AppColors.emergencyWash, borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.medical_services_outlined, size: 18, color: AppColors.emergency),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(context.tr('emergency_response'),
+                            textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.25)),
+                      ],
+                    ),
+                  ),
                 ),
-                Text(
-                  relation,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CareCard(
+                    onTap: _routeToNearestPHC,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.location_on_outlined, size: 18, color: AppColors.teal),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Nearest PHC', textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.25)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          GestureDetector(
-            onTap: () => _handleCall(phone),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.secondaryBg,
-              ),
-              child: const Icon(Icons.phone, size: 18, color: AppColors.textDark),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text(context.tr('emergency_contacts'), style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _showAddContactDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(AppRadii.pill)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text('Add contact', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            CareCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: _contacts.asMap().entries.map((e) {
+                  final idx = e.key;
+                  final c = e.value;
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(color: AppColors.groundAlt, borderRadius: BorderRadius.circular(10)),
+                              child: const Icon(Icons.person_outline_rounded, size: 16, color: AppColors.inkMuted),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(c['name'] ?? '', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                                  Text(c['relation'] ?? '', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkMuted)),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _handleCall(c['phone'] ?? ''),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (idx < _contacts.length - 1) const Divider(height: 1, indent: 14, endIndent: 14, color: AppColors.borderLight),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -20,16 +20,14 @@ class CustomSearchBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.glassBorder),
-        boxShadow: const [
-          BoxShadow(color: AppColors.shadow, blurRadius: 4, offset: Offset(0, 2)),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.borderLight),
+        boxShadow: const [AppColors.shadowLow],
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+          const Icon(Icons.search, color: AppColors.inkFaint, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -37,20 +35,62 @@ class CustomSearchBar extends StatelessWidget {
               onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+                hintStyle: Theme.of(context).textTheme.bodySmall!.copyWith(color: AppColors.inkFaint),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 13),
               ),
-              style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: AppColors.ink),
             ),
           ),
           if (controller != null && controller!.text.isNotEmpty)
             GestureDetector(
               onTap: onClear ?? () => controller!.clear(),
-              child: const Icon(Icons.close, color: AppColors.textMuted, size: 18),
+              child: const Icon(Icons.close, color: AppColors.inkFaint, size: 18),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Slim search field used in tables / admin filters.
+class CareSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String>? onChanged;
+
+  const CareSearchField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      style: Theme.of(context).textTheme.bodyMedium,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.inkFaint),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.borderLight),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.borderLight),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.tealDeep, width: 2),
+        ),
       ),
     );
   }

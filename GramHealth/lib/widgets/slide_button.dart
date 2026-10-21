@@ -62,75 +62,72 @@ class _SlideButtonState extends State<SlideButton>
     final maxX = buttonWidth - _thumbSize - 12;
     final progress = _thumbX / maxX;
 
-    return SizedBox(
-      width: buttonWidth,
-      height: _buttonHeight,
-      child: GestureDetector(
-        onHorizontalDragUpdate: (d) {
-          if (_completed) return;
-          setState(() {
-            _thumbX = (_thumbX + d.delta.dx).clamp(0.0, maxX);
-          });
-        },
-        onHorizontalDragEnd: (_) {
-          if (_completed) return;
-          if (_thumbX > maxX * 0.8) {
-            setState(() => _completed = true);
-            _snapTo(maxX);
-            Future.delayed(const Duration(milliseconds: 400),
-                widget.onComplete);
-          } else {
+    return Semantics(
+      button: true,
+      label: widget.title,
+      child: SizedBox(
+        width: buttonWidth,
+        height: _buttonHeight,
+        child: GestureDetector(
+          onHorizontalDragUpdate: (d) {
+            if (_completed) return;
+            setState(() {
+              _thumbX = (_thumbX + d.delta.dx).clamp(0.0, maxX);
+            });
+          },
+          onHorizontalDragCancel: () {
+            if (_completed) return;
             _snapTo(0);
-          }
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.darkNavy,
-            borderRadius: BorderRadius.circular(_buttonHeight / 2),
-          ),
-          padding: const EdgeInsets.all(6),
-          child: Stack(
-            alignment: Alignment.centerLeft,
-            children: [
-              // Label text fades as thumb moves right
-              Center(
-                child: Opacity(
-                  opacity: (1 - progress * 2).clamp(0.0, 1.0),
-                  child: Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+          },
+          onHorizontalDragEnd: (_) {
+            if (_completed) return;
+            if (_thumbX > maxX * 0.8) {
+              setState(() => _completed = true);
+              _snapTo(maxX);
+              Future.delayed(const Duration(milliseconds: 400), widget.onComplete);
+            } else {
+              _snapTo(0);
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.ink,
+              borderRadius: BorderRadius.circular(_buttonHeight / 2),
+            ),
+            padding: const EdgeInsets.all(6),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Center(
+                  child: Opacity(
+                    opacity: (1 - progress * 2).clamp(0.0, 1.0),
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // Draggable thumb
-              Transform.translate(
-                offset: Offset(_thumbX, 0),
-                child: Container(
-                  width: _thumbSize,
-                  height: _thumbSize,
-                  decoration: BoxDecoration(
-                    color: AppColors.medicalGreen,
-                    borderRadius: BorderRadius.circular(_thumbSize / 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x22000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      )
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    color: AppColors.darkNavy,
-                    size: 22,
+                Transform.translate(
+                  offset: Offset(_thumbX, 0),
+                  child: Container(
+                    width: _thumbSize,
+                    height: _thumbSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.teal,
+                      borderRadius: BorderRadius.circular(_thumbSize / 2),
+                      boxShadow: [
+                        BoxShadow(color: AppColors.ink.withValues(alpha: 0.13), blurRadius: 4, offset: const Offset(0, 2))
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_forward, color: AppColors.ink, size: 22),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

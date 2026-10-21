@@ -129,13 +129,13 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                   duration: const Duration(milliseconds: 300),
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                   decoration: BoxDecoration(
-                    color: _isRecording ? Colors.redAccent.withValues(alpha: 0.1) : Colors.white,
+                    color: _isRecording ? AppColors.emergencyWash : AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _isRecording ? Colors.redAccent : const Color(0xFFEEEEEE),
+                      color: _isRecording ? AppColors.emergency : AppColors.borderLight,
                     ),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))
+                    boxShadow: [
+                      BoxShadow(color: AppColors.ink.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))
                     ],
                   ),
                   child: Row(
@@ -143,7 +143,7 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                     children: [
                       Icon(
                         _isRecording ? Icons.stop_circle : Icons.mic,
-                        color: _isRecording ? Colors.redAccent : Colors.blueAccent,
+                        color: _isRecording ? AppColors.emergency : AppColors.teal,
                         size: 22,
                       ),
                       const SizedBox(width: 6),
@@ -153,7 +153,7 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: _isRecording ? Colors.redAccent : Colors.blueAccent,
+                            color: _isRecording ? AppColors.emergency : AppColors.teal,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -163,7 +163,7 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                         const SizedBox(
                           width: 12,
                           height: 12,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.emergency),
                         )
                       ]
                     ],
@@ -185,8 +185,8 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                     border: Border.all(
                       color: const Color(0xFF25D366),
                     ),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))
+                    boxShadow: [
+                      BoxShadow(color: AppColors.ink.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))
                     ],
                   ),
                   child: Row(

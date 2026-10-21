@@ -22,15 +22,15 @@ class StructuredClinicalResponseCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: response.emergency
-              ? const Color(0xFFFFCDD2)
-              : AppColors.primaryAccent.withValues(alpha: 0.2),
+              ? AppColors.emergencyPale
+              : AppColors.teal.withValues(alpha: 0.2),
           width: response.emergency ? 1.5 : 1,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D000000),
+            color: AppColors.ink.withValues(alpha: 0.05),
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -47,7 +47,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.1),
+                    color: AppColors.teal.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -56,7 +56,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                       Icon(
                         sourceLabel?.contains('Offline') ?? false ? Icons.cloud_off : Icons.cloud_done,
                         size: 11,
-                        color: AppColors.primaryAccent,
+                        color: AppColors.teal,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -64,7 +64,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primaryAccent,
+                          color: AppColors.teal,
                         ),
                       ),
                     ],
@@ -82,23 +82,23 @@ class StructuredClinicalResponseCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
+                color: AppColors.emergencyWash,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFEF5350), width: 1.5),
+                border: Border.all(color: AppColors.emergencySoft, width: 1.5),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.emergency, color: Color(0xFFC62828), size: 20),
+                      Icon(Icons.emergency, color: AppColors.emergency, size: 20),
                       SizedBox(width: 6),
                       Text(
                         'EMERGENCY ALERT',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFFC62828),
+                          color: AppColors.emergency,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -110,7 +110,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFB71C1C),
+                      color: AppColors.emergencyDeep,
                       height: 1.35,
                     ),
                   ),
@@ -169,16 +169,16 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.secondaryBg,
+                    color: AppColors.ground,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.leafGreenPale),
+                    border: Border.all(color: AppColors.mint),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.circle, size: 7, color: AppColors.primaryAccent),
+                          const Icon(Icons.circle, size: 7, color: AppColors.teal),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -226,7 +226,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                   children: [
                     const Padding(
                       padding: EdgeInsets.only(top: 4),
-                      child: Icon(Icons.arrow_right, size: 16, color: AppColors.primaryAccent),
+                      child: Icon(Icons.arrow_right, size: 16, color: AppColors.teal),
                     ),
                     Expanded(
                       child: Text(
@@ -244,7 +244,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
           const Divider(height: 24, thickness: 0.8),
 
           // ── 5. WARNING SIGNS ────────────────────────────────────────────────
-          _buildSectionHeader('WARNING SIGNS', Icons.warning_amber_rounded, color: const Color(0xFFD32F2F)),
+          _buildSectionHeader('Warning signs', Icons.warning_amber_rounded, color: AppColors.emergencyDeep),
           const SizedBox(height: 6),
           ...response.warningSigns.map((sign) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -253,7 +253,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                   children: [
                     const Padding(
                       padding: EdgeInsets.only(top: 3),
-                      child: Icon(Icons.warning_amber_rounded, size: 13, color: Color(0xFFD32F2F)),
+                      child: Icon(Icons.warning_amber_rounded, size: 13, color: AppColors.emergencyDeep),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -262,7 +262,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFFC62828),
+                          color: AppColors.emergency,
                           height: 1.35,
                         ),
                       ),
@@ -278,14 +278,14 @@ class StructuredClinicalResponseCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.leafBg,
+              color: AppColors.mintLight,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.leafGreenPale),
+              border: Border.all(color: AppColors.mint),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.health_and_safety_outlined, size: 18, color: AppColors.primaryAccent),
+                const Icon(Icons.health_and_safety_outlined, size: 18, color: AppColors.teal),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -323,7 +323,7 @@ class StructuredClinicalResponseCard extends StatelessWidget {
                           children: [
                             TextSpan(
                               text: '[${ev.sourceType}] ',
-                              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryAccent),
+                              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.teal),
                             ),
                             TextSpan(
                               text: '${ev.title} (${ev.source})',

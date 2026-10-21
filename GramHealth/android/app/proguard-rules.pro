@@ -17,3 +17,13 @@
 -keepclassmembers class ** {
     @org.greenrobot.eventbus.Subscribe <methods>;
 }
+
+# MediaPipe tasks-genai pulls in AutoValue, which references javac's
+# javax.lang.model compile-time API. Those classes are never present on
+# Android, so silence R8's missing-class check for them.
+-dontwarn javax.lang.model.SourceVersion
+-dontwarn javax.lang.model.element.Element
+-dontwarn javax.lang.model.element.ElementKind
+-dontwarn javax.lang.model.type.TypeMirror
+-dontwarn javax.lang.model.type.TypeVisitor
+-dontwarn javax.lang.model.util.SimpleTypeVisitor8

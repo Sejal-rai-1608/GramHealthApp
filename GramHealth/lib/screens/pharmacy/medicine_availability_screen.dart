@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
-
+import '../../widgets/care_card.dart';
+import '../../widgets/care_icon_button.dart';
+import '../../widgets/empty_state.dart';
 import '../../services/pharmacy_service.dart';
-
-// No longer using hardcoded kPharmacies
 
 class MedicineAvailabilityScreen extends StatefulWidget {
   final String? medicineQuery;
@@ -21,7 +21,7 @@ class MedicineAvailabilityScreen extends StatefulWidget {
 }
 
 class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen> {
-  final TextEditingController _searchCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
   List<PharmacySearchResult> _pharmacies = [];
   bool _isLoading = false;
   Position? _currentPosition;
@@ -35,20 +35,14 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   Future<void> _initLocationAndSearch() async {
     setState(() => _isLoading = true);
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (serviceEnabled) {
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      if (await Geolocator.isLocationServiceEnabled()) {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
+        if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
           _currentPosition = await Geolocator.getCurrentPosition();
         }
       }
-    } catch (_) {
-      // default position handling below
-    }
-
+    } catch (_) {}
     if (widget.medicineQuery != null && widget.medicineQuery!.isNotEmpty) {
       _searchCtrl.text = widget.medicineQuery!;
       _performSearch();
@@ -60,25 +54,14 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   Future<void> _performSearch() async {
     final query = _searchCtrl.text.trim();
     if (query.isEmpty) {
-      setState(() {
-        _pharmacies = [];
-      });
+      setState(() => _pharmacies = []);
       return;
     }
-
     setState(() => _isLoading = true);
-    
-    // Default to Indore if GPS fails
     final lat = _currentPosition?.latitude ?? 22.7196;
     final lon = _currentPosition?.longitude ?? 75.8577;
-    
     final results = await PharmacyService.searchPharmaciesLocal(query, lat, lon);
-    if (mounted) {
-      setState(() {
-        _pharmacies = results;
-        _isLoading = false;
-      });
-    }
+    if (mounted) setState(() { _pharmacies = results; _isLoading = false; });
   }
 
   @override
@@ -89,11 +72,9 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
 
   Future<void> _openNavigation(double lat, double lon) async {
     final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lon');
-    final success = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!success) {
-      final fallback = await launchUrl(url, mode: LaunchMode.inAppWebView);
-      if (!fallback && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open map app')));
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (!await launchUrl(url, mode: LaunchMode.inAppWebView) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open maps')));
       }
     }
   }
@@ -101,238 +82,174 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => context.pop(),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
+        ),
+        leadingWidth: 56,
+        title: Text(context.tr('medicine_availability'), style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.ink)),
+        centerTitle: false,
+      ),
       body: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-              boxShadow: [
-                BoxShadow(color: Color(0x0D000000), blurRadius: 8, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Search
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => context.pop(),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.secondaryBg,
-                        ),
-                        child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
-                      ),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onSubmitted: (_) => _performSearch(),
+                    style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
+                    decoration: InputDecoration(
+                      hintText: context.tr('search_medicine'),
+                      hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkFaint),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.inkMuted),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.borderLight)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.md), borderSide: const BorderSide(color: AppColors.tealDeep, width: 1.5)),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      context.tr('medicine_availability'),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondaryBg,
-                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, color: Color(0xFF666666), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtrl,
-                          onSubmitted: (_) => _performSearch(),
-                          decoration: InputDecoration(
-                            hintText: context.tr('search_medicine'),
-                            hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-                            border: InputBorder.none,
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _performSearch,
-                        child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primaryAccent),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: _performSearch,
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.teal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)), elevation: 0),
+                    child: Text('Search', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
             ),
           ),
-
-          // Content
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              children: [
-                // Map Preview
-                Container(
-                  height: 160,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x0F000000), blurRadius: 6, offset: Offset(0, 2)),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: LatLng(_currentPosition?.latitude ?? 22.7196, _currentPosition?.longitude ?? 75.8577),
-                        initialZoom: 13.5,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.ruralcare.app',
-                        ),
-                        MarkerLayer(
-                          markers: _pharmacies.map((res) {
-                            final p = res.pharmacy;
-                            return Marker(
-                              point: LatLng(p.latitude, p.longitude),
-                              width: 36,
-                              height: 36,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: res.isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                  boxShadow: const [
-                                    BoxShadow(color: Colors.black26, blurRadius: 4),
-                                  ],
-                                ),
-                                child: const Icon(Icons.local_pharmacy, color: Colors.white, size: 18),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Map
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              child: SizedBox(
+                height: 160,
+                child: FlutterMap(
+                  options: MapOptions(initialCenter: LatLng(_currentPosition?.latitude ?? 22.7196, _currentPosition?.longitude ?? 75.8577), initialZoom: 13.5),
                   children: [
-                    Text(
-                      context.tr('nearby_pharmacies'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.ruralcare.app'),
+                    MarkerLayer(
+                      markers: _pharmacies.map((res) {
+                        final p = res.pharmacy;
+                        return Marker(
+                          point: LatLng(p.latitude, p.longitude),
+                          width: 44,
+                          height: 44,
+                          child: Container(
+                            alignment: Alignment.center,
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: res.isAvailable ? AppColors.teal : AppColors.inkFaint,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.surface, width: 2),
+                              ),
+                              child: const Icon(Icons.local_pharmacy_rounded, color: AppColors.surface, size: 14),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    if (_isLoading)
-                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                   ],
                 ),
-                const SizedBox(height: 12),
-
-                if (!_isLoading && _pharmacies.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Text(
-                        _searchCtrl.text.isEmpty
-                            ? 'Search for a medicine to see availability.'
-                            : 'No pharmacies configured or synced nearby.',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-
-                // Pharmacy Cards
-                ..._pharmacies.map((res) {
-                  final p = res.pharmacy;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        p.name,
-                                        style: const TextStyle(
-                                            fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: res.isAvailable ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        res.isAvailable ? context.tr('available') : context.tr('out_of_stock'),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: res.isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  p.address,
-                                  style: TextStyle(
-                                      fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF666666)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${res.distanceKm.toStringAsFixed(1)} km ${context.tr('away')}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () => _openNavigation(p.latitude, p.longitude),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryAccent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.navigation_outlined, color: AppColors.textDark, size: 20),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text(context.tr('nearby_pharmacies'), style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                const Spacer(),
+                if (_isLoading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal)),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _isLoading
+                ? const SizedBox.shrink()
+                : _pharmacies.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: EmptyState(
+                          icon: Icons.search_off_rounded,
+                          title: _searchCtrl.text.isEmpty ? 'Search for a medicine' : 'No pharmacies found',
+                          subtitle: _searchCtrl.text.isEmpty ? 'Enter a medicine name above to check nearby availability.' : 'Try another medicine or check your connection and sync.',
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        itemCount: _pharmacies.length,
+                        itemBuilder: (_, i) {
+                          final res = _pharmacies[i];
+                          final p = res.pharmacy;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: CareCard(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(child: Text(p.name, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink))),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                              decoration: BoxDecoration(color: res.isAvailable ? AppColors.mint : AppColors.groundAlt, borderRadius: BorderRadius.circular(6)),
+                                              child: Text(res.isAvailable ? context.tr('available') : context.tr('out_of_stock'), style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: res.isAvailable ? AppColors.tealDeep : AppColors.inkMuted)),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(p.address, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkMuted)),
+                                        const SizedBox(height: 6),
+                                        Row(children: [
+                                          const Icon(Icons.location_on_outlined, size: 12, color: AppColors.inkFaint),
+                                          const SizedBox(width: 4),
+                                          Text('${res.distanceKm.toStringAsFixed(1)} km ${context.tr('away')}', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.inkFaint)),
+                                        ]),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  GestureDetector(
+                                    onTap: () => _openNavigation(p.latitude, p.longitude),
+                                    child: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 18)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

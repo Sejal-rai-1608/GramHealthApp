@@ -38,7 +38,7 @@ class LanguageSelectorBottomSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDDDDDD),
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -56,7 +56,7 @@ class LanguageSelectorBottomSheet extends StatelessWidget {
                       color: AppColors.textDark,
                     ),
                   ),
-                  const Icon(Icons.language, color: AppColors.primaryAccent, size: 24),
+                  const Icon(Icons.language, color: AppColors.teal, size: 24),
                 ],
               ),
               const SizedBox(height: 16),
@@ -74,10 +74,10 @@ class LanguageSelectorBottomSheet extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryAccent.withValues(alpha: 0.15) : const Color(0xFFF9F9F9),
+                      color: isSelected ? AppColors.teal.withValues(alpha: 0.15) : AppColors.ground,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppColors.primaryAccent : const Color(0xFFEEEEEE),
+                        color: isSelected ? AppColors.teal : AppColors.surfaceDim,
                         width: isSelected ? 1.5 : 1,
                       ),
                     ),
@@ -90,7 +90,7 @@ class LanguageSelectorBottomSheet extends StatelessWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.primaryAccent : const Color(0xFFE8E8E8),
+                                color: isSelected ? AppColors.teal : AppColors.borderLight,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -127,9 +127,9 @@ class LanguageSelectorBottomSheet extends StatelessWidget {
                           ],
                         ),
                         if (isSelected)
-                          const Icon(Icons.check_circle, color: AppColors.primaryAccent, size: 22)
+                          const Icon(Icons.check_circle, color: AppColors.teal, size: 22)
                         else
-                          const Icon(Icons.radio_button_unchecked, color: Color(0xFFCCCCCC), size: 22),
+                          const Icon(Icons.radio_button_unchecked, color: AppColors.inkGhost, size: 22),
                       ],
                     ),
                   ),

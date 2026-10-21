@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/care_icon_button.dart';
 import '../../widgets/custom_input.dart';
 import '../../widgets/primary_button.dart';
 import '../../services/api_client.dart';
@@ -16,160 +18,145 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailCtrl = TextEditingController();
-  final _newPasswordCtrl = TextEditingController();
-  final _confirmPasswordCtrl = TextEditingController();
-
-  bool _isLoading = false;
+  final _newPassCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _loading = false;
+  bool _obscure = true;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
-    _newPasswordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
+    _newPassCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
-  void _showNotification(String message, {bool isError = true}) {
+  void _snack(String msg, {bool error = true}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        content: Text(msg, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+        backgroundColor: error ? AppColors.emergency : AppColors.tealDeep,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
 
-  Future<void> _handleResetPassword() async {
+  Future<void> _reset() async {
     final email = _emailCtrl.text.trim();
-    final newPassword = _newPasswordCtrl.text;
-    final confirmPassword = _confirmPasswordCtrl.text;
-
-    if (email.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-      _showNotification('Please fill in all fields.');
+    final np = _newPassCtrl.text;
+    final cp = _confirmCtrl.text;
+    if (email.isEmpty || np.isEmpty || cp.isEmpty) {
+      _snack('Please fill in all fields.');
       return;
     }
-
-    if (newPassword.length < 6) {
-      _showNotification('Password must be at least 6 characters.');
+    if (np.length < 8) {
+      _snack('Password must be at least 8 characters.');
       return;
     }
-
-    if (newPassword != confirmPassword) {
-      _showNotification('Passwords do not match.');
+    if (np != cp) {
+      _snack('Passwords do not match.');
       return;
     }
-
-    setState(() => _isLoading = true);
-
+    setState(() => _loading = true);
     try {
-      await AuthService.resetPassword(
-        emailOrPhone: email,
-        newPassword: newPassword,
-      );
-
-      _showNotification('Password reset successfully! Please log in.', isError: false);
-      if (mounted) {
-        context.go('/login');
-      }
+      await AuthService.resetPassword(emailOrPhone: email, newPassword: np);
+      _snack('Password reset successful. Please sign in.', error: false);
+      if (mounted) context.go('/login');
     } on ApiException catch (e) {
-      _showNotification(e.message);
-    } catch (e) {
-      _showNotification('Failed to reset password. Please check your connection.');
+      _snack(e.message);
+    } catch (_) {
+      _snack('Failed to reset password. Check your connection.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        title: const Text('Reset Password'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.ground,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
-          onPressed: () => context.go('/login'),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: CareIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => context.go('/login'),
+            tooltip: 'Back',
+            iconSize: 18,
+            size: 44,
+          ),
         ),
+        leadingWidth: 56,
+        title: Text(
+          'Reset password',
+          style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink),
+        ),
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 20),
             Container(
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: AppColors.primaryAccent.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.tealPale),
               ),
-              child: const Icon(Icons.lock_reset, size: 32, color: AppColors.primaryAccent),
+              child: const Icon(Icons.lock_reset_rounded, size: 28, color: AppColors.teal),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Forgot Your Password?',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
             Text(
-              'Enter your registered email or phone number and set a new password for your account.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textDark.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
+              'Create a new password',
+              style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink, height: 1.2),
             ),
-            const SizedBox(height: 32),
-
-            GlassCard(
-              padding: const EdgeInsets.all(24),
+            const SizedBox(height: 6),
+            Text(
+              'Enter your registered email or phone number and choose a new password.',
+              style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.5),
+            ),
+            const SizedBox(height: 18),
+            CareCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  CustomInput(label: 'Email or phone', placeholder: 'Registered email or phone', controller: _emailCtrl),
                   CustomInput(
-                    label: 'Email or Phone Number',
-                    placeholder: 'Enter registered email or phone',
-                    controller: _emailCtrl,
+                    label: 'New password',
+                    placeholder: 'At least 8 characters',
+                    controller: _newPassCtrl,
+                    obscureText: _obscure,
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18, color: AppColors.inkMuted),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
                   ),
                   CustomInput(
-                    label: 'New Password',
-                    placeholder: 'Enter your new password',
-                    controller: _newPasswordCtrl,
-                    obscureText: true,
+                    label: 'Confirm new password',
+                    placeholder: 'Repeat new password',
+                    controller: _confirmCtrl,
+                    obscureText: _obscure,
                   ),
-                  CustomInput(
-                    label: 'Confirm New Password',
-                    placeholder: 'Re-enter your new password',
-                    controller: _confirmPasswordCtrl,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _isLoading
-                      ? const CircularProgressIndicator()
-                      : PrimaryButton(
-                          title: 'Reset Password',
-                          onPress: _handleResetPassword,
-                          width: double.infinity,
-                        ),
-
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () => context.go('/login'),
-                    child: const Text(
-                      'Back to Login',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.primaryAccent,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
+                  const SizedBox(height: 8),
+                  if (_loading)
+                    const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator(color: AppColors.teal)))
+                  else
+                    PrimaryButton(title: 'Reset password', onPress: _reset, width: double.infinity),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => context.go('/login'),
+                      child: Text('Back to sign in',
+                          style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.teal)),
                     ),
                   ),
                 ],

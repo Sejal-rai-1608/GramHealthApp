@@ -1,13 +1,20 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/medical_record.dart';
 import '../../services/medical_record_service.dart';
-import 'upload_record_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/loading_state.dart';
+import 'package:go_router/go_router.dart';
 
 class PatientRecordsScreen extends StatefulWidget {
+  const PatientRecordsScreen({super.key});
+
   @override
-  _PatientRecordsScreenState createState() => _PatientRecordsScreenState();
+  State<PatientRecordsScreen> createState() => _PatientRecordsScreenState();
 }
 
 class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
@@ -27,211 +34,264 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final records = await _recordService.getMyRecords();
-      setState(() {
-        _records = records;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = "Make sure you connect to the server. Could not fetch records.";
-        _isLoading = false;
-      });
+      if (mounted)
+        setState(() {
+          _records = records;
+          _isLoading = false;
+        });
+    } catch (_) {
+      if (mounted)
+        setState(() {
+          _error =
+              'Could not fetch records. Check your connection or try again.';
+          _isLoading = false;
+        });
     }
   }
 
-  Future<void> _launchUrl(String url) async {
+  Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open document')),
-      );
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open document')));
     }
+  }
+
+  Future<void> _pushUpload() async {
+    final result = await context.push<bool>('/upload-record');
+    if (!mounted) return;
+    if (result == true) _fetchRecords();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        title: Text('My Medical Vault'),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Health records',
+                style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            Text('Private • stored securely on your device and the server',
+                style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.inkSoft)),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.cloud_upload),
-            tooltip: 'Upload Document',
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => UploadRecordScreen()),
-              );
-              if (result == true) {
-                _fetchRecords();
-              }
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.ink),
             onPressed: _fetchRecords,
+            tooltip: 'Refresh',
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: SizedBox(
+              height: 36,
+              child: FilledButton.icon(
+                onPressed: _pushUpload,
+                icon: const Icon(Icons.upload_rounded, size: 16),
+                label: Text('Upload',
+                    style: GoogleFonts.manrope(
+                        fontSize: 12, fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.teal,
+                    foregroundColor: AppColors.surface,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.md)),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+              ),
+            ),
           ),
         ],
       ),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => UploadRecordScreen()),
-          );
-          if (result == true) {
-            _fetchRecords();
-          }
-        },
-        icon: Icon(Icons.cloud_upload),
-        label: Text('Upload Record'),
-      ),
     );
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
-    }
-
+    if (_isLoading) return const LoadingState(message: 'Loading your records…');
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(_error!, style: TextStyle(color: Colors.grey.shade700)),
-            SizedBox(height: 16),
-            ElevatedButton(onPressed: _fetchRecords, child: Text('Retry')),
-          ],
-        ),
+      return EmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: 'Unable to load records',
+        subtitle: _error!,
+        actionLabel: 'Retry',
+        onAction: _fetchRecords,
       );
     }
-
     if (_records.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No medical records found.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
-            SizedBox(height: 8),
-            Text('Upload your physical health documents safely.', style: TextStyle(color: Colors.grey)),
-            SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UploadRecordScreen()),
-                );
-                if (result == true) {
-                  _fetchRecords();
-                }
-              },
-              icon: Icon(Icons.add),
-              label: Text("Upload Record", style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-              )
-            )
-          ],
-        ),
+      return EmptyState(
+        icon: Icons.folder_open_rounded,
+        title: 'No records yet',
+        subtitle:
+            'Upload a prescription, lab report, or scan. You can use your camera or gallery.',
+        actionLabel: 'Upload record',
+        onAction: _pushUpload,
       );
     }
-
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       itemCount: _records.length,
-      itemBuilder: (context, index) {
-        final record = _records[index];
-        final isAbha = record.source == 'ABHA';
+      itemBuilder: (_, i) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _RecordCard(record: _records[i], onOpen: _openUrl),
+      ),
+    );
+  }
+}
 
-        return Card(
-          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          elevation: isAbha ? 3 : 1,
-          shape: RoundedRectangleBorder(
-            side: isAbha ? BorderSide(color: Colors.blue.shade200, width: 2) : BorderSide.none,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ListTile(
-            contentPadding: EdgeInsets.all(16),
-            leading: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isAbha ? Colors.blue.shade50 : Theme.of(context).primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                record.documentType == 'X_RAY' ? Icons.image : Icons.description,
-                color: isAbha ? Colors.blue.shade700 : Theme.of(context).primaryColor,
-              ),
+class _RecordCard extends StatelessWidget {
+  final MedicalRecord record;
+  final Future<void> Function(String) onOpen;
+  const _RecordCard({required this.record, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final isAbha = record.source == 'ABHA';
+    final isImage = record.documentType == 'X_RAY' ||
+        (record.fileUrl?.startsWith('data:image') ?? false);
+    return CareCard(
+      borderColor: isAbha ? AppColors.tealPale : AppColors.borderLight,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isAbha ? AppColors.mint : AppColors.mint,
+              borderRadius: BorderRadius.circular(12),
             ),
-            title: Text(record.title ?? 'Untitled Record', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Column(
+            child: Icon(
+                isImage ? Icons.image_outlined : Icons.description_outlined,
+                size: 20,
+                color: AppColors.teal),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 6),
-                Text('Type: ${record.documentType}'),
-                Text('Date: ${record.issuedDate?.toString().substring(0, 10) ?? '-'}'),
-                if (isAbha) 
+                Text(record.title ?? 'Untitled record',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink)),
+                const SizedBox(height: 3),
+                Text(
+                    '${record.documentType}  •  ${record.issuedDate?.toString().substring(0, 10) ?? '-'}',
+                    style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.inkMuted)),
+                if (isAbha) ...[
+                  const SizedBox(height: 6),
                   Container(
-                    margin: EdgeInsets.only(top: 8),
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
+                        color: AppColors.mint,
+                        borderRadius: BorderRadius.circular(6)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.verified, size: 14, color: Colors.blue.shade800),
-                        SizedBox(width: 4),
-                        Text('Fetched via ABHA', style: TextStyle(color: Colors.blue.shade900, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Icon(Icons.verified_rounded,
+                            size: 12, color: AppColors.teal),
+                        const SizedBox(width: 4),
+                        Text('ABHA verified',
+                            style: GoogleFonts.manrope(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.teal)),
                       ],
                     ),
-                  )
+                  ),
+                ],
               ],
             ),
-            trailing: IconButton(
-              icon: Icon(Icons.remove_red_eye, color: Theme.of(context).primaryColor),
-              onPressed: () {
-                if (record.fileUrl != null && record.fileUrl!.isNotEmpty) {
-                  if (record.fileUrl!.startsWith('data:image')) {
-                    final base64String = record.fileUrl!.split(',').last;
-                    final bytes = base64Decode(base64String);
-                    showDialog(
-                      context: context,
-                      builder: (_) => Dialog(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppBar(
-                              title: Text('Document View'), 
-                              automaticallyImplyLeading: false,
-                              actions: [CloseButton()],
-                            ),
-                            Flexible(child: InteractiveViewer(child: Image.memory(bytes))),
-                          ]
-                        )
-                      )
-                    );
-                  } else {
-                    _launchUrl(record.fileUrl!);
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No document attachment found.")));
-                }
-              },
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () {
+              final url = record.fileUrl;
+              if (url == null || url.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No attachment found.')));
+                return;
+              }
+              if (url.startsWith('data:image')) {
+                final bytes = base64Decode(url.split(',').last);
+                showDialog(
+                  context: context,
+                  builder: (_) => Dialog(
+                    backgroundColor: AppColors.surface,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.lg)),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+                          child: Row(
+                            children: [
+                              Text('Document',
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink)),
+                              const Spacer(),
+                              IconButton(
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed: () => Navigator.pop(context)),
+                            ],
+                          ),
+                        ),
+                        Flexible(
+                            child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: InteractiveViewer(
+                                    child: Image.memory(bytes)))),
+                      ],
+                    ),
+                  ),
+                );
+              } else {
+                onOpen(url);
+              }
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                    color: AppColors.ink,
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.visibility_outlined,
+                    size: 16, color: AppColors.surface),
+              ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

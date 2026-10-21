@@ -28,7 +28,7 @@ Future<bool?> showConfirmationModal({
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isDestructive ? AppColors.error : AppColors.leafGreenPrimary,
+            backgroundColor: isDestructive ? AppColors.error : AppColors.teal,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),

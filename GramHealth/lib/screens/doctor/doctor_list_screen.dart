@@ -1,11 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../services/doctor_service.dart';
 import '../../services/api_client.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/loading_state.dart';
 
 class DoctorListScreen extends StatefulWidget {
   const DoctorListScreen({super.key});
@@ -15,8 +18,14 @@ class DoctorListScreen extends StatefulWidget {
 }
 
 class _DoctorListScreenState extends State<DoctorListScreen> {
-  final _filterKeys = ['spec_gp', 'spec_pedia', 'spec_cardio', 'spec_derma'];
-  String _activeFilterKey = 'spec_gp';
+  final _filterKeys = const [
+    'spec_all',
+    'spec_gp',
+    'spec_pedia',
+    'spec_cardio',
+    'spec_derma'
+  ];
+  String _activeFilterKey = 'spec_all';
   final _searchCtrl = TextEditingController();
 
   List<DoctorModel> _doctors = [];
@@ -30,23 +39,56 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   }
 
   Future<void> _loadDoctors() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final docs = await DoctorService.getDoctors();
-      if (mounted) setState(() { _doctors = docs; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _doctors = docs;
+          _isLoading = false;
+        });
     } on ApiException catch (e) {
-      if (mounted) setState(() { _error = e.message; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _error = e.message;
+          _isLoading = false;
+        });
     } catch (_) {
-      if (mounted) setState(() { _error = 'Failed to load doctors. Check your connection.'; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _error = 'Failed to load doctors. Check your connection.';
+          _isLoading = false;
+        });
     }
   }
 
   List<DoctorModel> get _filtered {
-    final query = _searchCtrl.text.toLowerCase();
-    return _doctors.where((d) {
-      return d.name.toLowerCase().contains(query) ||
-          d.specialization.toLowerCase().contains(query);
-    }).toList();
+    final q = _searchCtrl.text.toLowerCase().trim();
+    var list = _doctors;
+    if (q.isNotEmpty) {
+      list = list
+          .where((d) =>
+              d.name.toLowerCase().contains(q) ||
+              d.specialization.toLowerCase().contains(q))
+          .toList();
+    }
+    if (_activeFilterKey != 'spec_all') {
+      const map = {
+        'spec_gp': 'general',
+        'spec_pedia': 'pedia',
+        'spec_cardio': 'cardio',
+        'spec_derma': 'derma'
+      };
+      final kw = map[_activeFilterKey] ?? '';
+      if (kw.isNotEmpty)
+        list = list
+            .where((d) => d.specialization.toLowerCase().contains(kw))
+            .toList();
+    }
+    return list;
   }
 
   @override
@@ -58,281 +100,284 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text('Find a doctor',
+            style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink)),
+        centerTitle: false,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(68),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (_) => setState(() {}),
+              style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.ink),
+              decoration: InputDecoration(
+                hintText: context.tr('search_doctor'),
+                hintStyle: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.inkFaint),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    size: 18, color: AppColors.inkMuted),
+                filled: true,
+                fillColor: AppColors.groundAlt,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    borderSide: const BorderSide(color: AppColors.borderLight)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    borderSide: const BorderSide(color: AppColors.borderLight)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    borderSide: const BorderSide(
+                        color: AppColors.tealDeep, width: 1.5)),
               ),
-              boxShadow: [
-                BoxShadow(
-                    color: Color(0x0F000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2))
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr('consult_doctor'),
-                  style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondaryBg,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search,
-                          color: Color(0xFF666666), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtrl,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: context.tr('search_doctor'),
-                            hintStyle: const TextStyle(
-                                color: Color(0xFFAAAAAA), fontSize: 13),
-                            border: InputBorder.none,
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
-
+        ),
+      ),
+      body: Column(
+        children: [
           // Filter chips
-          const SizedBox(height: 16),
           SizedBox(
             height: 44,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               itemCount: _filterKeys.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
                 final key = _filterKeys[i];
-                final isActive = _activeFilterKey == key;
-                return GestureDetector(
-                  onTap: () => setState(() => _activeFilterKey = key),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? AppColors.primaryAccent
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: const [
-                        BoxShadow(
-                            color: Color(0x0F000000), blurRadius: 4)
-                      ],
-                    ),
-                    child: Text(
-                      context.tr(key),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isActive
-                            ? AppColors.textDark
-                            : const Color(0xFF666666),
-                      ),
-                    ),
-                  ),
-                );
+                final active = _activeFilterKey == key;
+                return CareChip(
+                    label: context.tr(key),
+                    selected: active,
+                    onTap: () => setState(() => _activeFilterKey = key));
               },
             ),
           ),
-
-          // List / states
+          const Divider(height: 1),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const LoadingState(message: 'Finding doctors…')
                 : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.wifi_off,
-                                color: Colors.grey, size: 48),
-                            const SizedBox(height: 12),
-                            Text(_error!,
-                                style: const TextStyle(color: Colors.grey),
-                                textAlign: TextAlign.center),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadDoctors,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                    ? EmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Unable to load doctors',
+                        subtitle: _error!,
+                        actionLabel: 'Retry',
+                        onAction: _loadDoctors,
                       )
                     : _filtered.isEmpty
-                        ? const Center(
-                            child: Text('No doctors found.',
-                                style: TextStyle(color: Colors.grey)))
+                        ? EmptyState(
+                            icon: Icons.search_off_rounded,
+                            title: 'No doctors found',
+                            subtitle: 'Try a different search or filter.',
+                            actionLabel: 'Clear filters',
+                            onAction: () => setState(() {
+                              _searchCtrl.clear();
+                              _activeFilterKey = 'spec_all';
+                            }),
+                          )
                         : ListView.builder(
-                            padding:
-                                const EdgeInsets.fromLTRB(24, 16, 24, 100),
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
                             itemCount: _filtered.length,
-                            itemBuilder: (_, i) =>
-                                _buildDoctorCard(context, _filtered[i]),
+                            itemBuilder: (_, i) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _DoctorCard(doc: _filtered[i]),
+                            ),
                           ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildDoctorCard(BuildContext context, DoctorModel doc) {
-    return GestureDetector(
+class _DoctorCard extends StatelessWidget {
+  final DoctorModel doc;
+  const _DoctorCard({required this.doc});
+
+  @override
+  Widget build(BuildContext context) {
+    return CareCard(
       onTap: () => context.push('/doctor-details/${doc.id}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: GlassCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: CachedNetworkImage(
-                      imageUrl: doc.image,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                          color: AppColors.secondaryBg,
-                          width: 80,
-                          height: 80,
-                          child: const Icon(Icons.person, size: 40, color: Colors.grey)),
-                    ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: doc.image,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    width: 64,
+                    height: 64,
+                    color: AppColors.mint,
+                    alignment: Alignment.center,
+                    child: Text(
+                        doc.name.isNotEmpty ? doc.name[0].toUpperCase() : '?',
+                        style: GoogleFonts.manrope(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.teal)),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                doc.name,
-                                style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textDark),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => context
-                                  .push('/teleconsultation-request'),
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryAccent
-                                      .withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.videocam_outlined,
-                                    size: 18,
-                                    color: AppColors.primaryAccent),
-                              ),
-                            ),
-                          ],
+                        Expanded(
+                          child: Text('Dr. ${doc.name}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.manrope(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                  height: 1.2)),
                         ),
-                        Text(doc.specialization,
-                            style:
-                                TextStyle(fontSize: 13, color: Colors.grey[600])),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.work_outline,
-                                size: 12, color: Color(0xFF666666)),
-                            const SizedBox(width: 4),
-                            Text(doc.exp,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Color(0xFF666666))),
-                            const SizedBox(width: 12),
-                            const Icon(Icons.star,
-                                size: 12, color: Color(0xFFFFB000)),
-                            const SizedBox(width: 4),
-                            Text('${doc.rating}',
-                                style: const TextStyle(
-                                    fontSize: 12, color: Color(0xFF666666))),
-                            if (doc.isAvailable) ...[
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                        const SizedBox(width: 8),
+                        Semantics(
+                          button: true,
+                          label: 'Start video consultation',
+                          child: GestureDetector(
+                            onTap: () => context.push('/teleconsultation-request',
+                                extra: {
+                                  'doctorId': doc.id,
+                                  'doctorName': doc.name,
+                                  'doctorPhone': doc.phone
+                                }),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 32,
+                                height: 32,
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text('Online',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w600)),
+                                    color: AppColors.mint,
+                                    borderRadius: BorderRadius.circular(9),
+                                    border: Border.all(color: AppColors.tealPale)),
+                                child: const Icon(Icons.videocam_outlined,
+                                    size: 16, color: AppColors.teal),
                               ),
-                            ]
-                          ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () =>
-                    context.push('/teleconsultation-request'),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryAccent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    context.tr('book_consultation'),
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                        letterSpacing: 0.5),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(doc.specialization,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.inkMuted)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _meta(Icons.work_outline_rounded, doc.exp),
+                        if (doc.rating != null)
+                          _meta(Icons.star_rounded, '${doc.rating}',
+                              color: AppColors.amberDeep),
+                        if (doc.isAvailable == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: AppColors.onlineWash,
+                                borderRadius: BorderRadius.circular(6)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                        color: AppColors.onlineGreen,
+                                        shape: BoxShape.circle)),
+                                const SizedBox(width: 4),
+                                Text('Available',
+                                    style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.onlineGreen)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: FilledButton(
+              onPressed: () => context.push('/teleconsultation-request',
+                  extra: {
+                    'doctorId': doc.id,
+                    'doctorName': doc.name,
+                    'doctorPhone': doc.phone
+                  }),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.ink,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md)),
+                elevation: 0,
+              ),
+              child: Text(context.tr('book_consultation'),
+                  style: GoogleFonts.manrope(
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _meta(IconData icon, String text, {Color color = AppColors.inkMuted}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 3),
+        Text(text,
+            style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkMuted)),
+      ],
     );
   }
 }

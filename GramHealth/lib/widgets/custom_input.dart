@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// CustomInput replicates the React Native Input component with an
-/// animated border that transitions to primaryAccent when focused.
+/// Careway Input — opaque, 56h, focus 2px Teal + Mint wash.
 class CustomInput extends StatefulWidget {
   final String label;
   final String? placeholder;
@@ -10,6 +9,9 @@ class CustomInput extends StatefulWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final int? maxLines;
+  final String? Function(String?)? validator;
+  final Widget? suffixIcon;
+  final bool enabled;
 
   const CustomInput({
     super.key,
@@ -19,43 +21,31 @@ class CustomInput extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
+    this.validator,
+    this.suffixIcon,
+    this.enabled = true,
   });
 
   @override
   State<CustomInput> createState() => _CustomInputState();
 }
 
-class _CustomInputState extends State<CustomInput>
-    with SingleTickerProviderStateMixin {
+class _CustomInputState extends State<CustomInput> {
   late FocusNode _focusNode;
-  late AnimationController _ctrl;
-  late Animation<Color?> _borderColor;
-  late Animation<double> _borderWidth;
+  bool _focused = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200));
-    _borderColor = ColorTween(
-      begin: const Color(0x1A000000),
-      end: AppColors.primaryAccent,
-    ).animate(_ctrl);
-    _borderWidth = Tween<double>(begin: 1, end: 2).animate(_ctrl);
     _focusNode.addListener(() {
-      if (_focusNode.hasFocus) {
-        _ctrl.forward();
-      } else {
-        _ctrl.reverse();
-      }
+      setState(() => _focused = _focusNode.hasFocus);
     });
   }
 
   @override
   void dispose() {
     _focusNode.dispose();
-    _ctrl.dispose();
     super.dispose();
   }
 
@@ -64,50 +54,113 @@ class _CustomInputState extends State<CustomInput>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color(0x99030315),
-          ),
-        ),
-        const SizedBox(height: 4),
-        AnimatedBuilder(
-          animation: _ctrl,
-          builder: (_, child) => Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _borderColor.value ?? const Color(0x1A000000),
-                width: _borderWidth.value,
-              ),
+        if (widget.label.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6, left: 2),
+            child: Text(
+              widget.label,
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                    color: AppColors.inkSoft,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
-            child: child,
           ),
-          child: TextField(
+        AnimatedContainer(
+          duration: AppMotion.state,
+          curve: AppMotion.standard,
+          decoration: BoxDecoration(
+            color: _focused ? AppColors.mintLight : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            border: Border.all(
+              color: _focused ? AppColors.tealDeep : AppColors.borderStrong,
+              width: _focused ? 2 : 1,
+            ),
+          ),
+          child: TextFormField(
             focusNode: _focusNode,
             controller: widget.controller,
             obscureText: widget.obscureText,
             keyboardType: widget.keyboardType,
             maxLines: widget.maxLines,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textDark,
-            ),
+            enabled: widget.enabled,
+            validator: widget.validator,
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                  color: AppColors.ink,
+                  fontSize: 16,
+                ),
             decoration: InputDecoration(
               hintText: widget.placeholder,
-              hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              hintStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                    color: AppColors.textPlaceholder,
+                    fontWeight: FontWeight.w400,
+                  ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: InputBorder.none,
+              suffixIcon: widget.suffixIcon,
             ),
           ),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Slim input row for inline forms — same tokens, no label stack.
+class CareInput extends StatelessWidget {
+  final String hint;
+  final TextEditingController controller;
+  final bool obscureText;
+  final TextInputType keyboardType;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
+  final int? maxLines;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+
+  const CareInput({
+    super.key,
+    required this.hint,
+    required this.controller,
+    this.obscureText = false,
+    this.keyboardType = TextInputType.text,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.maxLines = 1,
+    this.onChanged,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: Theme.of(context).textTheme.bodyLarge,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.borderStrong),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.borderStrong),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: const BorderSide(color: AppColors.tealDeep, width: 2),
+        ),
+      ),
     );
   }
 }

@@ -1,46 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
-import '../utils/auth_guard.dart';
 import 'connectivity_badge.dart';
 
-/// Top navigation bar used across dashboards.
-/// Shows a title, optional notification icon, and a hamburger button on small screens.
 class TopNavbar extends StatelessWidget {
   final String title;
   final bool showDrawerButton;
-  const TopNavbar({required this.title, this.showDrawerButton = true, super.key});
+  final Widget? leading;
+
+  const TopNavbar({
+    required this.title,
+    this.showDrawerButton = true,
+    this.leading,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final role = AuthGuard.currentUserRole ?? 'patient';
     return AppBar(
-      backgroundColor: AppColors.primaryAccent,
-      leading: showDrawerButton
-          ? IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer())
-          : null,
-      title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      backgroundColor: AppColors.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      // The Builder is required: `context` inside TopNavbar.build sits above
+      // the Scaffold, so Scaffold.of(context) would throw when the drawer
+      // button is tapped on a phone.
+      leading: leading ??
+          (showDrawerButton
+              ? Builder(
+                  builder: (scaffoldContext) => IconButton(
+                    icon: const Icon(Icons.menu_rounded, color: AppColors.ink),
+                    tooltip: 'Open navigation',
+                    onPressed: () {
+                      final scaffold = Scaffold.maybeOf(scaffoldContext);
+                      if (scaffold != null && scaffold.hasDrawer) {
+                        scaffold.openDrawer();
+                      }
+                    },
+                  ),
+                )
+              : null),
+      title: Text(
+        title,
+        style: GoogleFonts.manrope(
+            fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.ink),
+      ),
+      centerTitle: false,
       actions: [
-        const Center(child: Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: ConnectivityBadge())),
-        IconButton(icon: const Icon(Icons.notifications_none), onPressed: () => context.push('/notifications')),
-        // Profile avatar / menu
-        GestureDetector(
-          onTap: () {
-            if (role == 'admin') {
-              context.go('/admin/settings');
-            } else if (role == 'patient') {
-              context.go('/main/profile');
-            } else {
-              context.go('/$role/profile');
-            }
-          },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: CircleAvatar(radius: 16, backgroundImage: AssetImage('assets/avatar_placeholder.png')),
-          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 6),
+          child: Center(child: ConnectivityBadge()),
         ),
-        // Language selector (reuse existing modal)
-       // IconButton(icon: const Icon(Icons.language), onPressed: () => showLanguageSelector(context)),
+        IconButton(
+          icon: const Icon(Icons.notifications_none_rounded, color: AppColors.ink),
+          tooltip: 'Notifications',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            }
+            context.push('/notifications');
+          },
+        ),
+        const SizedBox(width: 4),
       ],
     );
   }

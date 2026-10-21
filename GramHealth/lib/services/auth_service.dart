@@ -78,7 +78,12 @@ class AuthService {
       final token = data['token'] as String;
       final user = data['user'] as Map<String, dynamic>;
 
-      await LocalDatabase.instance.clearAllData();
+      // Chat history is scoped per user: the same account keeps its AI
+      // assistant history across re-logins, while any other account that used
+      // this device has its history removed.
+      await LocalDatabase.instance.clearAllData(
+        preserveChatForUserId: user['id'] as String?,
+      );
       await _saveToken(token);
       await _saveUser(user);
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/connectivity_service.dart';
+import '../theme/app_colors.dart';
 
 class ConnectivityBadge extends StatelessWidget {
   const ConnectivityBadge({super.key});
@@ -11,60 +12,51 @@ class ConnectivityBadge extends StatelessWidget {
       initialData: ConnectivityService.instance.currentStatus,
       builder: (context, snapshot) {
         final status = snapshot.data ?? NetworkStatus.online;
-        
         switch (status) {
           case NetworkStatus.online:
-            // Usually we hide it if online so it's not distracting,
-            // but for GramHealth's explicit rural focus, maybe show it subtly.
-            return const SizedBox.shrink(); 
-            
+            return const SizedBox.shrink();
           case NetworkStatus.weak:
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.orange.shade200),
+                color: AppColors.amberWash,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: Border.all(color: AppColors.amberPale),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.signal_wifi_bad, size: 14, color: Colors.orange.shade700),
+                  const Icon(Icons.signal_wifi_bad, size: 14, color: AppColors.amberDeep),
                   const SizedBox(width: 6),
                   Text(
-                    'Weak Connection (Audio Preferred)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange.shade700,
-                    ),
+                    'Weak connection — audio preferred',
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: AppColors.amberDeep,
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ],
               ),
             );
-            
           case NetworkStatus.offline:
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade300),
+                color: AppColors.groundAlt,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: Border.all(color: AppColors.borderLight),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.cloud_off, size: 14, color: Colors.grey.shade700),
+                  const Icon(Icons.cloud_off, size: 14, color: AppColors.inkMuted),
                   const SizedBox(width: 6),
                   Text(
-                    'Working Offline - Sync Paused',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
+                    'Working offline — sync paused',
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: AppColors.inkSoft,
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ],
               ),

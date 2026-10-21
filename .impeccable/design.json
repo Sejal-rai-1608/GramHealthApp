@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T00:00:00Z",
+  "title": "Design System: GramHealth",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17211D",
+        "tonalRamp": ["#17211D", "#26352E", "#3B4A43", "#53625A", "#718078", "#A5B0AA", "#D1D9D4", "#F7FAF7"]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Clear Teal",
+        "canonical": "#007A6E",
+        "tonalRamp": ["#003C36", "#00574F", "#006A60", "#007A6E", "#29988A", "#72BDB3", "#B2DED8", "#E1F5F1"]
+      },
+      "primary-container": {
+        "role": "primary",
+        "displayName": "Careway Mint",
+        "canonical": "#D5F3EC",
+        "tonalRamp": ["#003C36", "#00574F", "#007A6E", "#29988A", "#72BDB3", "#B2DED8", "#D5F3EC", "#F0FCF9"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Sunlit Amber",
+        "canonical": "#F0A624",
+        "tonalRamp": ["#4A2B00", "#6E4300", "#9A5B00", "#C17A0A", "#F0A624", "#F7C968", "#FFE3A6", "#FFF7E2"]
+      },
+      "tertiary": {
+        "role": "tertiary",
+        "displayName": "Warm Coral",
+        "canonical": "#D9584B",
+        "tonalRamp": ["#5A110B", "#7B2219", "#9D352A", "#BB473B", "#D9584B", "#E88C82", "#F6C2BC", "#FFF0EE"]
+      },
+      "emergency": {
+        "role": "error",
+        "displayName": "Emergency Red",
+        "canonical": "#B3261E",
+        "tonalRamp": ["#4A0A06", "#74130E", "#8F1C15", "#B3261E", "#CE554D", "#E7958F", "#F5C5C1", "#FFF0EE"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Careway Ground",
+        "canonical": "#F7FAF7",
+        "tonalRamp": ["#17211D", "#3B4A43", "#718078", "#A5B0AA", "#C4CEC8", "#EAF1ED", "#F2F7F3", "#F7FAF7"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#17211D", "#3B4A43", "#718078", "#A5B0AA", "#C4CEC8", "#EAF1ED", "#F7FAF7", "#FFFFFF"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Manrope Display",
+        "purpose": "High-level greeting, onboarding promise, and rare patient summary; one per screen at most."
+      },
+      "body": {
+        "displayName": "Atkinson Hyperlegible Body",
+        "purpose": "Default patient instructions, medical explanations, field values, and translated content."
+      },
+      "label": {
+        "displayName": "Atkinson Hyperlegible Label",
+        "purpose": "Buttons, chips, metadata, and compact status labels without relying on all caps."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient-low",
+        "value": "0 1px 3px rgba(23, 33, 29, 0.12)",
+        "purpose": "Resting cards and navigation surfaces that need light separation from the ground."
+      },
+      {
+        "name": "ambient-raised",
+        "value": "0 6px 18px rgba(23, 33, 29, 0.14)",
+        "purpose": "Menus, bottom sheets, and the single active FAB."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Material state transitions and short route changes."
+      },
+      {
+        "name": "duration-state",
+        "value": "180ms",
+        "purpose": "Selection, focus, pressed, and chip state transitions."
+      },
+      {
+        "name": "duration-route",
+        "value": "280ms",
+        "purpose": "Shared-axis or fade-through route changes; replace with a crossfade or instant cut when Reduce Motion is enabled."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "<600dp",
+        "purpose": "Phone layout with top app bar and Material navigation bar."
+      },
+      {
+        "name": "medium",
+        "value": "600–839dp",
+        "purpose": "Tablet layout with navigation rail or compact drawer."
+      },
+      {
+        "name": "expanded",
+        "value": "≥840dp",
+        "purpose": "Persistent navigation and centered working content up to 1200dp."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single clearest next action in a care task.",
+      "html": "<button class=\"ds-btn-primary\"><span class=\"ds-btn-icon\">→</span><span>Continue</span></button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:14px 20px; border:0; border-radius:10px; background:#007A6E; color:#FFFFFF; font:700 14px/1.25 'Atkinson Hyperlegible', sans-serif; cursor:pointer; transition:background 180ms cubic-bezier(.2,0,0,1), transform 180ms cubic-bezier(.2,0,0,1); } .ds-btn-primary:hover { background:#00574F; } .ds-btn-primary:focus-visible { outline:2px solid #425149; outline-offset:3px; } .ds-btn-primary:active { transform:translateY(1px); } .ds-btn-icon { font-size:18px; line-height:1; }"
+    },
+    {
+      "name": "Tonal Button",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "A supportive secondary action that stays visibly available without competing with the primary.",
+      "html": "<button class=\"ds-btn-tonal\">Save for later</button>",
+      "css": ".ds-btn-tonal { min-height:48px; padding:14px 20px; border:0; border-radius:10px; background:#D5F3EC; color:#00574F; font:700 14px/1.25 'Atkinson Hyperlegible', sans-serif; cursor:pointer; transition:background 180ms cubic-bezier(.2,0,0,1); } .ds-btn-tonal:hover { background:#B2DED8; } .ds-btn-tonal:focus-visible { outline:2px solid #425149; outline-offset:3px; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "An opaque, spacious field with a persistent label and a visible focus state.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Mobile number</span><input placeholder=\"Enter your number\" /></label>",
+      "css": ".ds-field { display:grid; gap:4px; min-height:56px; padding:8px 16px; border:1px solid #718078; border-radius:10px; background:#FFFFFF; color:#17211D; } .ds-field:focus-within { border:2px solid #00574F; padding:7px 15px; background:#D5F3EC; } .ds-field-label { color:#3B4A43; font:700 13px/1.2 'Atkinson Hyperlegible', sans-serif; } .ds-field input { min-width:0; border:0; outline:0; background:transparent; color:#17211D; font:400 16px/1.45 'Atkinson Hyperlegible', sans-serif; } .ds-field input::placeholder { color:#425149; opacity:1; }"
+    },
+    {
+      "name": "Care Card",
+      "kind": "card",
+      "refersTo": "care-card",
+      "description": "A calm grouping surface for a consultation, record, medication, or next-step summary.",
+      "html": "<article class=\"ds-care-card\"><h3>Today's medicines</h3><p>Two doses remain today.</p><button class=\"ds-card-link\">View schedule</button></article>",
+      "css": ".ds-care-card { padding:20px; border:1px solid #EAF1ED; border-radius:14px; background:#FFFFFF; color:#17211D; box-shadow:0 1px 3px rgba(23,33,29,.12); } .ds-care-card h3 { margin:0 0 8px; font:700 20px/1.25 'Manrope', sans-serif; } .ds-care-card p { margin:0 0 16px; font:400 16px/1.45 'Atkinson Hyperlegible', sans-serif; color:#3B4A43; } .ds-card-link { min-height:48px; padding:8px 0; border:0; background:transparent; color:#007A6E; font:700 14px/1.25 'Atkinson Hyperlegible', sans-serif; cursor:pointer; } .ds-card-link:focus-visible { outline:2px solid #425149; outline-offset:3px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "A compact state marker that pairs a signal color with explicit text.",
+      "html": "<span class=\"ds-status-chip\"><span aria-hidden=\"true\">●</span> Offline — saved on this device</span>",
+      "css": ".ds-status-chip { display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:8px 12px; border-radius:999px; background:#FFF0C7; color:#6E4300; font:700 14px/1.25 'Atkinson Hyperlegible', sans-serif; } .ds-status-chip span { font-size:12px; }"
+    },
+    {
+      "name": "Emergency Button",
+      "kind": "button",
+      "refersTo": "button-emergency",
+      "description": "A reserved, explicit SOS action used only for urgent help.",
+      "html": "<button class=\"ds-btn-emergency\"><span aria-hidden=\"true\">!</span><span>Get emergency help</span></button>",
+      "css": ".ds-btn-emergency { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:52px; padding:14px 20px; border:0; border-radius:10px; background:#B3261E; color:#FFFFFF; font:700 14px/1.25 'Atkinson Hyperlegible', sans-serif; cursor:pointer; } .ds-btn-emergency:hover { background:#8F1C15; } .ds-btn-emergency:focus-visible { outline:2px solid #17211D; outline-offset:3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Clear Careway",
+    "overview": "GramHealth should feel like excellent civic wayfinding translated into a caring Android healthcare companion: direct, legible, and impossible to get lost inside. The system replaces decorative glass and low-contrast leaf-green surfaces with clear Material 3 roles, strong ink, clean planes, and a small set of purposeful signals. Every screen should answer three questions quickly: where am I, what matters now, and what is the safest next action?\n\nThe atmosphere is reassuring without becoming soft or vague. Comfort comes from generous breathing room, warm neutral surfaces, friendly typography, and human status language—not from haze, excessive rounding, or pale text. High contrast is a visual signature: important information is allowed to look important, and emergency or offline states are unmistakable without turning the entire interface into an alert.",
+    "keyCharacteristics": [
+      "Wayfinding-first hierarchy with one unmistakable primary action per task.",
+      "High-contrast ink and bright, clean signal colors instead of muddy corporate greens/blues.",
+      "Material 3 structure tuned for Android phones, tablets, system Back, insets, and dynamic type.",
+      "Calm surface layering; no decorative glassmorphism or blur-dependent legibility.",
+      "Reusable Dart widgets and state patterns that make offline, loading, empty, error, and permission states first-class."
+    ],
+    "rules": [
+      { "name": "The Careway Rule", "body": "Every screen must make the next safe action more obvious than the current screen's decoration.", "section": "typography" },
+      { "name": "The Signal Budget Rule", "body": "A screen may have one dominant signal color and one supporting signal color. Emergency red is never used for brand decoration, and status is never communicated by color alone.", "section": "colors" },
+      { "name": "The Two-Weight Rule", "body": "A component should normally use one text size and two weights at most: a clear title and a readable supporting value. More levels dilute the care path.", "section": "typography" },
+      { "name": "The Breathing Room Rule", "body": "The gap above a section heading is at least one rhythm step larger than the gap below it, so the information hierarchy remains visible even when the user is tired, zoomed in, or reading a translated string.", "section": "layout" },
+      { "name": "The Opaque Surface Rule", "body": "If removing blur makes text harder to read, the component was relying on decoration instead of design. Make the surface opaque and let hierarchy do the work.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the Clear Careway hierarchy: screen context, current state, primary action, then supporting detail.",
+      "Do target 48dp minimum touch areas and 52dp for primary or emergency actions.",
+      "Do use ColorScheme roles and semantic status text so the UI survives dark mode, high contrast, and localization.",
+      "Do use opaque surfaces, tonal elevation, and restrained shadows instead of default glassmorphism.",
+      "Do design the compact, medium, and expanded navigation model intentionally; tablet is not a stretched phone.",
+      "Do make offline, loading, empty, error, permission, and emergency states visible and actionable.",
+      "Do keep text at or above 16sp for default patient content and verify translated strings at Android font scale 1.3.",
+      "Do keep CustomPainters sparse, semantic, constraint-aware, and accompanied by accessible summaries.",
+      "Do let the existing GramHealth/lib/**/*.dart architecture guide reusable widget extraction before adding screen-local decoration."
+    ],
+    "donts": [
+      "Don't use muddy olive greens, desaturated corporate blues, or low-contrast gray-on-gray text as primary identity cues.",
+      "Don't use glass, blur, translucency, or gradients as the default answer for depth or polish.",
+      "Don't make every screen a stack of same-size cards, nested cards, or dashboard metric tiles.",
+      "Don't communicate emergency, connectivity, medication, or consultation status through color alone.",
+      "Don't shrink labels, buttons, or fields to preserve a fixed composition on small screens or translated locales.",
+      "Don't use emoji, arbitrary decorative CustomPainter shapes, or oversized floating buttons as a substitute for a coherent icon and action system.",
+      "Don't hide critical patient guidance behind a tooltip, modal, or truncated label.",
+      "Don't bypass Material 3, Android system Back, window/IME insets, dynamic type, or reduced-motion behavior.",
+      "Don't change clinical meaning, role permissions, or privacy behavior while making a visual improvement."
+    ]
+  }
+}

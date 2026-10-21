@@ -43,6 +43,8 @@ class ConsultationModel {
   final String? patientName;
   final String? voiceNoteUrl;
   final List<VoiceNoteItem> voiceNotes;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   ConsultationModel({
     required this.id,
@@ -58,6 +60,8 @@ class ConsultationModel {
     this.patientName,
     this.voiceNoteUrl,
     this.voiceNotes = const [],
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory ConsultationModel.fromJson(Map<String, dynamic> json) {
@@ -102,6 +106,8 @@ class ConsultationModel {
       patientName: patientName,
       voiceNoteUrl: rawVoiceNoteUrl,
       voiceNotes: parsedVoiceNotes,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
     );
   }
 }

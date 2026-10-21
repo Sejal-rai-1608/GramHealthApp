@@ -35,7 +35,7 @@ class MedicationScheduleCard extends StatelessWidget {
                 icon: const Icon(Icons.explore),
                 label: const Text('Find Nearby Pharmacy'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryAccent,
+                  backgroundColor: AppColors.teal,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

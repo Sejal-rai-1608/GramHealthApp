@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/structured_clinical_response_card.dart';
 import '../../models/clinical_response.dart';
@@ -14,13 +15,7 @@ class SymptomResult {
   final String advice;
   final String action;
   final String source;
-
-  SymptomResult({
-    required this.condition,
-    required this.advice,
-    required this.action,
-    this.source = 'Online AI',
-  });
+  SymptomResult({required this.condition, required this.advice, required this.action, this.source = 'Online AI'});
 }
 
 class SymptomCheckerScreen extends StatefulWidget {
@@ -31,7 +26,7 @@ class SymptomCheckerScreen extends StatefulWidget {
 }
 
 class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
-  final _symptoms = ['Fever', 'Headache', 'Cough', 'Chest Pain', 'Fatigue', 'Stomach Ache', 'Nausea'];
+  final _symptoms = const ['Fever', 'Headache', 'Cough', 'Chest Pain', 'Fatigue', 'Stomach Ache', 'Nausea'];
   final _selected = <String>{};
   bool _isAnalyzing = false;
   bool _isRecording = false;
@@ -48,23 +43,21 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
   Future<void> _analyze() async {
     final symptomsToAnalyze = _selected.toList();
-    if (_otherCtrl.text.trim().isNotEmpty) {
-      symptomsToAnalyze.add(_otherCtrl.text.trim());
-    }
+    if (_otherCtrl.text.trim().isNotEmpty) symptomsToAnalyze.add(_otherCtrl.text.trim());
     if (symptomsToAnalyze.isEmpty) return;
 
     final combinedQuery = symptomsToAnalyze.join(', ');
 
     if (OfflineAiService.instance.isEmergency(combinedQuery)) {
       if (mounted) {
-        final emergencyResp = OfflineAiService.instance.buildEmergencyResponse(combinedQuery);
+        final er = OfflineAiService.instance.buildEmergencyResponse(combinedQuery);
         setState(() {
           _isAnalyzing = false;
-          _clinicalResult = emergencyResp.structuredResponse ?? ClinicalResponse.emergency(query: combinedQuery);
+          _clinicalResult = er.structuredResponse ?? ClinicalResponse.emergency(query: combinedQuery);
           _resultSource = 'Emergency Triage';
           _result = SymptomResult(
             condition: 'Emergency Indicator Detected',
-            advice: emergencyResp.text,
+            advice: er.text,
             action: 'Please contact local emergency services (108 / 112) or go to the nearest emergency department immediately.',
             source: 'Emergency Triage',
           );
@@ -73,32 +66,22 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       return;
     }
 
-    setState(() {
-      _isAnalyzing = true;
-      _result = null;
-      _clinicalResult = null;
-    });
-    
+    setState(() { _isAnalyzing = true; _result = null; _clinicalResult = null; });
+
     try {
-      final queryText = "I have the following symptoms: $combinedQuery. What could this mean?";
-      final aiResponse = await AiService.query(queryText)
-          .timeout(const Duration(seconds: 45));
-      
+      final aiResponse = await AiService.query("I have the following symptoms: $combinedQuery. What could this mean?").timeout(const Duration(seconds: 45));
       if (mounted) {
         String conditionText = 'Symptom Assessment';
         if (aiResponse.structuredResponse?.primaryCondition != null && aiResponse.structuredResponse!.primaryCondition!.isNotEmpty) {
           conditionText = aiResponse.structuredResponse!.primaryCondition!;
         } else if (aiResponse.answer != null && aiResponse.answer!.contains('Condition:')) {
-          final match = RegExp(r'Condition:\s*([^\n]+)').firstMatch(aiResponse.answer!);
-          if (match != null) {
-            conditionText = match.group(1)!.trim();
-          }
+          final m = RegExp(r'Condition:\s*([^\n]+)').firstMatch(aiResponse.answer!);
+          if (m != null) conditionText = m.group(1)!.trim();
         } else if (combinedQuery.toLowerCase().contains('pet') || combinedQuery.toLowerCase().contains('stomach') || combinedQuery.toLowerCase().contains('infection')) {
-          conditionText = 'Stomach Infection / Gastroenteritis (पेट का संक्रमण)';
-        } else if (aiResponse.intent != null && aiResponse.intent != 'symptom_analysis' && aiResponse.intent != 'general_health' && aiResponse.intent != 'offline_medical') {
+          conditionText = 'Stomach Infection / Gastroenteritis';
+        } else if (aiResponse.intent != null && !['symptom_analysis', 'general_health', 'offline_medical'].contains(aiResponse.intent)) {
           conditionText = aiResponse.intent!;
         }
-
         setState(() {
           _isAnalyzing = false;
           _clinicalResult = aiResponse.structuredResponse;
@@ -106,8 +89,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
           _result = SymptomResult(
             condition: conditionText,
             advice: aiResponse.answer ?? 'No detailed advice available.',
-            action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
-                ? 'Please consult a doctor if symptoms persist or worsen.' 
+            action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency')
+                ? 'Please consult a doctor if symptoms persist or worsen.'
                 : 'Monitor your symptoms and maintain hydration.',
             source: 'Online AI',
           );
@@ -115,44 +98,33 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       }
     } catch (e) {
       if (AiService.debugForceOnlineAi) {
-        // When debugForceOnlineAi is true, surface the real online error without silent offline fallback
         if (mounted) {
           setState(() {
             _isAnalyzing = false;
-            _result = SymptomResult(
-              condition: 'Online AI Request Error',
-              advice: e.toString(),
-              action: 'Please check backend connectivity or try again.',
-              source: 'Online AI (Error)',
-            );
+            _result = SymptomResult(condition: 'Online AI Request Error', advice: e.toString(), action: 'Please check backend connectivity or try again.', source: 'Online AI (Error)');
           });
         }
         return;
       }
-
-      // Offline fallback
       await OfflineAiService.instance.initialise();
-      final offlineStream = OfflineAiService.instance.queryOffline("I have symptoms: $combinedQuery");
-      final buffer = StringBuffer();
-      await for (final token in offlineStream) {
-        buffer.write(token);
+      final stream = OfflineAiService.instance.queryOffline("I have symptoms: $combinedQuery");
+      final buf = StringBuffer();
+      await for (final t in stream) {
+        buf.write(t);
       }
-      final offlineText = buffer.toString().trim();
-      const ClinicalResponse? structured = null;
-
+      final offlineText = buf.toString().trim();
       final repo = OfflineMedicalRepository();
       await repo.initialise();
-      final fallbackContext = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
-      final finalAdvice = offlineText.isNotEmpty ? offlineText : fallbackContext;
-      
+      final fallback = await repo.buildSymptomCheckerContext(symptomsToAnalyze);
+      final advice = offlineText.isNotEmpty ? offlineText : fallback;
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
-          _clinicalResult = structured;
+          _clinicalResult = null;
           _resultSource = 'Offline AI';
           _result = SymptomResult(
             condition: 'These symptoms can occur with several conditions. The offline assistant cannot determine the exact cause.',
-            advice: finalAdvice,
+            advice: advice,
             action: 'Please seek professional medical evaluation for an accurate diagnosis.',
             source: 'Offline AI',
           );
@@ -164,204 +136,183 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
+      backgroundColor: AppColors.ground,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.tr('symptom_checker_title'),
+                style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
+            Text('Select what you feel — get clear, safe next steps.',
+                style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+          ],
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 60, 24, 120),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.tr('symptom_checker_title'),
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textDark),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.tr('symptom_checker_subtitle'),
-              style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.6)),
-            ),
-            const SizedBox(height: 32),
-
-            GlassCard(
-              padding: const EdgeInsets.all(24),
+            CareCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    context.tr('symptom_question'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Symptom chips
+                  Text(context.tr('symptom_question'),
+                      style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                  const SizedBox(height: 12),
                   Wrap(
-                    spacing: 8, runSpacing: 8,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: _symptoms.map((s) {
-                      final isSelected = _selected.contains(s);
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          if (isSelected) _selected.remove(s); else _selected.add(s);
-                        }),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryAccent : AppColors.secondaryBg,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? AppColors.primaryAccent : const Color(0x0D000000),
-                            ),
-                          ),
-                          child: Text(s,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected ? AppColors.textDark : const Color(0xFF666666),
-                              )),
-                        ),
+                      final sel = _selected.contains(s);
+                      return CareChip(
+                        label: s,
+                        selected: sel,
+                        onTap: () => setState(() => sel ? _selected.remove(s) : _selected.add(s)),
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Text input with mic
+                  const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.groundAlt,
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                      border: Border.all(color: AppColors.borderLight),
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _otherCtrl,
+                            style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
                             decoration: InputDecoration(
                               hintText: context.tr('other_symptoms'),
-                              hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
+                              hintStyle: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkFaint),
                               border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => setState(() => _isRecording = !_isRecording),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              if (_isRecording)
-                                Container(
-                                  width: 34, height: 34,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.primaryAccent.withValues(alpha: 0.4),
-                                  ),
-                                ),
-                              Icon(Icons.mic,
-                                  size: 20,
-                                  color: _isRecording ? AppColors.primaryAccent : const Color(0xFF666666)),
-                            ],
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isRecording = !_isRecording),
+                            child: AnimatedContainer(
+                              duration: AppMotion.state,
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: _isRecording ? AppColors.teal : AppColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: _isRecording ? AppColors.teal : AppColors.borderLight),
+                              ),
+                              child: Icon(Icons.mic_rounded, size: 16, color: _isRecording ? AppColors.surface : AppColors.inkMuted),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-
                   if (_isRecording) ...[
                     const SizedBox(height: 8),
                     Center(
-                      child: Text(
-                        context.tr('listening'),
-                        style: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.w700, fontSize: 12),
-                      ),
+                      child: Text(context.tr('listening'),
+                          style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.teal)),
                     ),
                   ],
-
                   const SizedBox(height: 16),
                   PrimaryButton(
                     title: _isAnalyzing ? context.tr('analyzing') : context.tr('analyze_symptoms'),
-                    onPress: _analyze,
+                    onPress: _isAnalyzing ? () {} : _analyze,
                     width: double.infinity,
+                    loading: _isAnalyzing,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, size: 12, color: AppColors.inkFaint),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text('Not a diagnosis — guidance only. See a clinician for personal advice.',
+                            style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkFaint, height: 1.4)),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            // Loading state
             if (_isAnalyzing) ...[
-              const SizedBox(height: 32),
-              Center(
-                child: Column(
+              const SizedBox(height: 20),
+              CareCard(
+                child: Row(
                   children: [
-                    const Icon(Icons.memory, size: 40, color: AppColors.primaryAccent),
-                    const SizedBox(height: 16),
-                    Text(
-                      context.tr('ai_processing'),
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
+                    const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(context.tr('ai_processing'),
+                          style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.inkSoft)),
                     ),
                   ],
                 ),
               ),
             ],
-
-            // Result card
             if ((_clinicalResult != null || _result != null) && !_isAnalyzing) ...[
-              const SizedBox(height: 24),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 30, end: 0),
-                duration: const Duration(milliseconds: 500),
-                builder: (_, val, child) => Transform.translate(offset: Offset(0, val), child: child),
-                child: _clinicalResult != null
-                    ? StructuredClinicalResponseCard(
-                        response: _clinicalResult!,
-                        sourceLabel: _resultSource ?? 'Online AI',
-                      )
-                    : GlassCard(
-                        padding: const EdgeInsets.all(24),
-                        borderColor: AppColors.primaryAccent,
-                        child: Column(
+              const SizedBox(height: 16),
+              if (_clinicalResult != null)
+                StructuredClinicalResponseCard(response: _clinicalResult!, sourceLabel: _resultSource ?? 'Online AI')
+              else
+                CareCard(
+                  borderColor: AppColors.tealPale,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(9)),
+                            child: const Icon(Icons.monitor_heart_rounded, size: 16, color: AppColors.teal),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(context.tr('analysis_result'),
+                              style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: AppColors.groundAlt, borderRadius: BorderRadius.circular(6)),
+                            child: Text(_result!.source, style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.inkMuted)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _row(context.tr('possible_condition'), _result!.condition, large: true),
+                      const SizedBox(height: 12),
+                      _row(context.tr('advice'), _result!.advice),
+                      const SizedBox(height: 12),
+                      _row(context.tr('suggested_action'), _result!.action),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: AppColors.groundAlt, borderRadius: BorderRadius.circular(10)),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.monitor_heart_outlined, size: 24, color: AppColors.primaryAccent),
-                                const SizedBox(width: 8),
-                                Text(
-                                  context.tr('analysis_result'),
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _resultRow('Result Source', _result!.source),
-                            const SizedBox(height: 12),
-                            _resultRow(context.tr('possible_condition'), _result!.condition, large: true),
-                            const SizedBox(height: 12),
-                            _resultRow(context.tr('advice'), _result!.advice),
-                            const SizedBox(height: 12),
-                            _resultRow(context.tr('suggested_action'), _result!.action),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.warning_amber_outlined, size: 14, color: Color(0xFF999999)),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      context.tr('medical_disclaimer'),
-                                      style: const TextStyle(fontSize: 10, color: Color(0xFF999999)),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            const Icon(Icons.verified_outlined, size: 14, color: AppColors.inkMuted),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(context.tr('medical_disclaimer'),
+                                  style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkMuted, height: 1.4)),
                             ),
                           ],
                         ),
                       ),
-              ),
+                    ],
+                  ),
+                ),
             ],
           ],
         ),
@@ -369,19 +320,13 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
     );
   }
 
-  Widget _resultRow(String label, String value, {bool large = false}) {
+  Widget _row(String label, String value, {bool large = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF666666))),
+        Text(label, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.inkFaint, letterSpacing: 0.4)),
         const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-              fontSize: large ? 18 : 14,
-              fontWeight: large ? FontWeight.w700 : FontWeight.w400,
-              color: AppColors.textDark,
-              height: 1.4,
-            )),
+        Text(value, style: GoogleFonts.manrope(fontSize: large ? 15 : 13, fontWeight: large ? FontWeight.w700 : FontWeight.w500, color: AppColors.ink, height: 1.5)),
       ],
     );
   }

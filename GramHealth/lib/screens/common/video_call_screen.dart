@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/doctors_data.dart';
 import '../../l10n/app_language.dart';
+import '../../theme/app_colors.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String doctorId;
@@ -79,7 +80,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
             child: Image.network(
               doctor.image,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF222222)),
+              errorBuilder: (_, __, ___) => Container(color: AppColors.inkMid),
             ),
           ),
 
@@ -128,7 +129,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                             width: 8,
                             height: 8,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF4CAF50),
+                              color: AppColors.onlineGreen,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -172,15 +173,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4)),
+                boxShadow: [
+                  BoxShadow(color: AppColors.ink.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4)),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: _isVideoOff
                     ? Container(
-                        color: const Color(0xFF1A1A1A),
+                        color: AppColors.ink,
                         child: const Icon(Icons.videocam_off_outlined, color: Colors.white, size: 28),
                       )
                     : Image.network(
@@ -203,7 +204,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.signal_cellular_alt, size: 12, color: Color(0xFF4CAF50)),
+                  Icon(Icons.signal_cellular_alt, size: 12, color: AppColors.onlineGreen),
                   SizedBox(width: 4),
                   Text('HD', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
                 ],
@@ -229,7 +230,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                         height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _isMuted ? const Color(0xFFFF4D4D) : Colors.white.withValues(alpha: 0.2),
+                          color: _isMuted ? AppColors.emergency : Colors.white.withValues(alpha: 0.2),
                         ),
                         child: Icon(_isMuted ? Icons.mic_off : Icons.mic, color: Colors.white, size: 24),
                       ),
@@ -249,11 +250,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   child: Container(
                     width: 80,
                     height: 80,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFFFF3B30),
+                      color: AppColors.emergency,
                       boxShadow: [
-                        BoxShadow(color: Color(0x66FF3B30), blurRadius: 15, offset: Offset(0, 8)),
+                        BoxShadow(color: AppColors.emergency.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 8)),
                       ],
                     ),
                     child: const Icon(Icons.call_end, color: Colors.white, size: 34),
@@ -271,7 +272,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                         height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _isVideoOff ? const Color(0xFFFF4D4D) : Colors.white.withValues(alpha: 0.2),
+                          color: _isVideoOff ? AppColors.emergency : Colors.white.withValues(alpha: 0.2),
                         ),
                         child: Icon(_isVideoOff ? Icons.videocam_off : Icons.videocam, color: Colors.white, size: 24),
                       ),

@@ -20,19 +20,17 @@ class FilterDropdown<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.glassBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           items: items,
           onChanged: onChanged,
-          hint: hintText != null
-              ? Text(hintText!, style: const TextStyle(color: AppColors.textMuted, fontSize: 13))
-              : null,
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.leafGreenPrimary),
+          hint: hintText != null ? Text(hintText!, style: Theme.of(context).textTheme.bodySmall) : null,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.teal),
           isDense: true,
         ),
       ),

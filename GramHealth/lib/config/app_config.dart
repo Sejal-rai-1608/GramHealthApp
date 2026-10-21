@@ -55,6 +55,23 @@ class AppConfig {
   static String get apiUsers          => '$baseUrl/api/users';
   static String get apiPharmacy       => '$baseUrl/api/pharmacy';
   static String get apiAi             => '$baseUrl/api/ai';
+  static String get apiAshaWorkers    => '$baseUrl/api/asha-workers';
+
+  // ── Sub-resource paths (verified against the live Render backend) ─────
+  // The backend mounts /api/pharmacy/list and /api/pharmacy/inventory,
+  // not a bare /api/pharmacy collection.
+  static String get apiPharmacyList       => '$apiPharmacy/list';
+  static String get apiPharmacyInventory  => '$apiPharmacy/inventory';
+
+  // Doctor-scoped collections live under /api/doctors/...
+  static String get apiDoctorConsultations => '$apiDoctors/consultations';
+  static String get apiDoctorPrescriptions => '$apiDoctors/prescriptions';
+  static String get apiDoctorRecords      => '$apiDoctors/medical-records';
+  static String get apiDoctorMe            => '$apiDoctors/me';
+
+  // Patient-scoped collection.
+  static String get apiMyPrescriptions => '$apiPrescriptions/me';
+  static String get apiMyRecords      => '$apiMedicalRecords/me';
 
   // ── Token key stored in secure storage ────────────────────────────────
   static const String tokenKey = 'gram_health_token';

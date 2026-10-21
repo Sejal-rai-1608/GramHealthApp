@@ -50,6 +50,12 @@ class AuthGuard {
       return '/onboarding';
     }
 
+    // A signed-in user should land straight on their console, not on the
+    // splash screen that would otherwise need a tap to get past.
+    if (isLoggedIn && location == '/') {
+      return _dashboardFor(_cachedRole);
+    }
+
     if (isLoggedIn && (location == '/login' || location == '/onboarding')) {
       return _dashboardFor(_cachedRole);
     }

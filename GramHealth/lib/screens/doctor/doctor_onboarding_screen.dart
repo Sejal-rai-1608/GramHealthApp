@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/care_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../services/api_client.dart';
 import '../../config/app_config.dart';
@@ -19,10 +19,10 @@ class DoctorOnboardingScreen extends StatefulWidget {
 }
 
 class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
-  final _specCtrl   = TextEditingController();
-  final _regCtrl    = TextEditingController();
-  final _hospCtrl   = TextEditingController();
-  bool _isLoading   = false;
+  final _specCtrl = TextEditingController();
+  final _regCtrl = TextEditingController();
+  final _hospCtrl = TextEditingController();
+  bool _isLoading = false;
 
   final List<String> _specializations = [
     'General Physician',
@@ -50,16 +50,16 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: Colors.redAccent,
+      content: Text(msg, style: GoogleFonts.manrope(color: Colors.white)),
+      backgroundColor: AppColors.emergency,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
     ));
   }
 
   Future<void> _handleSubmit() async {
     final spec = _specCtrl.text.trim();
-    final reg  = _regCtrl.text.trim();
+    final reg = _regCtrl.text.trim();
     final hosp = _hospCtrl.text.trim();
 
     if (spec.isEmpty) {
@@ -78,16 +78,12 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
         'registrationNumber': reg,
         if (hosp.isNotEmpty) 'hospitalName': hosp,
       };
-
       await ApiClient.patch('${AppConfig.apiDoctors}/me', body);
-
-      // Merge doctor details into stored user so profile screen can read them
       final user = await AuthService.getUser() ?? {};
-      user['specialization']   = spec;
-      user['registrationNo']   = reg;
-      user['hospital']         = hosp;
+      user['specialization'] = spec;
+      user['registrationNo'] = reg;
+      user['hospital'] = hosp;
       await AuthService.updateUser(user);
-
       if (mounted) context.go('/doctor/requests');
     } on ApiException catch (e) {
       _showError(e.message);
@@ -101,7 +97,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondaryBg,
+      backgroundColor: AppColors.ground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -109,15 +105,14 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 12),
-
-              // Header
               Center(
                 child: Container(
                   width: 72, height: 72,
                   decoration: BoxDecoration(
-                    color: AppColors.leafGreenPrimary,
+                    color: AppColors.teal,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: AppColors.leafGreenPrimary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+                    border: Border.all(color: AppColors.tealPale, width: 2),
+                    boxShadow: const [AppColors.shadowLow],
                   ),
                   child: const Icon(Icons.local_hospital_outlined, size: 36, color: Colors.white),
                 ),
@@ -126,7 +121,7 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               Center(
                 child: Text(
                   'Complete Your Doctor Profile',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                  style: GoogleFonts.manrope(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.ink),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -134,24 +129,27 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
               Center(
                 child: Text(
                   'This information helps patients find and trust you.',
-                  style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.6)),
+                  style: GoogleFonts.manrope(fontSize: 14, color: AppColors.inkMuted),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Specialization dropdown
-              Text('Specialization *', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Specialization *', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
               const SizedBox(height: 8),
-              GlassCard(
+              CareCard(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _specializations.contains(_specCtrl.text) ? _specCtrl.text : null,
-                    hint: const Text('Select specialization', style: TextStyle(color: Color(0xFFAAAAAA))),
+                    hint: Text('Select specialization', style: GoogleFonts.manrope(color: AppColors.inkFaint, fontSize: 13)),
                     isExpanded: true,
-                    icon: const Icon(Icons.expand_more, color: AppColors.leafGreenPrimary),
-                    items: _specializations.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    icon: const Icon(Icons.expand_more, color: AppColors.teal),
+                    items: _specializations
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.ink)),
+                            ))
+                        .toList(),
                     onChanged: (val) {
                       if (val != null) setState(() => _specCtrl.text = val == 'Other' ? '' : val);
                     },
@@ -167,9 +165,8 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-
-              // Registration number
-              Text('Medical Registration No. *', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Medical Registration No. *',
+                  style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
               const SizedBox(height: 8),
               _buildField(
                 controller: _regCtrl,
@@ -177,36 +174,28 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
                 icon: Icons.badge_outlined,
               ),
               const SizedBox(height: 20),
-
-              // Hospital / PHC
-              Text('Hospital / PHC / Clinic', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text('Hospital / PHC / Clinic', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
               const SizedBox(height: 4),
-              Text('(Optional)', style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.5))),
+              Text('(Optional)', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.inkFaint)),
               const SizedBox(height: 8),
               _buildField(
                 controller: _hospCtrl,
                 label: 'e.g. District Hospital, Pipariya',
                 icon: Icons.local_hospital_outlined,
               ),
-
               const SizedBox(height: 32),
-
               _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.teal))
                   : PrimaryButton(
                       title: 'Save & Enter App',
                       onPress: _handleSubmit,
                       width: double.infinity,
                     ),
-
               const SizedBox(height: 16),
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/doctor/requests'),
-                  child: Text(
-                    'Skip for now',
-                    style: TextStyle(color: AppColors.textDark.withValues(alpha: 0.5), fontSize: 14),
-                  ),
+                  child: Text('Skip for now', style: GoogleFonts.manrope(color: AppColors.inkFaint, fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -217,19 +206,19 @@ class _DoctorOnboardingScreenState extends State<DoctorOnboardingScreen> {
   }
 
   Widget _buildField({required TextEditingController controller, required String label, required IconData icon}) {
-    return GlassCard(
+    return CareCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.leafGreenPrimary),
+          Icon(icon, size: 20, color: AppColors.teal),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: controller,
-              style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+              style: GoogleFonts.manrope(fontSize: 14, color: AppColors.ink),
               decoration: InputDecoration(
                 hintText: label,
-                hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
+                hintStyle: GoogleFonts.manrope(color: AppColors.inkFaint, fontSize: 13),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),

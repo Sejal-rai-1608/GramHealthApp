@@ -1,106 +1,124 @@
 import 'package:flutter/material.dart';
-import '../../widgets/dashboard_layout.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/status_badge.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class AdminConsultationsScreen extends StatelessWidget {
+import '../../services/admin_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/care_card.dart';
+import '../../widgets/dashboard_layout.dart';
+import '../../widgets/role_async_view.dart';
+import '../../widgets/status_badge.dart';
+import '../../l10n/app_language.dart';
+
+/// Every consultation on the platform, from `GET /api/consultations`.
+class AdminConsultationsScreen extends StatefulWidget {
   const AdminConsultationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> consultations = [
-      {'patient': 'Ramesh Patel', 'doctor': 'Dr. Alok Sharma', 'type': 'Video Call', 'duration': '15 mins', 'status': 'Completed'},
-      {'patient': 'Sita Verma', 'doctor': 'Dr. Priya Mehta', 'type': 'Chat', 'duration': '10 mins', 'status': 'Completed'},
-      {'patient': 'Mohan Lal', 'doctor': 'Dr. Alok Sharma', 'type': 'In-Person', 'duration': '—', 'status': 'Active'},
-    ];
+  State<AdminConsultationsScreen> createState() => _AdminConsultationsScreenState();
+}
 
+class _AdminConsultationsScreenState extends State<AdminConsultationsScreen> {
+  String _status = 'ALL';
+
+  static final _statuses = [
+    ('ALL', 'All'),
+    ('PENDING', 'Pending'),
+    ('ACTIVE', 'Active'),
+    ('COMPLETED', 'Completed'),
+    ('CANCELLED', 'Cancelled'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return DashboardLayout(
-      title: 'Consultations Registry',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: context.tr('nav_consultations'),
+      child: RoleAsyncView<List<AdminConsultation>>(
+        loader: () => AdminService.getConsultations(
+          status: _status == 'ALL' ? null : _status,
+        ),
+        builder: (context, items) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Consultations Record',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'View past and active teleconsultation sessions',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  ),
-                ],
+              RoleSectionHeader(
+                title: context.tr('nav_consultations'),
+                subtitle: '${items.length} record(s) match this filter.',
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search consultations...',
-                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                        prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 20),
-                        border: InputBorder.none,
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _statuses.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final s = _statuses[i];
+                    final selected = _status == s.$1;
+                    return GestureDetector(
+                      onTap: () => setState(() => _status = s.$1),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.mint : AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(
+                            color: selected ? AppColors.tealPale : AppColors.borderLight,
+                          ),
+                        ),
+                        child: Text(
+                          s.$2,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? AppColors.tealDeep : AppColors.inkSoft,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: consultations.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final cons = consultations[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.leafGreenPale,
-                            child: const Icon(Icons.chat_bubble_outline, color: AppColors.leafGreenDeep),
-                          ),
-                          title: Text(
-                            '${cons['patient']} with ${cons['doctor']}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          ),
-                          subtitle: Text(
-                            'Type: ${cons['type']} • Duration: ${cons['duration']}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              StatusBadge(status: cons['status']!),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                                onPressed: () {},
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ),
-        ],
+              const SizedBox(height: 16),
+              if (items.isEmpty)
+                CareCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_note_outlined,
+                          size: 20, color: AppColors.inkFaint),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _status == 'ALL'
+                              ? 'No consultations on the platform yet.'
+                              : 'No $_status consultations.',
+                          style: GoogleFonts.manrope(
+                              fontSize: 13, color: AppColors.inkMuted),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...items.map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: RoleListRow(
+                        initials: c.patientInitials,
+                        title: c.patientName ?? 'Unknown patient',
+                        subtitle: [
+                          c.type,
+                          if (c.hasDoctor)
+                            c.doctorName ?? 'Assigned doctor'
+                          else
+                            'Unassigned',
+                          if (c.symptoms != null && c.symptoms!.isNotEmpty)
+                            c.symptoms!,
+                        ].join(' · '),
+                        trailingWidget: StatusBadge(status: c.status),
+                      ),
+                    )),
+            ],
+          );
+        },
       ),
     );
   }

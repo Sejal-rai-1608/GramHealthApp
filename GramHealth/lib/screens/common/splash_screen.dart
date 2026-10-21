@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/primary_button.dart';
 
@@ -21,27 +22,28 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
     _logoCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
 
-    _logoScale = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _logoScale = Tween<double>(begin: 1.0, end: 1.06).animate(
       CurvedAnimation(parent: _logoCtrl, curve: Curves.easeInOut),
     );
 
     _textCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 700),
     );
 
-    _textOpacity = Tween<double>(begin: 0, end: 1).animate(_textCtrl);
-    _textSlide = Tween<double>(begin: 20, end: 0).animate(
-      CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut),
+    _textOpacity = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _textCtrl, curve: AppMotion.standard),
+    );
+    _textSlide = Tween<double>(begin: 16, end: 0).animate(
+      CurvedAnimation(parent: _textCtrl, curve: AppMotion.standard),
     );
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 350), () {
       if (mounted) _textCtrl.forward();
     });
   }
@@ -56,121 +58,187 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primaryBg, AppColors.primaryAccent],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              // Glow + Logo
-              Stack(
+      backgroundColor: AppColors.ground,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 2),
+            // ── Brand mark ──────────────────────────────────────────────
+            ScaleTransition(
+              scale: _logoScale,
+              child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Glow ring
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.primaryAccent.withOpacity(0.3),
-                      ),
+                  // Soft halo — opaque wash, no blur decoration
+                  Container(
+                    width: 168,
+                    height: 168,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.teal.withValues(alpha: 0.08),
                     ),
                   ),
-                  // Logo circle
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.textDark,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryAccent.withOpacity(0.5),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        size: 60,
-                        color: AppColors.primaryAccent,
+                  Container(
+                    width: 132,
+                    height: 132,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.mint,
+                      border: Border.all(color: AppColors.tealPale, width: 1),
+                    ),
+                  ),
+                  // Ink mark
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.ink,
+                    ),
+                    child: const Icon(
+                      Icons.favorite_rounded,
+                      size: 44,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            AnimatedBuilder(
+              animation: _textCtrl,
+              builder: (_, child) => Opacity(
+                opacity: _textOpacity.value,
+                child: Transform.translate(
+                  offset: Offset(0, _textSlide.value),
+                  child: child,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'GramHealth',
+                    style: GoogleFonts.manrope(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                      letterSpacing: -0.6,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'RuralCare',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.teal,
+                      letterSpacing: 2.2,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      'Trusted care for rural communities.\nClear guidance, even when offline.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.inkSoft,
+                        height: 1.5,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-
-              // Title + tagline
-              AnimatedBuilder(
-                animation: _textCtrl,
-                builder: (_, child) => Opacity(
-                  opacity: _textOpacity.value,
-                  child: Transform.translate(
-                    offset: Offset(0, _textSlide.value),
-                    child: child,
-                  ),
+            ),
+            const Spacer(flex: 2),
+            // ── Trust row ───────────────────────────────────────────────
+            AnimatedBuilder(
+              animation: _textCtrl,
+              builder: (_, child) => Opacity(
+                opacity: _textOpacity.value,
+                child: child,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    _trustPill(Icons.verified_outlined, 'Private & secure'),
+                    _trustPill(Icons.cloud_off_outlined, 'Works offline'),
+                    _trustPill(Icons.language_outlined, '4 languages'),
+                  ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // ── Primary action ──────────────────────────────────────────
+            AnimatedBuilder(
+              animation: _textCtrl,
+              builder: (_, child) => Opacity(
+                opacity: _textOpacity.value,
+                child: Transform.translate(
+                  offset: Offset(0, _textSlide.value * 0.6),
+                  child: child,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
                 child: Column(
                   children: [
-                    Text(
-                      'RuralCare',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                        letterSpacing: -0.5,
-                      ),
+                    PrimaryButton(
+                      title: 'Get Started',
+                      icon: Icons.arrow_forward_rounded,
+                      onPress: () => context.go('/onboarding'),
+                      width: double.infinity,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
-                      'Smart Healthcare for Rural Communities',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textDark.withOpacity(0.8),
-                      ),
+                      'By continuing you agree to our Terms and Privacy Policy.',
                       textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.inkFaint,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              
-              // Get Started Button
-              AnimatedBuilder(
-                animation: _textCtrl,
-                builder: (_, child) => Opacity(
-                  opacity: _textOpacity.value,
-                  child: Transform.translate(
-                    offset: Offset(0, _textSlide.value),
-                    child: child,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                  child: PrimaryButton(
-                    title: 'Get Started',
-                    onPress: () => context.go('/onboarding'),
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _trustPill(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.teal),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.inkSoft,
+            ),
+          ),
+        ],
       ),
     );
   }
