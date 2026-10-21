@@ -56,6 +56,12 @@ class AppConfig {
   static String get apiPharmacy       => '$baseUrl/api/pharmacy';
   static String get apiAi             => '$baseUrl/api/ai';
 
+  // ── Jitsi Meet Configuration ───────────────────────────────────────────
+  /// Jitsi Meet server domain. Defaults to public meet.jit.si for development.
+  /// In production, this should be set to your self-hosted Jitsi instance.
+  /// Can be overridden at build time with --dart-define=JITSI_SERVER_URL=https://your-jitsi-domain.com
+  static const String jitsiServerUrl = String.fromEnvironment('JITSI_SERVER_URL', defaultValue: 'https://meet.jit.si');
+
   // ── Token key stored in secure storage ────────────────────────────────
   static const String tokenKey = 'gram_health_token';
   static const String userKey  = 'gram_health_user';

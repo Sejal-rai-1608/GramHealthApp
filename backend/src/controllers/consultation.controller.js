@@ -121,6 +121,32 @@ const addVoiceNote = asyncHandler(async (req, res) => {
     });
 });
 
+const getJitsiMeetingDetails = asyncHandler(async (req, res) => {
+    const consultation = await consultationService.getConsultationById(
+        req.params.id,
+        req.user
+    );
+
+    if (!consultation.jitsiRoomName || !consultation.jitsiServerUrl) {
+        return res.status(400).json({
+            success: false,
+            message: "Jitsi meeting not initialized for this consultation. Doctor must accept first.",
+            data: null
+        });
+    }
+
+    res.json({
+        success: true,
+        message: "Jitsi meeting details retrieved successfully",
+        data: {
+            roomName: consultation.jitsiRoomName,
+            serverUrl: consultation.jitsiServerUrl,
+            consultationType: consultation.type,
+            consultationId: consultation.id
+        }
+    });
+});
+
 module.exports = {
     createConsultation,
     getConsultationById,
@@ -129,5 +155,6 @@ module.exports = {
     acceptConsultation,
     completeConsultation,
     assignDoctor,
-    addVoiceNote
+    addVoiceNote,
+    getJitsiMeetingDetails
 };

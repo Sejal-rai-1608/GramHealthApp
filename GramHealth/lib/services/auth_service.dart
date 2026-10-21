@@ -170,17 +170,34 @@ class AuthService {
   static Future<void> updateUser(Map<String, dynamic> updated) =>
       _saveUser(updated);
 
-  // ── Reset Password ────────────────────────────────────────────────────────
+  // ── Forgot Password (Step 1: Send OTP) ────────────────────────────────────
 
-  /// Resets a user's password given their registered email/phone and new password.
-  static Future<void> resetPassword({
+  /// Sends a password reset OTP to the user's registered email or phone.
+  static Future<void> forgotPassword({
     required String emailOrPhone,
+  }) async {
+    await ApiClient.post(
+      '${AppConfig.apiAuth}/forgot-password',
+      {
+        'email': emailOrPhone,
+      },
+      auth: false,
+    );
+  }
+
+  // ── Reset Password with Token (Step 2: Verify OTP + New Password) ────────
+
+  /// Resets password using OTP received via email/SMS.
+  static Future<void> resetPasswordWithToken({
+    required String emailOrPhone,
+    required String otp,
     required String newPassword,
   }) async {
     await ApiClient.post(
       '${AppConfig.apiAuth}/reset-password',
       {
         'email': emailOrPhone,
+        'otp': otp,
         'newPassword': newPassword,
       },
       auth: false,
@@ -194,5 +211,23 @@ class AuthService {
     await prefs.remove(AppConfig.tokenKey);
     await prefs.remove(AppConfig.userKey);
     await LocalDatabase.instance.clearAllData();
+  }
+
+  /// Get the current user's name from cached user data
+  static Future<String?> getUserName() async {
+    final user = await getUser();
+    return user?['name'] as String?;
+  }
+
+  /// Get the current user's email from cached user data
+  static Future<String?> getUserEmail() async {
+    final user = await getUser();
+    return user?['email'] as String?;
+  }
+
+  /// Get the current user's ID from cached user data
+  static Future<String?> getUserId() async {
+    final user = await getUser();
+    return user?['id'] as String?;
   }
 }

@@ -6,7 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model User {
   id           String      @id @default(uuid()) @db.Uuid
   name         String      @db.VarChar(150)
@@ -15,6 +14,8 @@ model User {
   passwordHash String      @map("password_hash")
   role         UserRole
   abhaId       String?     @unique @map("abha_id") @db.VarChar(50)
+  resetOtp     String?     @map("reset_otp") @db.VarChar(6)
+  resetOtpExpiry DateTime?   @map("reset_otp_expiry")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   ashaWorker   AshaWorker?
@@ -73,24 +74,26 @@ model AshaWorker {
 }
 
 model Consultation {
-  id             String             @id @default(uuid()) @db.Uuid
-  patientId      String             @map("patient_id") @db.Uuid
-  doctorId       String?            @map("doctor_id") @db.Uuid
-  ashaWorkerId   String?            @map("asha_worker_id") @db.Uuid
-  type           ConsultationType
-  status         ConsultationStatus
-  symptoms       String?
-  notes          String?
-  voiceNoteUrl   String?            @map("voice_note_url")
-  voiceNoteDuration Int?            @map("voice_note_duration")
-  riskLevel      String?            @map("risk_level") @db.VarChar(20)
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  ashaWorker     AshaWorker?        @relation(fields: [ashaWorkerId], references: [id])
-  doctor         Doctor?            @relation(fields: [doctorId], references: [id])
-  patient        Patient            @relation(fields: [patientId], references: [id])
-  medicalRecords MedicalRecord[]
-  prescriptions  Prescription[]
+  id                String             @id @default(uuid()) @db.Uuid
+  patientId         String             @map("patient_id") @db.Uuid
+  doctorId          String?            @map("doctor_id") @db.Uuid
+  ashaWorkerId      String?            @map("asha_worker_id") @db.Uuid
+  type              ConsultationType
+  status            ConsultationStatus
+  symptoms          String?
+  notes             String?
+  voiceNoteUrl      String?            @map("voice_note_url")
+  voiceNoteDuration Int?               @map("voice_note_duration")
+  riskLevel         String?            @map("risk_level") @db.VarChar(20)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  jitsiRoomName     String?            @map("jitsi_room_name") @db.VarChar(100)
+  jitsiServerUrl    String?            @map("jitsi_server_url") @db.VarChar(255)
+  ashaWorker        AshaWorker?        @relation(fields: [ashaWorkerId], references: [id])
+  doctor            Doctor?            @relation(fields: [doctorId], references: [id])
+  patient           Patient            @relation(fields: [patientId], references: [id])
+  medicalRecords    MedicalRecord[]
+  prescriptions     Prescription[]
 
   @@index([patientId])
   @@index([doctorId])
@@ -174,8 +177,8 @@ model Pharmacy {
   id          String              @id @default(uuid()) @db.Uuid
   userId      String              @unique @map("user_id") @db.Uuid
   name        String              @db.VarChar(150)
-  latitude    Float               @db.DoublePrecision
-  longitude   Float               @db.DoublePrecision
+  latitude    Float
+  longitude   Float
   address     String?             @db.VarChar(255)
   contact     String?             @db.VarChar(20)
   createdAt   DateTime            @default(now()) @map("created_at")
@@ -187,12 +190,12 @@ model Pharmacy {
 }
 
 model PharmacyInventory {
-  id           String    @id @default(uuid()) @db.Uuid
-  pharmacyId   String    @map("pharmacy_id") @db.Uuid
-  medicineName String    @map("medicine_name") @db.VarChar(150)
-  inStock      Boolean   @default(false) @map("in_stock")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  pharmacy     Pharmacy  @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid()) @db.Uuid
+  pharmacyId   String   @map("pharmacy_id") @db.Uuid
+  medicineName String   @map("medicine_name") @db.VarChar(150)
+  inStock      Boolean  @default(false) @map("in_stock")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  pharmacy     Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
 
   @@index([pharmacyId])
   @@index([medicineName])

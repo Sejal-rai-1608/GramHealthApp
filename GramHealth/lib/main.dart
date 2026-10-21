@@ -16,8 +16,10 @@ import 'screens/common/home_screen.dart';
 import 'screens/common/profile_screen.dart';
 import 'screens/common/notifications_screen.dart';
 import 'screens/common/chatbot_screen.dart';
-import 'screens/common/video_call_screen.dart';
+import 'screens/common/jitsi_meeting_screen.dart';
 import 'screens/common/emergency_help_screen.dart';
+import 'screens/common/forgot_password_screen.dart';
+import 'screens/common/reset_password_screen.dart';
 
 import 'screens/patient/symptom_checker_screen.dart';
 import 'screens/patient/patient_records_screen.dart';
@@ -177,10 +179,27 @@ final _router = GoRouter(
         path: '/prescriptions',
         builder: (c, s) => const PrescriptionListScreen()),
     GoRoute(
-      path: '/video-call/:id',
+        path: '/forgot-password',
+        builder: (c, s) => const ForgotPasswordScreen()),
+    GoRoute(
+        path: '/reset-password',
+        builder: (c, s) {
+          final extra = s.extra as Map<String, dynamic>? ?? {};
+          return ResetPasswordScreen(
+            emailOrPhone: extra['emailOrPhone'] as String? ?? '',
+          );
+        },
+    ),
+    GoRoute(
+      path: '/jitsi-meeting/:id',
       builder: (c, s) {
-        final id = s.pathParameters['id'] ?? '1';
-        return VideoCallScreen(doctorId: id);
+        final id = s.pathParameters['id'] ?? '';
+        final extra = s.extra as Map<String, dynamic>? ?? {};
+        return JitsiMeetingScreen(
+          consultationId: id,
+          participantName: extra['participantName'] as String?,
+          participantRole: extra['participantRole'] as String?,
+        );
       },
     ),
     GoRoute(

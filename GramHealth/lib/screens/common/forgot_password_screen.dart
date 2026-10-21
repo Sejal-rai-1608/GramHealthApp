@@ -4,8 +4,8 @@ import '../../theme/app_colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/custom_input.dart';
 import '../../widgets/primary_button.dart';
-import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_client.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -15,17 +15,12 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _emailCtrl = TextEditingController();
-  final _newPasswordCtrl = TextEditingController();
-  final _confirmPasswordCtrl = TextEditingController();
-
+  final _emailPhoneCtrl = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _newPasswordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
+    _emailPhoneCtrl.dispose();
     super.dispose();
   }
 
@@ -41,42 +36,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Future<void> _handleResetPassword() async {
-    final email = _emailCtrl.text.trim();
-    final newPassword = _newPasswordCtrl.text;
-    final confirmPassword = _confirmPasswordCtrl.text;
+  Future<void> _handleSendResetCode() async {
+    final emailPhone = _emailPhoneCtrl.text.trim();
 
-    if (email.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-      _showNotification('Please fill in all fields.');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      _showNotification('Password must be at least 6 characters.');
-      return;
-    }
-
-    if (newPassword != confirmPassword) {
-      _showNotification('Passwords do not match.');
+    if (emailPhone.isEmpty) {
+      _showNotification('Please enter your email or phone number.');
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      await AuthService.resetPassword(
-        emailOrPhone: email,
-        newPassword: newPassword,
-      );
+      await AuthService.forgotPassword(emailOrPhone: _emailPhoneCtrl.text.trim());
 
-      _showNotification('Password reset successfully! Please log in.', isError: false);
+      _showNotification('Reset code sent! Please check your email/SMS.', isError: false);
+      
       if (mounted) {
-        context.go('/login');
+        context.push('/reset-password', extra: {
+          'emailOrPhone': _emailPhoneCtrl.text.trim(),
+        });
       }
     } on ApiException catch (e) {
       _showNotification(e.message);
     } catch (e) {
-      _showNotification('Failed to reset password. Please check your connection.');
+      _showNotification('Failed to send reset code. Please check your connection.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -86,7 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: const Text('Forgot Password'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -98,35 +81,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
             Container(
-              width: 64,
-              height: 64,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: AppColors.primaryAccent.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.lock_reset, size: 32, color: AppColors.primaryAccent),
+              child: const Icon(Icons.lock_outline, size: 40, color: AppColors.primaryAccent),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             const Text(
-              'Forgot Your Password?',
+              'Forgot Password?',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textDark,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              'Enter your registered email or phone number and set a new password for your account.',
+              'Enter your registered email or phone number. We\'ll send you a verification code to reset your password.',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 color: AppColors.textDark.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
 
             GlassCard(
               padding: const EdgeInsets.all(24),
@@ -135,27 +118,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   CustomInput(
                     label: 'Email or Phone Number',
                     placeholder: 'Enter registered email or phone',
-                    controller: _emailCtrl,
+                    controller: _emailPhoneCtrl,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  CustomInput(
-                    label: 'New Password',
-                    placeholder: 'Enter your new password',
-                    controller: _newPasswordCtrl,
-                    obscureText: true,
-                  ),
-                  CustomInput(
-                    label: 'Confirm New Password',
-                    placeholder: 'Re-enter your new password',
-                    controller: _confirmPasswordCtrl,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   _isLoading
                       ? const CircularProgressIndicator()
                       : PrimaryButton(
-                          title: 'Reset Password',
-                          onPress: _handleResetPassword,
+                          title: 'Send Reset Code',
+                          onPress: _handleSendResetCode,
                           width: double.infinity,
                         ),
 
