@@ -21,7 +21,11 @@ const createTransporter = () => {
     auth: { user, pass },
     tls: {
       rejectUnauthorized: process.env.NODE_ENV === "production"
-    }
+    },
+    // Connection timeouts for Render/network issues
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 10000
   });
 };
 
