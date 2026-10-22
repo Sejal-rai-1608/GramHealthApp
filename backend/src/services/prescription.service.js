@@ -39,6 +39,15 @@ const createPrescription = async (user, { consultationId, medicines, instruction
         throw new ApiError("Consultation not found", 404, "CONSULTATION_NOT_FOUND");
     }
 
+    // If the consultation is PENDING and unassigned, auto-assign this doctor
+    // (consistent with acceptConsultation behavior)
+    if (consultation.status === "PENDING" && consultation.doctorId === null) {
+        await prisma.consultation.update({
+            where: { id: consultationId },
+            data: { doctorId: doctorProfileId }
+        });
+    }
+
     if (consultation.doctorId !== doctorProfileId) {
         throw new ApiError(
             "Only the assigned doctor can write a prescription for this consultation",

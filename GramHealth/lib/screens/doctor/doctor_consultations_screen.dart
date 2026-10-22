@@ -180,7 +180,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
                   ),
                 ),
-                const StatusBadge(status: c.status),
+                StatusBadge(status: c.status),
               ],
             ),
             if (c.symptoms != null && c.symptoms!.isNotEmpty) ...[
