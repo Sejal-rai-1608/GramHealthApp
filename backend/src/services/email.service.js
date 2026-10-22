@@ -7,6 +7,8 @@ const createTransporter = () => {
   const user = (process.env.SMTP_USER || "").trim();
   const pass = (process.env.SMTP_PASS || "").trim();
 
+  console.log(`[EmailService] ENV CHECK - host: ${host}, port: ${port}, secure: ${secure}, user: ${user ? 'SET' : 'MISSING'}, pass: ${pass ? 'SET' : 'MISSING'}, NODE_ENV: ${process.env.NODE_ENV}`);
+
   if (!user || !pass) {
     console.warn("[EmailService] SMTP credentials not configured. Emails will be logged instead of sent.");
     return null;
@@ -23,9 +25,9 @@ const createTransporter = () => {
       rejectUnauthorized: process.env.NODE_ENV === "production"
     },
     // Longer timeouts for Render network
-    connectionTimeout: 30000, // 30 seconds
-    greetingTimeout: 15000,
-    socketTimeout: 30000,
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
     // Force IPv4 (sometimes helps on cloud)
     family: 4
   });
@@ -97,8 +99,10 @@ If you didn't request this, please ignore this email or contact support if you h
     console.log(`[EmailService] OTP email sent to ${email}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("[EmailService] Failed to send OTP email:", error);
-    console.error("[EmailService] Error details:", error.message, error.code, error.response);
+    console.error("[EmailService] Failed to send OTP email:", error.message);
+    console.error("[EmailService] Error code:", error.code);
+    console.error("[EmailService] Error response:", error.response);
+    console.error("[EmailService] Full error:", error);
     // Don't throw - we don't want to break the forgot password flow if email fails
     return { success: false, error: error.message, code: error.code, response: error.response };
   }
