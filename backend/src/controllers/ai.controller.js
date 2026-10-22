@@ -47,6 +47,7 @@ const queryAi = asyncHandler(async (req, res) => {
   const queryText = query.trim();
   const qLower = queryText.toLowerCase();
   const apiKey = process.env.GEMINI_API_KEY;
+  console.log('[Backend AI] GEMINI_API_KEY loaded:', apiKey ? `YES (${apiKey.length} chars)` : 'NO - MISSING');
 
   // Medical specialty keywords
   const specialties = [
@@ -164,6 +165,45 @@ const queryAi = asyncHandler(async (req, res) => {
     console.warn("[Backend AI] Context retrieval warning:", dbErr.message);
   }
 
+  // Determine if this is a medical symptom query BEFORE fallback engine
+  const isMedicalSymptomQuery =
+    qLower.includes("fever") ||
+    qLower.includes("pain") ||
+    qLower.includes("cough") ||
+    qLower.includes("headache") ||
+    qLower.includes("symptom") ||
+    qLower.includes("disease") ||
+    qLower.includes("cure") ||
+    qLower.includes("pet") ||
+    qLower.includes("stomach") ||
+    qLower.includes("infection") ||
+    qLower.includes("dast") ||
+    qLower.includes("loose motion") ||
+    qLower.includes("vomit") ||
+    qLower.includes("thikh") ||
+    qLower.includes("breath") ||
+    qLower.includes("chest") ||
+    qLower.includes("fatigue") ||
+    qLower.includes("tired") ||
+    qLower.includes("weakness") ||
+    qLower.includes("nausea") ||
+    qLower.includes("vomiting") ||
+    qLower.includes("ult") ||
+    qLower.includes("matli") ||
+    qLower.includes("rash") ||
+    qLower.includes("skin") ||
+    qLower.includes("itch") ||
+    qLower.includes("allergy") ||
+    qLower.includes("joint") ||
+    qLower.includes("muscle") ||
+    qLower.includes("body ache") ||
+    qLower.includes("urine") ||
+    qLower.includes("urination") ||
+    qLower.includes("uti") ||
+    qLower.includes("burning") ||
+    qLower.includes("dizzy") ||
+    qLower.includes("faint");
+
   let answer = "";
   let routingMethod = "knowledge_engine";
 
@@ -190,6 +230,7 @@ User Question: ${queryText}`;
 
     for (const modelName of modelEndpoints) {
       try {
+        console.log(`[Backend AI] Trying Gemini model: ${modelName}`);
         const geminiResponse = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
           {
@@ -201,14 +242,22 @@ User Question: ${queryText}`;
           }
         );
 
+        console.log(`[Backend AI] Gemini ${modelName} response status: ${geminiResponse.status}`);
+
         if (geminiResponse.ok) {
           const geminiData = await geminiResponse.json();
           const generatedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (generatedText) {
             answer = generatedText.trim();
             routingMethod = `gemini_${modelName}`;
+            console.log(`[Backend AI] SUCCESS with ${modelName}`);
             break;
+          } else {
+            console.warn(`[Backend AI] ${modelName} returned empty response`);
           }
+        } else {
+          const errorBody = await geminiResponse.text();
+          console.error(`[Backend AI] ${modelName} failed: ${geminiResponse.status} - ${errorBody}`);
         }
       } catch (err) {
         console.error(`[Backend AI] Error calling Gemini endpoint ${modelName}:`, err.message);
@@ -218,6 +267,7 @@ User Question: ${queryText}`;
 
   // ── 3. Universal Natural Language Fallback Engine (Handles Typos & Offline Mode)
   if (!answer) {
+    console.warn('[Backend AI] All Gemini models failed or no API key - using fallback engine');
     // A. Consultation & Booking Queries (handles typos like 'consutation', 'consulation', 'consult', 'booking', 'appointment')
     if (
       qLower.includes("consult") ||
@@ -239,27 +289,9 @@ User Question: ${queryText}`;
     else if (doctorSearchResultText) {
       answer = doctorSearchResultText;
     }
-    // C. Stomach & Gastrointestinal Symptom Queries (handles Hindi/Hinglish terms like 'pet main infection', 'pet dard', 'dast', 'loose motion', 'vomit', 'stomach ache')
-    else if (
-      qLower.includes("pet") ||
-      qLower.includes("stomach") ||
-      qLower.includes("infection") ||
-      qLower.includes("dast") ||
-      qLower.includes("loose motion") ||
-      qLower.includes("gastric") ||
-      qLower.includes("acidity") ||
-      qLower.includes("vomit") ||
-      qLower.includes("ulti")
-    ) {
-      answer = `Condition: Stomach Infection / Gastroenteritis (पेट का संक्रमण)
-
-Health Advice & Remedies:
-1. 💧 **Dehydration Prevention**: Drink plenty of clean boiled water, coconut water, or ORS (Oral Rehydration Solution) to maintain electrolyte balance.
-2. 🍚 **Light Diet**: Eat soft, easy-to-digest food such as curd rice (दही-चावल), khichdi (खिचड़ी), bananas, and toast. Avoid oily, spicy, raw, or street food.
-3. 🛌 **Rest**: Rest well to allow your digestive tract to recover.
-
-⚠️ **When to Consult a Doctor Immediately**:
-If you experience high fever (>101°F), severe abdominal cramps, persistent vomiting for >24 hours, or blood in stool, please consult a verified physician or visit your nearest PHC immediately.`;
+    // C. Symptom Analysis - Comprehensive Medical Fallback
+    else if (isMedicalSymptomQuery) {
+      answer = generateSymptomAnalysisFallback(qLower);
     }
     // D. ABHA & Health Records Queries
     else if (qLower.includes("abha") || qLower.includes("record") || qLower.includes("report") || qLower.includes("vault")) {
@@ -294,22 +326,6 @@ If you experience high fever (>101°F), severe abdominal cramps, persistent vomi
     }
   }
 
-  const isMedicalSymptomQuery =
-    qLower.includes("fever") ||
-    qLower.includes("pain") ||
-    qLower.includes("cough") ||
-    qLower.includes("headache") ||
-    qLower.includes("symptom") ||
-    qLower.includes("disease") ||
-    qLower.includes("cure") ||
-    qLower.includes("pet") ||
-    qLower.includes("stomach") ||
-    qLower.includes("infection") ||
-    qLower.includes("dast") ||
-    qLower.includes("loose motion") ||
-    qLower.includes("vomit") ||
-    qLower.includes("thikh");
-
   return res.status(200).json({
     success: true,
     data: {
@@ -326,4 +342,272 @@ If you experience high fever (>101°F), severe abdominal cramps, persistent vomi
   });
 });
 
-module.exports = { queryAi };
+/**
+ * Generate comprehensive symptom analysis fallback for common medical symptoms
+ * Provides structured medical guidance when Gemini API is unavailable
+ */
+function generateSymptomAnalysisFallback(qLower) {
+  // Check for specific symptom patterns and return appropriate medical guidance
+  const symptoms = {
+    // Fever and temperature related
+    fever: {
+      condition: "Fever (बुखार)",
+      keywords: ["fever", "temperature", "bukhar", "tap", "pyrexia"],
+      advice: `**Immediate Care:**
+1. 🌡️ **Monitor Temperature**: Check temperature every 4-6 hours. Normal: 97-99°F (36-37.2°C)
+2. 💧 **Hydration**: Drink plenty of fluids - water, ORS, coconut water, clear soups
+3. 🛌 **Rest**: Complete rest in a cool, well-ventilated room
+4. 🧊 **Cooling**: Lukewarm sponge baths (not cold water), light clothing
+5. 💊 **Medication**: Paracetamol 500mg every 6 hours (max 4g/day) if temp >100°F
+
+**⚠️ Red Flags - Seek Immediate Care:**
+- Temperature >103°F (39.4°C) or >101°F in infants <3 months
+- Fever lasting >3 days without improvement
+- Severe headache, neck stiffness, confusion, difficulty breathing
+- Rash with fever, seizures, persistent vomiting`,
+      urgency: "routine"
+    },
+    
+    // Headache and migraine
+    headache: {
+      condition: "Headache / Migraine (सिरदर्द / आधा सीसी)",
+      keywords: ["headache", "migraine", "head pain", "sir dard", "half head pain"],
+      advice: `**Immediate Relief:**
+1. 🌑 **Dark Quiet Room**: Rest in a dark, quiet environment
+2. 💧 **Hydration**: Drink 2-3 glasses of water - dehydration is a common trigger
+3. 🧊 **Cold/Heat**: Cold compress on forehead for migraine; warm compress for tension headache
+4. 💊 **OTC Relief**: Paracetamol 500mg or Ibuprofen 400mg (with food)
+5. ☕ **Caffeine**: Small amount may help (but don't overuse)
+
+**⚠️ Red Flags - Seek Immediate Care:**
+- Sudden "thunderclap" worst headache of life
+- Headache with fever, stiff neck, confusion, vision changes
+- Headache after head injury
+- New onset headaches >50 years old`,
+      urgency: "routine"
+    },
+    
+    // Cough and respiratory
+    cough: {
+      condition: "Cough / Respiratory Infection (खांसी / श्वसन संक्रमण)",
+      keywords: ["cough", "khansi", "khasi", "cold", "flu", "respiratory"],
+      advice: `**Home Care:**
+1. 🍯 **Honey & Warm Water**: 1 tsp honey in warm water 3x/day (not for children <1 year)
+2. 💨 **Steam Inhalation**: 10-15 min, 2-3x/day with eucalyptus/mint if available
+3. 💧 **Hydration**: Warm fluids - herbal tea, soup, water
+4. 🛌 **Elevated Head**: Sleep with extra pillow
+5. 💊 **OTC**: Dextromethorphan for dry cough; Guaifenesin for productive cough
+
+**⚠️ Red Flags - Seek Immediate Care:**
+- Cough >3 weeks, coughing blood
+- High fever >101°F with cough
+- Shortness of breath, wheezing, chest pain
+- Night sweats, unexplained weight loss`,
+      urgency: "routine"
+    },
+    
+    // Chest pain - HIGH PRIORITY
+    chest_pain: {
+      condition: "Chest Pain (सीने में दर्द) - POTENTIAL EMERGENCY",
+      keywords: ["chest pain", "chest tightness", "chest discomfort", "angina", "heart pain", "sine mein dard"],
+      advice: `**⚠️ THIS MAY BE A MEDICAL EMERGENCY - ACT FAST:**
+
+**If ANY of these: CALL 108/112 OR GO TO NEAREST EMERGENCY DEPT IMMEDIATELY:**
+- Crushing/squeezing chest pain radiating to arm, jaw, back, neck
+- Shortness of breath, sweating, nausea, dizziness
+- Pain lasting >10 minutes or worsening with exertion
+- History of heart disease, diabetes, high BP
+
+**If clearly musculoskeletal (tender to touch, changes with movement):**
+1. 🛌 Rest and avoid strenuous activity
+2. 💊 Ibuprofen 400mg with food for inflammation
+3. 🧊 Warm compress to affected area
+
+**When in doubt - ALWAYS seek emergency care. Heart attacks can present atypically.**`,
+      urgency: "emergency"
+    },
+    
+    // Fatigue and weakness
+    fatigue: {
+      condition: "Fatigue / Weakness (थकान / कमजोरी)",
+      keywords: ["fatigue", "tired", "weakness", "exhaustion", "lethargy", "thakan", "kamzori"],
+      advice: `**Assessment & Care:**
+1. 😴 **Sleep**: 7-9 hours quality sleep, consistent schedule
+2. 🥗 **Nutrition**: Balanced meals - protein, complex carbs, iron-rich foods (spinach, lentils, jaggery)
+3. 💧 **Hydration**: 2.5-3L water daily
+4. 🚶 **Light Activity**: Gentle walking 15-20 min daily (not intense exercise)
+5. 🧘 **Stress Management**: Deep breathing, meditation
+
+**⚠️ Red Flags - Consult Doctor:**
+- Fatigue >2 weeks despite rest
+- Unexplained weight loss, night sweats
+- Shortness of breath on mild exertion
+- Palpitations, dizziness, fainting
+- Depression symptoms (low mood >2 weeks)`,
+      urgency: "routine"
+    },
+    
+    // Nausea and vomiting
+    nausea: {
+      condition: "Nausea / Vomiting (मतली / उल्टी)",
+      keywords: ["nausea", "vomit", "vomiting", "ulti", "matli", "sick"],
+      advice: `**Immediate Care:**
+1. 🚫 **NPO (Nothing by mouth)** for 1-2 hours after vomiting, then...
+2. 💧 **Sips**: Ice chips → clear fluids (water, ORS, coconut water) - 1 tsp every 5 min
+3. 🍚 **BRAT Diet**: Banana, Rice, Applesauce, Toast - once tolerating fluids
+4. 💊 **Anti-emetic**: Ondansetron 4mg or Domperidone 10mg (if available/prescribed)
+5. 🛌 **Position**: Sit upright or left lateral; avoid lying flat
+
+**⚠️ Red Flags - Seek Immediate Care:**
+- Vomiting >24 hours, unable to keep fluids down
+- Signs of dehydration (dry mouth, no urine >8h, dizziness)
+- Severe abdominal pain, blood in vomit (coffee ground appearance)
+- High fever, stiff neck, severe headache`,
+      urgency: "routine"
+    },
+    
+    // Stomach/Abdominal pain
+    abdominal_pain: {
+      condition: "Abdominal Pain (पेट दर्द)",
+      keywords: ["stomach pain", "abdominal pain", "belly pain", "pet dard", "pet me dard", "tummy ache"],
+      advice: `**Assessment & Care:**
+1. 📍 **Location Matters**: 
+   - Upper central: Gastritis/acidity
+   - Right upper: Gallbladder/liver
+   - Right lower: Appendicitis (EMERGENCY if severe)
+   - Left lower: Diverticulitis/colon
+   - Generalized: Gastroenteritis
+2. 💧 **Hydration**: Small sips of clear fluids
+3. 🍚 **Light Diet**: Khichdi, curd rice, toast - avoid spicy/oily
+4. 💊 **Antacid**: Gelusil/Mucaine gel 10ml for acidity
+5. 🛌 **Rest**: Comfortable position (often knees bent)
+
+**⚠️ Red Flags - Seek Immediate Care:**
+- Severe pain, especially right lower quadrant (appendicitis)
+- Pain with fever, vomiting, inability to pass gas/stool
+- Blood in stool or black tarry stools
+- Pregnancy with abdominal pain`,
+      urgency: "routine"
+    },
+    
+    // Breathing difficulty - HIGH PRIORITY
+    breathing: {
+      condition: "Shortness of Breath / Breathing Difficulty (सांस लेने में तकलीफ) - POTENTIAL EMERGENCY",
+      keywords: ["breath", "breathing", "shortness", "dyspnea", "saans", "sas", "difficulty breathing"],
+      advice: `**⚠️ THIS IS A MEDICAL EMERGENCY - SEEK CARE IMMEDIATELY:**
+
+**CALL 108/112 OR GO TO NEAREST EMERGENCY DEPT IF:**
+- Cannot speak in full sentences
+- Blue lips/fingernails, confusion, drowsiness
+- Wheezing, stridor (high-pitched sound)
+- Chest pain with breathing difficulty
+- Rapid breathing >24 breaths/min
+
+**While seeking care:**
+1. 🪑 **Sit upright** - do not lie flat
+2. 💨 **Use inhaler** if prescribed (salbutamol/asthma inhaler)
+3. 🧘 **Stay calm** - anxiety worsens breathing
+4. 🪟 **Fresh air** - open windows, loosen tight clothing
+
+**Common causes needing urgent evaluation:** Asthma attack, allergic reaction, heart failure, pneumonia, pulmonary embolism, COVID-19.`,
+      urgency: "emergency"
+    },
+    
+    // Joint/muscle pain
+    joint_pain: {
+      condition: "Joint / Muscle Pain (जोड़ों का दर्द / मांसपेशियों में दर्द)",
+      keywords: ["joint pain", "muscle pain", "body ache", "joint", "arthritis", "jod dard", "body pain"],
+      advice: `**General Care:**
+1. 🧊 **RICE**: Rest, Ice (15-20 min), Compression, Elevation
+2. 💊 **NSAIDs**: Ibuprofen 400mg or Diclofenac 50mg with food (max 3 days)
+3. 🛌 **Activity Modification**: Avoid aggravating movements, gentle range of motion
+4. 🌡️ **Warmth**: After 48h, warm compresses for stiffness
+5. 🏃 **Physio**: Gentle stretching once acute pain subsides
+
+**⚠️ Red Flags - Consult Doctor:**
+- Joint swelling, redness, heat (possible infection/gout)
+- Pain after injury with deformity/inability to bear weight
+- Morning stiffness >1 hour (inflammatory arthritis)
+- Fever with joint pain
+- Multiple joints affected symmetrically`,
+      urgency: "routine"
+    },
+    
+    // Skin issues
+    skin: {
+      condition: "Skin Rash / Skin Problem (त्वचा की समस्या / चकत्ते)",
+      keywords: ["rash", "skin", "itch", "allergy", "hives", "eczema", "acne", "pimple", "khujli", "daad"],
+      advice: `**General Care:**
+1. 🧼 **Gentle Cleansing**: Mild soap, lukewarm water, pat dry
+2. 🧴 **Moisturize**: Fragrance-free moisturizer 2-3x/day
+3. 🚫 **Avoid Irritants**: Harsh soaps, detergents, tight synthetic clothing
+4. 🧊 **Cool Compresses**: For itching - calamine lotion or aloe vera gel
+5. 💊 **Antihistamine**: Cetirizine 10mg or Loratadine 10mg for allergic itching
+
+**⚠️ Red Flags - Seek Care:**
+- Rapidly spreading rash, especially with fever
+- Blisters, pus, increasing pain/redness (infection)
+- Difficulty breathing, facial swelling (allergic reaction)
+- Purple spots that don't blanch (petechiae)
+- Rash with joint pain, eye involvement`,
+      urgency: "routine"
+    },
+    
+    // Urinary issues
+    urinary: {
+      condition: "Urinary Problem (मूत्र संबंधी समस्या)",
+      keywords: ["urine", "urination", "pee", "burning urine", "frequency", "uti", "mutra", "peshab"],
+      advice: `**Care:**
+1. 💧 **Hydration**: 3-4L water daily - flush bacteria
+2. 🧃 **Cranberry/Barley Water**: May help prevent UTI recurrence
+3. 🚽 **Don't Hold**: Urinate when urge arises
+4. 🧼 **Hygiene**: Front-to-back wiping, cotton underwear
+5. 💊 **Symptomatic**: Flavoxate 200mg for urgency/frequency
+
+**⚠️ Red Flags - Consult Doctor:**
+- Burning urination >2 days
+- Blood in urine, flank/back pain, fever
+- Inability to urinate (retention - EMERGENCY)
+- Pregnancy with urinary symptoms`,
+      urgency: "routine"
+    }
+  };
+
+  // Match symptoms in order of priority (emergency first)
+  const priorityOrder = [
+    "chest_pain", "breathing", // Emergency first
+    "fever", "headache", "cough", "abdominal_pain", "nausea", 
+    "fatigue", "joint_pain", "skin", "urinary"
+  ];
+
+  for (const key of priorityOrder) {
+    const symptom = symptoms[key];
+    if (symptom.keywords.some(kw => qLower.includes(kw))) {
+      return `Condition: ${symptom.condition}
+
+Health Advice & Remedies:
+${symptom.advice}
+
+**Next Steps:** ${symptom.urgency === "emergency" ? "🚨 SEEK EMERGENCY CARE IMMEDIATELY" : "Monitor symptoms. Consult a doctor if symptoms persist >2-3 days or worsen."}
+
+---
+*Disclaimer: This is AI-generated general health information, not a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation and treatment.*`;
+    }
+  }
+
+  // Generic medical symptom fallback
+  return `These symptoms can occur with several conditions. For an accurate assessment, please consult a qualified healthcare professional.
+
+**General Guidance:**
+1. 📝 **Track Symptoms**: Note when they started, triggers, severity (1-10), what helps/worsens
+2. 💧 **Stay Hydrated**: Water, electrolytes
+3. 🛌 **Rest Adequately**: Sleep 7-9 hours
+4. 🏥 **Consult Doctor**: If symptoms persist >2-3 days, worsen, or new symptoms appear
+
+**⚠️ Seek Immediate Care for:** Chest pain, difficulty breathing, severe abdominal pain, high fever (>103°F), confusion, fainting, uncontrolled bleeding.
+
+---
+*Disclaimer: This is AI-generated general health information, not a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation and treatment.*`;
+}
+
+module.exports = { queryAi, generateSymptomAnalysisFallback };

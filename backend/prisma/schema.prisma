@@ -219,7 +219,10 @@ enum ConsultationType {
 
 enum ConsultationStatus {
   PENDING
+  RINGING
   ACTIVE
+  REJECTED
+  MISSED
   COMPLETED
   CANCELLED
 }
@@ -235,4 +238,23 @@ enum SyncStatus {
   SYNCED
   FAILED
   CONFLICT
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+}
+
+model DeviceToken {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  token     String         @db.VarChar(500) @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("device_tokens")
 }

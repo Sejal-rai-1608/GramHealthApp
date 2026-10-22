@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/glass_card.dart';
@@ -14,7 +16,7 @@ import '../../services/offline_ai_service.dart';
 class Message {
   final String id;
   final String text;
-  final String sender; // 'user' or 'ai'
+  final String sender;
   final DateTime timestamp;
   final bool isOffline;
 
@@ -25,6 +27,22 @@ class Message {
     required this.timestamp,
     this.isOffline = false,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'text': text,
+    'sender': sender,
+    'timestamp': timestamp.toIso8601String(),
+    'isOffline': isOffline,
+  };
+
+  factory Message.fromJson(Map<String, dynamic> json) => Message(
+    id: json['id'] as String,
+    text: json['text'] as String,
+    sender: json['sender'] as String,
+    timestamp: DateTime.parse(json['timestamp'] as String),
+    isOffline: json['isOffline'] as bool? ?? false,
+  );
 }
 
 class ChatBotScreen extends StatefulWidget {
@@ -41,10 +59,12 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   StreamSubscription<LocalModelStatus>? _modelSub;
   StreamSubscription<NetworkStatus>? _connSub;
   bool _showSetupCard = true;
+  Timer? _saveDebounce;
 
   @override
   void initState() {
     super.initState();
+    _loadMessages();
     unawaited(OfflineAiService.instance.ensureModelLoaded());
 
     _modelSub = OfflineAiService.instance.statusStream.listen((_) {
@@ -53,6 +73,30 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
     _connSub = ConnectivityService.instance.statusStream.listen((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Future<void> _loadMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = prefs.getStringList('chat_history') ?? [];
+    if (jsonList.isNotEmpty && mounted) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(jsonList.map((e) => Message.fromJson(jsonDecode(e) as Map<String, dynamic>)));
+      });
+    }
+  }
+
+  void _saveMessages() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_saveMessagesAsync());
+    });
+  }
+
+  Future<void> _saveMessagesAsync() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = _messages.map((m) => jsonEncode(m.toJson())).toList();
+    await prefs.setStringList('chat_history', jsonList);
   }
 
   @override
@@ -67,6 +111,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
           timestamp: DateTime.now(),
         ),
       );
+      _saveMessages();
     }
   }
 
@@ -74,6 +119,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   void dispose() {
     _modelSub?.cancel();
     _connSub?.cancel();
+    _saveDebounce?.cancel();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -134,6 +180,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
       _messages.add(userMsg);
       _inputCtrl.clear();
     });
+    _saveMessages();
 
     _scrollToBottom();
 
@@ -163,6 +210,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
       setState(() {
         _messages.add(aiMsg);
       });
+      _saveMessages();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -175,6 +223,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
       setState(() {
         _messages.add(errorMsg);
       });
+      _saveMessages();
       _scrollToBottom();
     }
   }

@@ -1,8 +1,11 @@
 const CONSULTATION_TRANSITIONS = {
-    PENDING: ["ACTIVE", "CANCELLED"],
+    PENDING: ["RINGING", "CANCELLED"],
+    RINGING: ["ACTIVE", "REJECTED", "MISSED"],
     ACTIVE: ["COMPLETED", "CANCELLED"],
     COMPLETED: [],
-    CANCELLED: []
+    CANCELLED: [],
+    REJECTED: [],
+    MISSED: []
 };
 
 const canTransitionConsultationStatus = (currentStatus, newStatus) => {

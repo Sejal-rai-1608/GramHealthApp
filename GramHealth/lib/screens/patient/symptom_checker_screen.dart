@@ -93,8 +93,6 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
           if (match != null) {
             conditionText = match.group(1)!.trim();
           }
-        } else if (combinedQuery.toLowerCase().contains('pet') || combinedQuery.toLowerCase().contains('stomach') || combinedQuery.toLowerCase().contains('infection')) {
-          conditionText = 'Stomach Infection / Gastroenteritis (पेट का संक्रमण)';
         } else if (aiResponse.intent != null && aiResponse.intent != 'symptom_analysis' && aiResponse.intent != 'general_health' && aiResponse.intent != 'offline_medical') {
           conditionText = aiResponse.intent!;
         }
