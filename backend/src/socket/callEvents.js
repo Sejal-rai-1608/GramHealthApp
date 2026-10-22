@@ -4,6 +4,17 @@
 
 const prisma = require('../config/prisma');
 const { getProfileIdForRole } = require('../utils/profile');
+const { v4: uuidv4 } = require('uuid');
+
+const JITSI_DOMAIN = process.env.JITSI_DOMAIN || "meet.jit.si";
+const JITSI_SERVER_URL = `https://${JITSI_DOMAIN}`;
+
+const generateJitsiRoomName = (consultationId) => {
+  const prefix = "gramhealth";
+  const shortId = consultationId.replace(/-/g, "").substring(0, 12);
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  return `${prefix}-${shortId}-${randomSuffix}`;
+};
 
 module.exports = (io) => {
   // Helper: verify that the authenticated socket user participates in the consultation
@@ -26,6 +37,23 @@ module.exports = (io) => {
       (user.role === 'ASHA' && consultation.ashaWorkerId === profileId);
     if (!isParticipant) {
       throw new Error('User not authorized for this consultation');
+    }
+    return consultation;
+  };
+
+  // Helper: ensure Jitsi meeting details exist for a consultation, generating them if missing
+  const ensureJitsiDetails = async (consultationId) => {
+    let consultation = await prisma.consultation.findUnique({
+      where: { id: consultationId },
+      select: { jitsiRoomName: true, jitsiServerUrl: true },
+    });
+    if (!consultation?.jitsiRoomName || !consultation?.jitsiServerUrl) {
+      const jitsiRoomName = generateJitsiRoomName(consultationId);
+      consultation = await prisma.consultation.update({
+        where: { id: consultationId },
+        data: { jitsiRoomName, jitsiServerUrl: JITSI_SERVER_URL },
+        select: { jitsiRoomName: true, jitsiServerUrl: true },
+      });
     }
     return consultation;
   };
@@ -79,7 +107,39 @@ module.exports = (io) => {
         socket.emit('error', { message: err.message });
       }
     });
+    // ---------------------------------------------------------------------
+    // 4️⃣ callAccept – doctor accepts the call invitation
+    // ---------------------------------------------------------------------
+    socket.on('callAccept', async ({ consultationId }) => {
+      try {
+        await verifyParticipation(socket.user, consultationId);
+        const room = `consultation_${consultationId}`;
+        // Ensure Jitsi meeting details exist (generate if missing) so both
+        // parties receive valid room/server URLs via the callAccept event.
+        const consultation = await ensureJitsiDetails(consultationId);
+        io.to(room).emit('callAccept', {
+          consultationId,
+          by: socket.user.id,
+          jitsiRoomName: consultation.jitsiRoomName,
+          jitsiServerUrl: consultation.jitsiServerUrl,
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
 
+    // ---------------------------------------------------------------------
+    // 5️⃣ callReject – doctor rejects the call invitation
+    // ---------------------------------------------------------------------
+    socket.on('callReject', async ({ consultationId }) => {
+      try {
+        await verifyParticipation(socket.user, consultationId);
+        const room = `consultation_${consultationId}`;
+        io.to(room).emit('callReject', { consultationId, by: socket.user.id });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
     // ---------------------------------------------------------------------
     // Clean up on disconnect – rooms are auto‑cleaned by Socket.IO.
     // ---------------------------------------------------------------------

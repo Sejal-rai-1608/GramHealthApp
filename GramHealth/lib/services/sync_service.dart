@@ -51,7 +51,7 @@ class SyncService {
   }) async {
     final status = ConnectivityService.instance.currentStatus;
 
-    if (status != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       // Offline: Enqueue the mutation.
       final uuid = const Uuid().v4();
       await LocalDatabase.instance.enqueueSync(

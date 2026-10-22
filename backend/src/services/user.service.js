@@ -31,7 +31,11 @@ const listUsers = async (query = {}) => {
                 email: true,
                 role: true,
                 createdAt: true,
-                updatedAt: true
+                updatedAt: true,
+                patient: { select: { id: true } },
+                doctor: { select: { id: true } },
+                ashaWorker: { select: { id: true } },
+                pharmacy: { select: { id: true } }
             },
             orderBy: { createdAt: "desc" },
             skip,

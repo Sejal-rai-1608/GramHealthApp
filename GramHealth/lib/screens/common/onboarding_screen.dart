@@ -116,12 +116,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
 
           // Plus decorative icon
-          Positioned(
+          const Positioned(
             top: 70,
             left: 40,
             child: Opacity(
               opacity: 0.3,
-              child: const Icon(Icons.add, size: 24, color: AppColors.medicalGreen),
+              child: Icon(Icons.add, size: 24, color: AppColors.medicalGreen),
             ),
           ),
 

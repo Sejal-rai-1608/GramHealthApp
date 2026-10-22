@@ -72,7 +72,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
             boxShadow: [
               BoxShadow(
                 color: (widget.backgroundColor ?? AppColors.primaryAccent)
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),

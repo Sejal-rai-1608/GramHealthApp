@@ -77,10 +77,10 @@ class ConnectivityService {
     try {
       final startTime = DateTime.now();
       final response = await http.get(Uri.parse('${AppConfig.baseUrl}/api/health')).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 8),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final latency = DateTime.now().difference(startTime).inMilliseconds;
         if (latency > 1500) {
           _updateStatus(NetworkStatus.weak);

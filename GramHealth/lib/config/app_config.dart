@@ -12,10 +12,10 @@ enum LocalBackendMode {
 class AppConfig {
   AppConfig._();
 
-  // ── Live Backend URL (Render Production Deployment) ───────────────────
+  // Live Backend URL (Render Production Deployment)
   static const String liveBackendUrl = 'https://gramhealthapp.onrender.com';
 
-  // ── Local Development URLs ─────────────────────────────────────────────
+  // Local Development URLs
   static const String adbReverseBackendUrl = 'http://127.0.0.1:3000';
   static const String defaultLanBackendUrl = 'http://192.168.0.102:3000';
 
@@ -39,30 +39,32 @@ class AppConfig {
     }
   }
 
-  // ── Base URL ──────────────────────────────────────────────────────────
+  // Base URL
   static String get baseUrl => useProduction ? liveBackendUrl : localBackendUrl;
 
-  // ── API Routes (All routed strictly through Node.js backend) ───────────
-  static String get apiHealth         => '$baseUrl/api/health';
+  // API Routes (All routed strictly through Node.js backend)
+  static String get apiHealth         => baseUrl + '/api/health';
 
-  // ── API Routes (All routed strictly through Node.js backend) ───────────
-  static String get apiAuth           => '$baseUrl/api/auth';
-  static String get apiDoctors        => '$baseUrl/api/doctors';
-  static String get apiPatients       => '$baseUrl/api/patients';
-  static String get apiConsultations  => '$baseUrl/api/consultations';
-  static String get apiMedicalRecords => '$baseUrl/api/medical-records';
-  static String get apiPrescriptions  => '$baseUrl/api/prescriptions';
-  static String get apiUsers          => '$baseUrl/api/users';
-  static String get apiPharmacy       => '$baseUrl/api/pharmacy';
-  static String get apiAi             => '$baseUrl/api/ai';
+  // API Routes (All routed strictly through Node.js backend)
+  static String get apiAuth           => baseUrl + '/api/auth';
+  static String get apiDoctors        => baseUrl + '/api/doctors';
+  static String get apiPatients       => baseUrl + '/api/patients';
+  static String get apiConsultations  => baseUrl + '/api/consultations';
+  static String get apiMedicalRecords => baseUrl + '/api/medical-records';
+  static String get apiPrescriptions  => baseUrl + '/api/prescriptions';
+  static String get apiUsers          => baseUrl + '/api/users';
+  static String get apiPharmacy       => baseUrl + '/api/pharmacy';
+  static String get apiFacilities     => baseUrl + '/api/facilities';
+  static String get apiAdminReports   => baseUrl + '/api/admin/reports';
+  static String get apiAi             => baseUrl + '/api/ai';
 
-  // ── Jitsi Meet Configuration ───────────────────────────────────────────
+  // Jitsi Meet Configuration
   /// Jitsi Meet server domain. Defaults to public meet.jit.si for development.
   /// In production, this should be set to your self-hosted Jitsi instance.
   /// Can be overridden at build time with --dart-define=JITSI_SERVER_URL=https://your-jitsi-domain.com
   static const String jitsiServerUrl = String.fromEnvironment('JITSI_SERVER_URL', defaultValue: 'https://meet.jit.si');
 
-  // ── Token key stored in secure storage ────────────────────────────────
+  // Token key stored in secure storage
   static const String tokenKey = 'gram_health_token';
   static const String userKey  = 'gram_health_user';
   static const String roleKey  = 'gram_health_role';

@@ -34,10 +34,10 @@ class TopNavbar extends StatelessWidget {
               context.go('/$role/profile');
             }
           },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: CircleAvatar(radius: 16, backgroundImage: AssetImage('assets/avatar_placeholder.png')),
-          ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: CircleAvatar(radius: 16, backgroundColor: AppColors.primaryAccent, child: Icon(Icons.person, color: Colors.white, size: 16)),
+            ),
         ),
         // Language selector (reuse existing modal)
        // IconButton(icon: const Icon(Icons.language), onPressed: () => showLanguageSelector(context)),

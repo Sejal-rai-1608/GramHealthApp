@@ -58,6 +58,7 @@ dependencies:
   audioplayers: ^6.7.1
   geolocator: ^14.0.2
   geocoding: ^5.0.0
+  socket_io_client: ^2.0.2
 
   path: any
   crypto: any

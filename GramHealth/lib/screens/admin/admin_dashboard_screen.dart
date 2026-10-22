@@ -5,21 +5,27 @@ import '../../widgets/stat_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../theme/app_colors.dart';
+import '../../services/admin_service.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  late Future<Map<String, dynamic>> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _statsFuture = AdminService.getSystemStats();
+  }
 
   @override
   Widget build(BuildContext context) {
     final title = context.tr('admin_dashboard');
-    final kpiData = [
-      {'icon': Icons.group, 'label': 'Total Users', 'value': '1,420'},
-      {'icon': Icons.medical_services, 'label': 'Doctors', 'value': '48'},
-      {'icon': Icons.people_alt, 'label': 'Patients', 'value': '1,372'},
-      {'icon': Icons.local_hospital, 'label': 'Facilities', 'value': '12'},
-      {'icon': Icons.local_pharmacy, 'label': 'Pharmacies', 'value': '18'},
-      {'icon': Icons.calendar_month, 'label': 'Appointments', 'value': '320'},
-    ];
 
     return DashboardLayout(
       title: title,
@@ -37,14 +43,48 @@ class AdminDashboardScreen extends StatelessWidget {
               style: TextStyle(fontSize: 14, color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: kpiData.map((d) => StatCard(
-                icon: d['icon'] as IconData,
-                label: d['label'] as String,
-                value: d['value'] as String,
-              )).toList(),
+            FutureBuilder<Map<String, dynamic>>(
+              future: _statsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      _buildStatCard(Icons.group, 'Total Users', '—'),
+                      _buildStatCard(Icons.medical_services, 'Doctors', '—'),
+                      _buildStatCard(Icons.people_alt, 'Patients', '—'),
+                      _buildStatCard(Icons.local_hospital, 'Facilities', '—'),
+                      _buildStatCard(Icons.local_pharmacy, 'Pharmacies', '—'),
+                      _buildStatCard(Icons.calendar_month, 'Appointments', '—'),
+                    ],
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorState('Failed to load stats');
+                }
+
+                final stats = snapshot.data ?? {};
+                final kpiData = [
+                  {'icon': Icons.group, 'label': 'Total Users', 'value': _formatNumber(stats['totalUsers'] ?? 0)},
+                  {'icon': Icons.medical_services, 'label': 'Doctors', 'value': _formatNumber(stats['totalDoctors'] ?? 0)},
+                  {'icon': Icons.people_alt, 'label': 'Patients', 'value': _formatNumber(stats['totalPatients'] ?? 0)},
+                  {'icon': Icons.local_hospital, 'label': 'Facilities', 'value': _formatNumber(stats['totalFacilities'] ?? 0)},
+                  {'icon': Icons.local_pharmacy, 'label': 'Pharmacies', 'value': _formatNumber(stats['totalPharmacies'] ?? 0)},
+                  {'icon': Icons.calendar_month, 'label': 'Appointments', 'value': _formatNumber(stats['totalConsultations'] ?? 0)},
+                ];
+
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: kpiData.map((d) => StatCard(
+                    icon: d['icon'] as IconData,
+                    label: d['label'] as String,
+                    value: d['value'] as String,
+                  )).toList(),
+                );
+              },
             ),
             const SizedBox(height: 32),
             const Text(
@@ -54,19 +94,31 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(height: 12),
             GlassCard(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildActivityRow('Dr. Sharma completed video consultation with Ramesh Patel', '5 mins ago', 'Completed'),
-                  const Divider(),
-                  _buildActivityRow('New patient registered from Sonkatch Village', '20 mins ago', 'Active'),
-                  const Divider(),
-                  _buildActivityRow('Emergency SOS trigger in North Zone PHC', '1 hour ago', 'Resolved'),
-                ],
-              ),
+              child: _buildActivitySection(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatCard(IconData icon, String label, String value) {
+    return StatCard(
+      icon: icon,
+      label: label,
+      value: value,
+    );
+  }
+
+  Widget _buildActivitySection() {
+    return Column(
+      children: [
+        _buildActivityRow(
+          'System started',
+          'Just now',
+          'Active',
+        ),
+      ],
     );
   }
 
@@ -91,5 +143,37 @@ class AdminDashboardScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    }
+    return number.toString();
   }
 }

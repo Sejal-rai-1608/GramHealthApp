@@ -115,7 +115,7 @@ class ConsultationService {
     int limit = 20,
     String? status,
   }) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
       var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
       if (status != null) {
@@ -146,7 +146,7 @@ class ConsultationService {
     int limit = 50,
     String? status,
   }) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_consultations');
       var models = cached.map((e) => ConsultationModel.fromJson(e)).toList();
       if (status != null) {

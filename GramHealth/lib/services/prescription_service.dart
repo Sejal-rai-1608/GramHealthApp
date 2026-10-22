@@ -79,7 +79,7 @@ class PrescriptionService {
     int page = 1,
     int limit = 20,
   }) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
       return cached.map((e) => PrescriptionModel.fromJson(e)).toList();
     }
@@ -118,7 +118,7 @@ class PrescriptionService {
     int page = 1,
     int limit = 20,
   }) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_prescriptions');
       return cached.map((e) => PrescriptionModel.fromJson(e)).toList();
     }

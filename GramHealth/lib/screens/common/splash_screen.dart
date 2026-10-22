@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 140,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.primaryAccent.withOpacity(0.3),
+                        color: AppColors.primaryAccent.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
@@ -96,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
                         color: AppColors.textDark,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryAccent.withOpacity(0.5),
+                            color: AppColors.primaryAccent.withValues(alpha: 0.5),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -125,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 child: Column(
                   children: [
-                    Text(
+                    const Text(
                       'RuralCare',
                       style: TextStyle(
                         fontSize: 40,
@@ -140,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textDark.withOpacity(0.8),
+                        color: AppColors.textDark.withValues(alpha: 0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),

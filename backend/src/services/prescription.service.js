@@ -67,6 +67,36 @@ const createPrescription = async (user, { consultationId, medicines, instruction
     });
 };
 
+const listPrescriptions = async (query = {}) => {
+    const { page, limit, skip, take } = getPagination(query);
+    const { search, patientId, doctorId } = query;
+
+    const where = {};
+
+    if (patientId) where.patientId = patientId;
+    if (doctorId) where.doctorId = doctorId;
+
+    if (search) {
+        where.OR = [
+            { patient: { user: { name: { contains: search, mode: "insensitive" } } } },
+            { doctor: { user: { name: { contains: search, mode: "insensitive" } } } }
+        ];
+    }
+
+    const [total, items] = await Promise.all([
+        prisma.prescription.count({ where }),
+        prisma.prescription.findMany({
+            where,
+            include: PRESCRIPTION_INCLUDE,
+            orderBy: { createdAt: "desc" },
+            skip,
+            take
+        })
+    ]);
+
+    return { items, meta: buildMeta(total, page, limit) };
+};
+
 const listMyPrescriptions = async (user, query = {}) => {
     const { page, limit, skip, take } = getPagination(query);
     const patientProfileId = await requireProfile("PATIENT", user.userId);
@@ -162,6 +192,7 @@ const listDoctorPrescriptions = async (user, query = {}) => {
 
 module.exports = {
     createPrescription,
+    listPrescriptions,
     listMyPrescriptions,
     getPrescriptionById,
     listDoctorPrescriptions

@@ -52,13 +52,20 @@ const registerUser = async ({ name, email, phone, password, role, address, latit
     } else if (effectiveRole === "ASHA") {
         await prisma.ashaWorker.create({ data: { userId: user.id } });
     } else if (effectiveRole === "PHARMACY") {
+        if (!latitude || !longitude || latitude === 0 || longitude === 0) {
+            throw new ApiError(
+                "Valid pharmacy location (latitude/longitude) is required",
+                400,
+                "INVALID_LOCATION"
+            );
+        }
         await prisma.pharmacy.create({ 
             data: { 
                 userId: user.id, 
                 name: `${name}'s Pharmacy`,
                 address: address || null,
-                latitude: latitude || 0,
-                longitude: longitude || 0
+                latitude: latitude,
+                longitude: longitude
             } 
         });
     }

@@ -15,6 +15,17 @@ const createPrescription = asyncHandler(async (req, res) => {
     });
 });
 
+const listPrescriptions = asyncHandler(async (req, res) => {
+    const { items, meta } = await prescriptionService.listPrescriptions(req.query);
+
+    res.json({
+        success: true,
+        message: "Prescriptions retrieved successfully",
+        data: items,
+        meta
+    });
+});
+
 const listMyPrescriptions = asyncHandler(async (req, res) => {
     const { items, meta } = await prescriptionService.listMyPrescriptions(
         req.user,
@@ -58,6 +69,7 @@ const listDoctorPrescriptions = asyncHandler(async (req, res) => {
 
 module.exports = {
     createPrescription,
+    listPrescriptions,
     listMyPrescriptions,
     getPrescriptionById,
     listDoctorPrescriptions

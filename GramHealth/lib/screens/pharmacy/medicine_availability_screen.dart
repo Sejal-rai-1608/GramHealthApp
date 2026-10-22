@@ -35,6 +35,8 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
   Future<void> _initLocationAndSearch() async {
     setState(() => _isLoading = true);
     try {
+      await PharmacyService.syncPharmacies();
+      
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (serviceEnabled) {
         LocationPermission permission = await Geolocator.checkPermission();
@@ -45,8 +47,8 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
           _currentPosition = await Geolocator.getCurrentPosition();
         }
       }
-    } catch (_) {
-      // default position handling below
+    } catch (e) {
+      print('Failed to sync pharmacies: $e');
     }
 
     if (widget.medicineQuery != null && widget.medicineQuery!.isNotEmpty) {
@@ -72,12 +74,24 @@ class _MedicineAvailabilityScreenState extends State<MedicineAvailabilityScreen>
     final lat = _currentPosition?.latitude ?? 22.7196;
     final lon = _currentPosition?.longitude ?? 75.8577;
     
-    final results = await PharmacyService.searchPharmaciesLocal(query, lat, lon);
-    if (mounted) {
-      setState(() {
-        _pharmacies = results;
-        _isLoading = false;
-      });
+    try {
+      final results = await PharmacyService.searchPharmaciesByMedicine(query, lat, lon);
+      if (mounted) {
+        setState(() {
+          _pharmacies = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Search failed, falling back to local cache: $e');
+      // Fallback to local cache if API fails
+      final results = await PharmacyService.searchPharmaciesLocal(query, lat, lon);
+      if (mounted) {
+        setState(() {
+          _pharmacies = results;
+          _isLoading = false;
+        });
+      }
     }
   }
 

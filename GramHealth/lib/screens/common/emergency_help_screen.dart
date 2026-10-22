@@ -208,7 +208,7 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
               const SizedBox(height: 6),
               Text(
                 'One-tap lifeline features and offline emergency guides.',
-                style: TextStyle(fontSize: 14, color: AppColors.textDark.withOpacity(0.6)),
+                style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.6)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -221,10 +221,10 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                   height: 220,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.emergency.withOpacity(0.1),
+                    color: AppColors.emergency.withValues(alpha: 0.1),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.emergency.withOpacity(0.3),
+                        color: AppColors.emergency.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -282,7 +282,7 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.secondaryBg,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primaryAccent.withOpacity(0.3))
+                          border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3))
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -325,13 +325,13 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                   Expanded(
                     child: GestureDetector(
                       onTap: _routeToNearestPHC,
-                      child: GlassCard(
-                        padding: const EdgeInsets.all(16),
+                      child: const GlassCard(
+                        padding: EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            const Icon(Icons.location_on, size: 28, color: AppColors.primaryAccent),
-                            const SizedBox(height: 8),
-                            const Text(
+                            Icon(Icons.location_on, size: 28, color: AppColors.primaryAccent),
+                            SizedBox(height: 8),
+                            Text(
                               'Nearest\nPHC',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
                               textAlign: TextAlign.center,

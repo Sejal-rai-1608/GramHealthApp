@@ -9,6 +9,8 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/offline_voice_recorder.dart';
 import '../../services/connectivity_service.dart';
+import '../../services/call_socket_service.dart';
+import '../../services/call_service.dart';
 
 class TeleconsultationRequestScreen extends StatefulWidget {
   const TeleconsultationRequestScreen({super.key});
@@ -56,6 +58,51 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   void initState() {
     super.initState();
     _networkStatus = ConnectivityService.instance.currentStatus;
+    _initializeSocket();
+  }
+
+  Future<void> _initializeSocket() async {
+    bool socketReady = false;
+    // Initialize the socket before registering listeners so that
+    // CallSocketService._socket is not null when on() is called.
+    try {
+      await CallSocketService.init();
+      socketReady = true;
+    } catch (e) {
+      debugPrint('Socket init error: $e');
+    }
+    // Register listeners for call flow events only if init succeeded. Without
+    // this, on() throws when the socket is null (e.g. no auth token), crashing
+    // the screen instead of just skipping socket signaling.
+    if (socketReady && mounted) {
+      CallSocketService.on('callAccept', (data) async {
+        // Data contains jitsiRoomName and jitsiServerUrl
+        final String? room = data['jitsiRoomName'];
+        final String? server = data['jitsiServerUrl'];
+        final bool audioOnly = (data['consultationType'] ?? 'VIDEO') == 'AUDIO';
+        if (room != null && server != null) {
+          // Directly start Jitsi call using provided details
+          await CallService.startCallWithFallback(
+            context: context,
+            consultationId: data['consultationId'],
+            audioOnly: audioOnly,
+            doctorId: null,
+            doctorName: null,
+            doctorPhone: null,
+            patientName: null,
+            userRole: 'patient',
+            roomName: room,
+            serverUrl: server,
+          );
+        }
+      });
+      CallSocketService.on('callReject', (data) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Doctor rejected the call')));
+      });
+      CallSocketService.on('callCancel', (data) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Call was cancelled')));
+      });
+    }
     _netSub = ConnectivityService.instance.statusStream.listen((status) {
       if (mounted) {
         setState(() {
@@ -79,7 +126,7 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     if (_selectedReason.isEmpty) return;
     setState(() => _isSubmitting = true);
     try {
-      await ConsultationService.createConsultation(
+      final created = await ConsultationService.createConsultation(
         reason: _selectedReason,
         symptoms: _symptomsCtrl.text.trim().isEmpty
             ? null
@@ -90,6 +137,12 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
         voiceNoteUrl: _voiceNoteBase64,
       );
       if (!mounted) return;
+      // After creating consultation, join socket room and send invite if online
+      final String consultationId = created.id;
+      await CallSocketService.joinRoom(consultationId);
+      if (_selectedType != 'OFFLINE') {
+        await CallSocketService.sendInvite(consultationId);
+      }
       setState(() => _isSubmitted = true);
       Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) context.pop();

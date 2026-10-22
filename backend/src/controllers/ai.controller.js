@@ -138,6 +138,59 @@ const queryAi = asyncHandler(async (req, res) => {
       }
     }
 
+    // Pharmacy Search
+    let pharmacySearchResultText = "";
+    const isPharmacyQuery =
+      qLower.includes("pharmacy") ||
+      qLower.includes("medical store") ||
+      qLower.includes("medicine store") ||
+      qLower.includes("dawa") ||
+      qLower.includes("chemist") ||
+      qLower.includes("drug store");
+
+    if (isPharmacyQuery) {
+      let pharmacies = [];
+
+      const nameMatch = qLower.match(/(?:pharmacy|medical store|chemist|drug store)\s+([a-z0-9\s]+)/i);
+      const nameToken = nameMatch ? nameMatch[1].trim() : null;
+
+      if (nameToken && nameToken.length > 2 && !["list", "details", "name", "available", "show", "near", "nearby"].includes(nameToken)) {
+        pharmacies = await prisma.pharmacy.findMany({
+          where: {
+            OR: [
+              { name: { contains: nameToken, mode: "insensitive" } },
+              { address: { contains: nameToken, mode: "insensitive" } }
+            ]
+          },
+          take: 10,
+        });
+      }
+
+      if (pharmacies.length === 0) {
+        pharmacies = await prisma.pharmacy.findMany({
+          take: 10,
+        });
+      }
+
+      if (pharmacies.length > 0) {
+        const pharmLines = pharmacies.map((p) => {
+          const name = p.name || "Pharmacy";
+          const addr = p.address ? ` | ${p.address}` : "";
+          const contact = p.contact ? ` | Contact: ${p.contact}` : "";
+          const loc = ` | Location: ${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)}`;
+          return `💊 **${name}**${addr}${contact}${loc}`;
+        });
+
+        if (nameToken && pharmacies.some(p => p.name?.toLowerCase().includes(nameToken))) {
+          pharmacySearchResultText = `Here are the matching pharmacy details found for **"${nameToken.toUpperCase()}"**:\n\n` + pharmLines.join("\n\n");
+        } else {
+          pharmacySearchResultText = `Here are the registered pharmacies on GramHealth:\n\n` + pharmLines.join("\n\n");
+        }
+
+        dynamicDbContext += `\n[LIVE REGISTERED PHARMACIES IN DATABASE]:\n` + pharmLines.join("\n");
+      }
+    }
+
     // Patient Records Search
     const targetUserId = req.user?.userId || patientId;
     if (
@@ -302,6 +355,9 @@ User Question: ${queryText}`;
 3. 📄 Tap **'Upload Record'** to take a picture of lab tests, prescriptions, or X-rays to store them securely.`;
     }
     // E. Pharmacy & Medicine Queries
+    else if (pharmacySearchResultText) {
+      answer = pharmacySearchResultText;
+    }
     else if (qLower.includes("pharmacy") || qLower.includes("medicine") || qLower.includes("dawa") || qLower.includes("store")) {
       answer = `To find local pharmacies and medicines:
 
@@ -330,7 +386,7 @@ User Question: ${queryText}`;
     success: true,
     data: {
       query: queryText,
-      intent: doctorSearchResultText ? "doctor_lookup" : (isMedicalSymptomQuery ? "symptom_analysis" : "general_health"),
+      intent: doctorSearchResultText ? "doctor_lookup" : (pharmacySearchResultText ? "pharmacy_lookup" : (isMedicalSymptomQuery ? "symptom_analysis" : "general_health")),
       agent: "online_ai_assistant",
       answer: answer,
       grounded: true,

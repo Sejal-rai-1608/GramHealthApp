@@ -68,9 +68,24 @@ const listDoctorPrescriptions = [
         .isUUID().withMessage("patientId must be a valid UUID")
 ];
 
+const listPrescriptions = [
+    ...paginationQuery,
+    query("search")
+        .optional()
+        .trim()
+        .isLength({ min: 1, max: 100 }).withMessage("search must be 1-100 characters"),
+    query("patientId")
+        .optional()
+        .isUUID().withMessage("patientId must be a valid UUID"),
+    query("doctorId")
+        .optional()
+        .isUUID().withMessage("doctorId must be a valid UUID")
+];
+
 module.exports = {
     createPrescription,
     prescriptionParam,
     listMyPrescriptions,
-    listDoctorPrescriptions
+    listDoctorPrescriptions,
+    listPrescriptions
 };

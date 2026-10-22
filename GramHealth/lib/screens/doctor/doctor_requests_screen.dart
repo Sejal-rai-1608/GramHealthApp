@@ -83,7 +83,7 @@ class _DoctorRequestsScreenState extends State<DoctorRequestsScreen> {
                     children: [
                       const Icon(Icons.error_outline, size: 40, color: Colors.redAccent),
                       const SizedBox(height: 8),
-                      Text('Could not load requests', style: const TextStyle(color: Colors.redAccent)),
+                      const Text('Could not load requests', style: TextStyle(color: Colors.redAccent)),
                       const SizedBox(height: 12),
                       TextButton.icon(
                         icon: const Icon(Icons.refresh),

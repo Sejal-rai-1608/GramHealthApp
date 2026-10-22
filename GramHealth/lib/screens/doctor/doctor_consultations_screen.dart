@@ -1,3 +1,5 @@
+
+
 import 'package:flutter/material.dart';
 import '../../l10n/app_language.dart';
 import '../../widgets/dashboard_layout.dart';
@@ -10,6 +12,7 @@ import '../../services/call_service.dart';
 import '../../services/medical_record_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/call_socket_service.dart';
 import '../../models/medical_record.dart';
 import '../../widgets/voice_note_dialog.dart';
 import '../../widgets/voice_note_history_dialog.dart';
@@ -26,6 +29,8 @@ class DoctorConsultationsScreen extends StatefulWidget {
   State<DoctorConsultationsScreen> createState() => _DoctorConsultationsScreenState();
 }
 
+
+
 class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
   bool _loading = true;
   List<ConsultationModel> _consultations = [];
@@ -34,6 +39,58 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeSocket();
+  }
+
+  Future<void> _initializeSocket() async {
+    bool socketReady = false;
+    // Initialize the socket before registering listeners so that
+    // CallSocketService._socket is not null when on() is called.
+    try {
+      await CallSocketService.init();
+      socketReady = true;
+    } catch (e) {
+      debugPrint('Socket init error: $e');
+    }
+    // Register socket listeners only if init succeeded (e.g. a valid auth
+    // token exists in secure storage). Without this, on() throws when the
+    // socket is null and _load() never runs, leaving the page stuck loading.
+    if (socketReady && mounted) {
+      CallSocketService.on('callInvite', (data) {
+        if (!mounted) return;
+        final String? consultationId = data is Map
+            ? data['consultationId']?.toString()
+            : null;
+        if (consultationId == null) return;
+
+        ConsultationModel? consultation;
+        for (final item in _consultations) {
+          if (item.id == consultationId) {
+            consultation = item;
+            break;
+          }
+        }
+
+        if (consultation != null) {
+          _showIncomingCallDialog(consultation);
+        } else {
+          // Refresh the list in case the invitation arrived before loading completed.
+          _load();
+        }
+      });
+      CallSocketService.on('callReject', (data) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The call was rejected.')),
+        );
+      });
+      CallSocketService.on('callCancel', (data) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The patient cancelled the call.')),
+        );
+      });
+    }
     _load();
   }
 
@@ -42,6 +99,8 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
     try {
       final data = await ConsultationService.listDoctorConsultations(status: 'ACTIVE', limit: 50);
       if (mounted) setState(() { _consultations = data; _loading = false; });
+      // After loading consultations, join socket rooms and set listeners
+      _setupSocket();
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
@@ -71,6 +130,9 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure socket is initialized when UI builds
+    // (initState already called init)
+
     return DashboardLayout(
       title: context.tr('consultations'),
       child: RefreshIndicator(
@@ -118,7 +180,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
                   ),
                 ),
-                StatusBadge(status: 'ACTIVE'),
+                const StatusBadge(status: 'ACTIVE'),
               ],
             ),
             if (c.symptoms != null && c.symptoms!.isNotEmpty) ...[
@@ -224,6 +286,21 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () async {
+                            try {
+                              // Initialize Jitsi room if the consultation is still PENDING.
+                              // Ignore if already ACTIVE (accepted earlier).
+                              try {
+                                await ConsultationService.acceptConsultation(c.id);
+                              } catch (_) {
+                                // Already ACTIVE or not PENDING – proceed to join.
+                              }
+                              // Notify the patient via socket so they join the same room.
+                              try {
+                                await CallSocketService.acceptCall(c.id);
+                              } catch (_) {
+                                // Socket not ready – patient will fetch details via HTTP.
+                              }
+                            } catch (_) {}
                             final doctorName = await AuthService.getUserName();
                             CallService.startCall(
                               context: context,
@@ -390,7 +467,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Patient Health Vault', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Patient Health Vault', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text('Fetching linked records securely...', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 16),
@@ -469,4 +546,85 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
       }
     );
   }
+
+
+  // Join the doctor's socket to each active consultation room so incoming
+  // call invitations for these consultations can be received.
+  Future<void> _setupSocket() async {
+    for (final consultation in _consultations) {
+      try {
+        await CallSocketService.joinRoom(consultation.id);
+      } catch (e) {
+        debugPrint('Failed to join consultation room ${consultation.id}: $e');
+      }
+    }
+  }
+
+  // Show Accept/Reject actions when a patient starts a call.
+  void _showIncomingCallDialog(ConsultationModel consultation) {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Incoming Call'),
+        content: Text(
+          'Patient ${consultation.patientName} is inviting you to a '
+          '${consultation.type.toUpperCase()} call.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              try {
+                // Initialize Jitsi room details via HTTP accept so both
+                // parties receive valid room/server URLs.
+                await ConsultationService.acceptConsultation(consultation.id);
+                // Notify the patient via socket (includes jitsi details).
+                await CallSocketService.acceptCall(consultation.id);
+                if (!mounted) return;
+                final doctorName = await AuthService.getUserName();
+                if (!mounted) return;
+                await CallService.startCall(
+                  context: context,
+                  consultationId: consultation.id,
+                  audioOnly: consultation.type.toUpperCase() == 'AUDIO',
+                  doctorName: doctorName,
+                  userRole: 'doctor',
+                );
+                if (mounted) _complete(consultation.id);
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Could not join the call: $e'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            child: const Text('Accept'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              try {
+                await CallSocketService.rejectCall(consultation.id);
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Could not reject the call: $e')),
+                );
+              }
+            },
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+
+

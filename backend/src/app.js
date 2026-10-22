@@ -13,6 +13,8 @@ const consultationRoutes = require("./routes/consultation.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 const prescriptionRoutes = require("./routes/prescription.routes");
 const pharmacyRoutes = require("./routes/pharmacy.routes");
+const facilityRoutes = require("./routes/facility.routes");
+const reportRoutes = require("./routes/report.routes");
 const aiRoutes = require("./routes/ai.routes");
 
 const { notFound } = require("./middleware/notFound");
@@ -22,15 +24,15 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    // Allow all during development — restrict to specific domains in production
+    // Allow all during development - restrict to specific domains in production
     return callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'x-request-id'],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "x-request-id"],
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use((req, res, next) => {
   console.log(`[HTTP INCOMING] ${req.method} ${req.url} (from ${req.ip})`);
@@ -38,7 +40,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-  res.json({ 
+  res.json({
         message: "Welcome to the GramHealth API!",
         status: "success",
         version: "1.0.0"
@@ -46,7 +48,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ 
+  res.json({
         message: "API is healthy!",
         status: "healthy",
         version: "1.0.0"
@@ -64,6 +66,8 @@ app.use("/api/consultations", consultationRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/pharmacy", pharmacyRoutes);
+app.use("/api/facilities", facilityRoutes);
+app.use("/api/admin/reports", reportRoutes);
 app.use("/api/ai", aiRoutes);
 
 app.use(notFound);

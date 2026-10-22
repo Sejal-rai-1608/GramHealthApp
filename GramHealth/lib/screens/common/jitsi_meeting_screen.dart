@@ -2,9 +2,9 @@ import "dart:async";
 
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
+
 import "package:jitsi_meet_wrapper/jitsi_meet_wrapper.dart";
 import "package:ruralcare_flutter/services/jitsi_service.dart";
-import "../../l10n/app_language.dart";
 import "../../config/app_config.dart";
 import "../../theme/app_colors.dart";
 
@@ -28,7 +28,9 @@ class JitsiMeetingScreen extends StatefulWidget {
   final String consultationId;
   final String? participantName;
   final String? participantRole;
-  const JitsiMeetingScreen({super.key, required this.consultationId, this.participantName, this.participantRole});
+  final String? roomName;
+  final String? serverUrl;
+  const JitsiMeetingScreen({super.key, required this.consultationId, this.participantName, this.participantRole, this.roomName, this.serverUrl});
   @override
   State<JitsiMeetingScreen> createState() => _JitsiMeetingScreenState();
 }
@@ -47,15 +49,124 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
   bool _isVideoMuted = false;
   bool _isSpeakerOn = true;
   int _participantCount = 1;
-  String _connectionQuality = "good";
+  final String _connectionQuality = "good";
   bool _isNativeViewVisible = false;
+
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeAndJoin();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hasInitialized) return;
+    _hasInitialized = true;
+
+    // Now context is safe to use for inherited widget lookups
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    if (extra != null && extra['roomName'] != null && extra['serverUrl'] != null) {
+      _meetingDetails = JitsiMeetingDetails(
+        roomName: extra['roomName'] as String,
+        serverUrl: extra['serverUrl'] as String,
+        consultationType: (extra['audioOnly'] == true) ? 'AUDIO' : 'VIDEO',
+        consultationId: widget.consultationId,
+      );
+      debugPrint('[JitsiMeetingScreen] Using meeting details from extras: ${_meetingDetails!.roomName}');
+      _joinMeeting();
+    } else {
+      _initializeAndJoin();
+    }
+  }
+  // Removed stray call
+
+  // Directly join meeting using pre-fetched details
+  Future<void> _joinMeeting() async {
+    final listener = JitsiMeetingListener(
+      onConferenceWillJoin: (url) {
+        debugPrint('[JitsiMeetingScreen] Conference will join: $url');
+        _setState(MeetingState.connecting);
+      },
+      onConferenceJoined: (url) {
+        debugPrint('[JitsiMeetingScreen] Conference joined successfully: $url');
+        _isNativeViewVisible = true;
+        _setState(MeetingState.connected);
+        _startDurationTimer();
+        _retryCount = 0;
+      },
+      onConferenceTerminated: (url, error) {
+        debugPrint('[JitsiMeetingScreen] Conference terminated: $url, error: $error');
+        _isNativeViewVisible = false;
+        if (error != null) {
+          final errorStr = error.toString();
+          if (errorStr.contains('97') || errorStr.contains('connection')) {
+            _handleConnectionError('Unable to connect to meeting server. Please check your internet connection.', '97');
+          } else if (errorStr.contains('password') || errorStr.contains('auth')) {
+            _handleConnectionError('Meeting authentication failed. Please try again.', 'AUTH');
+          } else {
+            _handleConnectionError('Meeting ended unexpectedly: $errorStr', 'TERMINATED');
+          }
+        } else {
+          _onMeetingEnded();
+        }
+      },
+      onAudioMutedChanged: (isMuted) {
+        if (mounted) setState(() => _isAudioMuted = isMuted);
+      },
+      onVideoMutedChanged: (isMuted) {
+        if (mounted) setState(() => _isVideoMuted = isMuted);
+      },
+      onParticipantJoined: (email, name, role, participantId) {
+        if (mounted) setState(() => _participantCount++);
+      },
+      onParticipantLeft: (participantId) {
+        if (mounted) setState(() => _participantCount = (_participantCount - 1).clamp(1, 100));
+      },
+      onClosed: () {
+        _isNativeViewVisible = false;
+        if (mounted && _meetingState == MeetingState.connected) _onMeetingEnded();
+      },
+    );
+    try {
+      _setState(MeetingState.connecting);
+      await JitsiService.joinMeeting(
+        roomName: _meetingDetails!.roomName,
+        serverUrl: _meetingDetails!.serverUrl,
+        userDisplayName: widget.participantName ?? 'User',
+        audioOnly: _meetingDetails!.consultationType == 'AUDIO',
+        listener: listener,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[JitsiMeetingScreen] Join meeting error: $e');
+      debugPrint('[JitsiMeetingScreen] Stack trace: $stackTrace');
+      // Fallback to a temporary room and retry once
+      final fallbackRoom = "room_${widget.consultationId}_${DateTime.now().millisecondsSinceEpoch}";
+      _meetingDetails = JitsiMeetingDetails(
+        roomName: fallbackRoom,
+        serverUrl: AppConfig.jitsiServerUrl,
+        consultationType: 'VIDEO',
+        consultationId: widget.consultationId,
+      );
+      try {
+        await JitsiService.joinMeeting(
+          roomName: _meetingDetails!.roomName,
+          serverUrl: _meetingDetails!.serverUrl,
+          userDisplayName: widget.participantName ?? 'User',
+          audioOnly: _meetingDetails!.consultationType == 'AUDIO',
+          listener: listener,
+        );
+      } catch (retryError) {
+        debugPrint('[JitsiMeetingScreen] Fallback join failed: $retryError');
+        _errorMessage = 'Could not join meeting: $e';
+        _errorCode = 'JOIN_FAILED';
+        _setState(MeetingState.error);
+      }
+    }
+  }
+  
 
   @override
   void dispose() {
@@ -155,16 +266,18 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
     } catch (e, stackTrace) {
       debugPrint("[JitsiMeetingScreen] Initialize and join error: $e");
       debugPrint("[JitsiMeetingScreen] Stack trace: $stackTrace");
-      // Fallback: generate temporary room and use public Jitsi server
-      final fallbackRoom = "room_${widget.consultationId}_${DateTime.now().millisecondsSinceEpoch}";
-      _meetingDetails = JitsiMeetingDetails(
-        roomName: fallbackRoom,
-        serverUrl: AppConfig.jitsiServerUrl,
-        consultationType: "VIDEO",
-        consultationId: widget.consultationId,
-      );
+      // Show error state instead of silently failing
+      final errorMsg = e.toString();
+      if (errorMsg.contains('Doctor must accept first') || errorMsg.contains('not initialized')) {
+        _errorMessage = 'The doctor has not accepted this consultation yet. Please wait for the doctor to accept before joining.';
+      } else {
+        _errorMessage = 'Could not join meeting: $errorMsg';
+      }
+      _errorCode = 'INIT_FAILED';
+      _setState(MeetingState.error);
     }
   }
+
 
   void _setState(MeetingState newState) {
     if (mounted) setState(() => _meetingState = newState);
@@ -191,8 +304,11 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
   void _startDurationTimer() {
     _durationTimer?.cancel();
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted && _meetingState == MeetingState.connected) setState(() => _callDuration++);
-      else timer.cancel();
+      if (mounted && _meetingState == MeetingState.connected) {
+        setState(() => _callDuration++);
+      } else {
+        timer.cancel();
+      }
     });
   }
 
@@ -308,7 +424,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
           const SizedBox(height: 32),
           Text(_getConnectingMessage(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text("Meeting ID: ${_meetingDetails?.roomName ?? 'Loading...'}", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontFamily: "monospace"), textAlign: TextAlign.center),
+          Text("Meeting ID: ${_meetingDetails?.roomName ?? 'Loading...'}", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontFamily: "monospace"), textAlign: TextAlign.center),
         ],
       ),
     ),
@@ -322,12 +438,12 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
           Container(
             width: 120,
             height: 120,
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primaryAccent.withOpacity(0.2), width: 3)),
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.2), width: 3)),
           ),
           Container(
             width: 100,
             height: 100,
-            decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [AppColors.primaryAccent.withOpacity(0.3), AppColors.primaryAccent.withOpacity(0.05)])),
+            decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [AppColors.primaryAccent.withValues(alpha: 0.3), AppColors.primaryAccent.withValues(alpha: 0.05)])),
           ),
           const Icon(Icons.videocam, size: 48, color: Colors.white),
         ],
@@ -348,7 +464,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
                 child: Container(
                   width: 140,
                   height: 140,
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primaryAccent.withOpacity(0.3 * (1 - value)), width: 2)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3 * (1 - value)), width: 2)),
                 ),
               ),
             ),
@@ -380,14 +496,14 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
           Container(
             width: 100,
             height: 100,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withOpacity(0.1), border: Border.all(color: Colors.red.withOpacity(0.3), width: 2)),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withValues(alpha: 0.1), border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 2)),
             child: const Icon(Icons.wifi_off, size: 48, color: Colors.red),
           ),
           const SizedBox(height: 24),
           Text("Connection Failed", style: TextStyle(color: Colors.red.shade300, fontSize: 24, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          Text(message, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15), textAlign: TextAlign.center),
-          if (code != "ERROR") ...[const SizedBox(height: 4), Text("Error code: $code", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontFamily: "monospace"))],
+          Text(message, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 15), textAlign: TextAlign.center),
+          if (code != "ERROR") ...[const SizedBox(height: 4), Text("Error code: $code", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontFamily: "monospace"))],
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -426,7 +542,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
             onTap: () => _endMeeting(),
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
               child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
             ),
           ),
@@ -444,21 +560,21 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
                     const SizedBox(width: 6),
                     Text(
                       _meetingState == MeetingState.reconnecting ? "Reconnecting... (attempt $_retryCount/$_maxRetries)" : (isConnected ? "Connected • ${_formatTime(_callDuration)}" : _getConnectingMessage()),
-                      style: TextStyle(color: _meetingState == MeetingState.reconnecting ? Colors.orange : Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: _meetingState == MeetingState.reconnecting ? Colors.orange : Colors.white.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (!isAudioOnly && isConnected) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.blue.shade400.withOpacity(0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.blue.shade400.withOpacity(0.5))),
+                        decoration: BoxDecoration(color: Colors.blue.shade400.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.blue.shade400.withValues(alpha: 0.5))),
                         child: const Text("VIDEO", style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.blueAccent)),
                       ),
                     ] else ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.orange.withOpacity(0.5))),
+                        decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.orange.withValues(alpha: 0.5))),
                         child: const Text("AUDIO", style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.orange)),
                       ),
                     ],
@@ -469,7 +585,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
           ),
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: const Icon(Icons.more_vert, color: Colors.white, size: 24),
           ),
         ],
@@ -481,26 +597,26 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
     final isAudioOnly = _meetingDetails?.consultationType == "AUDIO";
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)])),
+      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)])),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildControlButton(icon: _isAudioMuted ? Icons.mic_off_rounded : Icons.mic_rounded, label: _isAudioMuted ? "Unmute" : "Mute", color: _isAudioMuted ? Colors.red.shade400 : Colors.white, backgroundColor: _isAudioMuted ? Colors.red.withOpacity(0.2) : Colors.white.withOpacity(0.2), onTap: _toggleAudio),
+          _buildControlButton(icon: _isAudioMuted ? Icons.mic_off_rounded : Icons.mic_rounded, label: _isAudioMuted ? "Unmute" : "Mute", color: _isAudioMuted ? Colors.red.shade400 : Colors.white, backgroundColor: _isAudioMuted ? Colors.red.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.2), onTap: _toggleAudio),
           if (!isAudioOnly)
-            _buildControlButton(icon: _isVideoMuted ? Icons.videocam_off_rounded : Icons.videocam_rounded, label: _isVideoMuted ? "Start Video" : "Stop Video", color: _isVideoMuted ? Colors.red.shade400 : Colors.white, backgroundColor: _isVideoMuted ? Colors.red.withOpacity(0.2) : Colors.white.withOpacity(0.2), onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Use native Jitsi controls to toggle video"), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2))))
+            _buildControlButton(icon: _isVideoMuted ? Icons.videocam_off_rounded : Icons.videocam_rounded, label: _isVideoMuted ? "Start Video" : "Stop Video", color: _isVideoMuted ? Colors.red.shade400 : Colors.white, backgroundColor: _isVideoMuted ? Colors.red.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.2), onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Use native Jitsi controls to toggle video"), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2))))
           else
-            _buildControlButton(icon: Icons.videocam_off_rounded, label: "Audio Only", color: Colors.white54, backgroundColor: Colors.white.withOpacity(0.1), onTap: null),
+            _buildControlButton(icon: Icons.videocam_off_rounded, label: "Audio Only", color: Colors.white54, backgroundColor: Colors.white.withValues(alpha: 0.1), onTap: null),
           GestureDetector(
             onTap: () => _endMeeting(),
             child: Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.red.shade400, Colors.red.shade600]), shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 20, spreadRadius: 2)]),
+              decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.red.shade400, Colors.red.shade600]), shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2)]),
               child: const Icon(Icons.call_end_rounded, color: Colors.white, size: 30),
             ),
           ),
-          _buildControlButton(icon: _isSpeakerOn ? Icons.volume_up_rounded : Icons.volume_off_rounded, label: _isSpeakerOn ? "Speaker" : "Earpiece", color: Colors.white, backgroundColor: Colors.white.withOpacity(0.2), onTap: _toggleSpeaker),
-          _buildControlButton(icon: Icons.switch_camera_rounded, label: "Flip Camera", color: Colors.white, backgroundColor: Colors.white.withOpacity(0.2), onTap: _switchCamera),
+          _buildControlButton(icon: _isSpeakerOn ? Icons.volume_up_rounded : Icons.volume_off_rounded, label: _isSpeakerOn ? "Speaker" : "Earpiece", color: Colors.white, backgroundColor: Colors.white.withValues(alpha: 0.2), onTap: _toggleSpeaker),
+          _buildControlButton(icon: Icons.switch_camera_rounded, label: "Flip Camera", color: Colors.white, backgroundColor: Colors.white.withValues(alpha: 0.2), onTap: _switchCamera),
         ],
       ),
     );
@@ -514,11 +630,11 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
         Container(
           width: 56,
           height: 56,
-          decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.1))),
-          child: Icon(icon, color: onTap != null ? color : color.withOpacity(0.4), size: 26),
+          decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
+          child: Icon(icon, color: onTap != null ? color : color.withValues(alpha: 0.4), size: 26),
         ),
         const SizedBox(height: 6),
-        Text(label, style: TextStyle(color: onTap != null ? color : color.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: onTap != null ? color : color.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.w500)),
       ],
     ),
   );
@@ -545,13 +661,13 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withOpacity(0.5))),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.5))),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(_connectionQuality.capitalize(), style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(_connectionQuality.capitalize(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -559,7 +675,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
 
   Widget _buildParticipantCount() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.2))),
+    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.2))),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -572,18 +688,18 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
 
   Widget _buildReconnectingOverlay() => Positioned.fill(
     child: Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.orange, strokeWidth: 3),
+            const CircularProgressIndicator(color: Colors.orange, strokeWidth: 3),
             const SizedBox(height: 24),
-            Text("Reconnecting...", style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500)),
+            const Text("Reconnecting...", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
-            Text("Attempt $_retryCount of $_maxRetries", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14)),
+            Text("Attempt $_retryCount of $_maxRetries", style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
             const SizedBox(height: 8),
-            Text("Please check your internet connection", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+            Text("Please check your internet connection", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
           ],
         ),
       ),
@@ -592,7 +708,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
 
   Widget _buildErrorOverlay() => Positioned.fill(
     child: Container(
-      color: Colors.black.withOpacity(0.95),
+      color: Colors.black.withValues(alpha: 0.95),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -602,14 +718,14 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
               Container(
                 width: 100,
                 height: 100,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withOpacity(0.1), border: Border.all(color: Colors.red.withOpacity(0.3), width: 2)),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withValues(alpha: 0.1), border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 2)),
                 child: const Icon(Icons.wifi_off, size: 48, color: Colors.red),
               ),
               const SizedBox(height: 24),
               Text("Connection Failed", style: TextStyle(color: Colors.red.shade300, fontSize: 24, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              Text(_errorMessage ?? "Unable to connect to the meeting", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15), textAlign: TextAlign.center),
-              if (_errorCode != null) ...[const SizedBox(height: 8), Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Text("Error: $_errorCode", style: TextStyle(color: Colors.red.shade300, fontSize: 12, fontFamily: "monospace")))],
+              Text(_errorMessage ?? "Unable to connect to the meeting", style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 15), textAlign: TextAlign.center),
+              if (_errorCode != null) ...[const SizedBox(height: 8), Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text("Error: $_errorCode", style: TextStyle(color: Colors.red.shade300, fontSize: 12, fontFamily: "monospace")))],
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -641,7 +757,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
 
   Widget _buildWaitingForHostOverlay() => Positioned.fill(
     child: Container(
-      color: Colors.black.withOpacity(0.9),
+      color: Colors.black.withValues(alpha: 0.9),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -651,15 +767,15 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
               Container(
                 width: 100,
                 height: 100,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.withOpacity(0.1), border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2)),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.withValues(alpha: 0.1), border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2)),
                 child: const Icon(Icons.person_outline, size: 48, color: Colors.blue),
               ),
               const SizedBox(height: 24),
-              Text("Waiting for Host", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+              const Text("Waiting for Host", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              Text("The doctor will start the meeting shortly", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 15), textAlign: TextAlign.center),
+              Text("The doctor will start the meeting shortly", style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 15), textAlign: TextAlign.center),
               const SizedBox(height: 24),
-              Text("Meeting ID: ${_meetingDetails?.roomName ?? ""}", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontFamily: "monospace")),
+              Text("Meeting ID: ${_meetingDetails?.roomName ?? ""}", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontFamily: "monospace")),
               const SizedBox(height: 32),
               OutlinedButton.icon(
                 onPressed: () => _endMeeting(),

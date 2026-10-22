@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
 
-import 'services/offline_ai_service.dart';
 import 'utils/auth_guard.dart';
 
 import 'l10n/app_language.dart';
@@ -34,7 +32,6 @@ import 'screens/doctor/doctor_prescriptions_screen.dart';
 import 'screens/doctor/doctor_profile_screen.dart';
 import 'screens/doctor/doctor_onboarding_screen.dart';
 
-import 'screens/common/forgot_password_screen.dart';
 import 'screens/pharmacy/prescription_list_screen.dart';
 import 'screens/pharmacy/medicine_availability_screen.dart';
 import 'screens/pharmacy/pharmacy_dashboard_screen.dart';
@@ -88,7 +85,7 @@ final _router = GoRouter(
         GoRoute(
             path: 'records',
             builder: (c, s) =>
-                MainShell(child: PatientRecordsScreen())),
+                const MainShell(child: PatientRecordsScreen())),
         GoRoute(
             path: 'profile',
             builder: (c, s) => const MainShell(child: ProfileScreen())),

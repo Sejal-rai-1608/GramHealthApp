@@ -154,6 +154,17 @@ class _LoginScreenState extends State<LoginScreen> {
         if (locations.isNotEmpty) {
           latitude = locations.first.latitude;
           longitude = locations.first.longitude;
+          
+          // Validate coordinates are not default (0,0)
+          if (latitude == 0.0 && longitude == 0.0) {
+            setState(() => _isLoading = false);
+            _showError('Invalid location. Please enter a more specific address.');
+            return;
+          }
+        } else {
+          setState(() => _isLoading = false);
+          _showError('Could not find location from address. Please try a different address.');
+          return;
         }
       } catch (e) {
         setState(() => _isLoading = false);

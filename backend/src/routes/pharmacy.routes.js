@@ -6,6 +6,9 @@ const { authenticate, authorize } = require("../middleware/auth.middleware");
 // Public (or just protected) route to sync pharmacy data offline
 router.get("/list", authenticate, pharmacyController.list);
 
+// Search pharmacies by medicine name with location
+router.get("/search", authenticate, pharmacyController.search);
+
 // Pharmacist role route to update inventory
 router.post("/inventory", authenticate, authorize("PHARMACY"), pharmacyController.updateInventory);
 

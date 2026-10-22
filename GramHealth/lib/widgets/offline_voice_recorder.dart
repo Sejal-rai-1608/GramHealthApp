@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_colors.dart';
 
 class OfflineVoiceRecorder extends StatefulWidget {
   final Function(String base64String) onRecordingComplete;
@@ -13,11 +12,11 @@ class OfflineVoiceRecorder extends StatefulWidget {
   final String? doctorName;
 
   const OfflineVoiceRecorder({
-    Key? key,
+    super.key,
     required this.onRecordingComplete,
     this.doctorPhone,
     this.doctorName,
-  }) : super(key: key);
+  });
 
   @override
   _OfflineVoiceRecorderState createState() => _OfflineVoiceRecorderState();
@@ -189,9 +188,9 @@ class _OfflineVoiceRecorderState extends State<OfflineVoiceRecorder> {
                       BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))
                     ],
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(
                         Icons.phone_in_talk,
                         color: Color(0xFF1E8E3E),

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../config/app_config.dart';
 import 'api_client.dart';
 import '../data/local_database.dart';
@@ -62,6 +61,14 @@ class PharmacySearchResult {
   final bool isAvailable;
 
   PharmacySearchResult(this.pharmacy, this.distanceKm, this.isAvailable);
+
+  factory PharmacySearchResult.fromJson(Map<String, dynamic> json) {
+    return PharmacySearchResult(
+      PharmacyModel.fromJson(json['pharmacy']),
+      json['distanceKm']?.toDouble() ?? 0.0,
+      json['isAvailable'] ?? false,
+    );
+  }
 }
 
 class PharmacyService {
@@ -79,8 +86,7 @@ class PharmacyService {
       }
       return pharmacies;
     } catch (e) {
-      print('Sync Pharmacies failed: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -89,6 +95,23 @@ class PharmacyService {
       'medicineName': medicineName,
       'inStock': inStock,
     });
+  }
+
+  static Future<List<PharmacySearchResult>> searchPharmaciesByMedicine(
+      String medicine, double userLat, double userLon, {double radiusKm = 50}) async {
+    try {
+      final uri = Uri.parse('${AppConfig.apiPharmacy}/search').replace(queryParameters: {
+        'medicineName': medicine,
+        'lat': userLat.toString(),
+        'lon': userLon.toString(),
+        'radiusKm': radiusKm.toString(),
+      });
+      final response = await ApiClient.get(uri.toString());
+      final data = response['data'] as List<dynamic>;
+      return data.map((e) => PharmacySearchResult.fromJson(e)).toList();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   static Future<List<PharmacySearchResult>> searchPharmaciesLocal(String medicine, double userLat, double userLon) async {

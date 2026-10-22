@@ -196,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Text(
-                              '${_userName.isEmpty ? context.tr('greeting') : _userName} 👋',
+                              _userName.isEmpty ? context.tr('greeting') : _userName,
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
@@ -349,11 +349,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Active Consultations
                 if (!_loadingConsultations && _activeConsultations.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
                     child: Text(
                       'Your Active Consultations',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
                     ),
                   ),
                   ..._activeConsultations.map((c) => Padding(

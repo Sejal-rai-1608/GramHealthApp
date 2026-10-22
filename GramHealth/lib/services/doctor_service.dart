@@ -68,7 +68,7 @@ class DoctorService {
     int page = 1,
     int limit = 20,
   }) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getAllCachedData('cached_doctors');
       var models = cached.map((e) => DoctorModel.fromJson(e)).toList();
       if (specialization != null) {
@@ -109,7 +109,7 @@ class DoctorService {
 
   /// Returns a single doctor by ID.
   static Future<DoctorModel> getDoctorById(String id) async {
-    if (ConnectivityService.instance.currentStatus != NetworkStatus.online) {
+    if (!ConnectivityService.instance.isOnline) {
       final cached = await LocalDatabase.instance.getCachedData('cached_doctors', id);
       if (cached != null) return DoctorModel.fromJson(cached);
       throw Exception('Doctor data not found offline.');
