@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import '../config/app_config.dart';
 import '../services/api_client.dart';
 import '../services/sync_service.dart';
@@ -200,10 +201,16 @@ class ConsultationService {
       operation: 'POST',
       endpoint: AppConfig.apiConsultations,
       payload: body,
+      maxRetries: 3,
     );
-    if (response['status'] == 'PENDING_SYNC') {
+    
+    // Check if request was actually sent (not just queued)
+    final isQueued = response['queued'] == true || response['status'] == 'PENDING_SYNC';
+    
+    if (isQueued) {
+      // Return a model indicating it's queued locally
       return ConsultationModel(
-        id: response['id'],
+        id: response['id'] ?? const Uuid().v4(),
         status: 'PENDING_SYNC',
         type: type,
         reason: reason,
@@ -212,6 +219,8 @@ class ConsultationService {
         doctorId: doctorId,
       );
     }
+    
+    // Actual server response
     return ConsultationModel.fromJson(
         response['data'] as Map<String, dynamic>);
   }

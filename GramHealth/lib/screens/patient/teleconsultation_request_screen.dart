@@ -151,12 +151,29 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
         voiceNoteUrl: _voiceNoteBase64,
       );
       if (!mounted) return;
-      // After creating consultation, join socket room and send invite if online
-      final String consultationId = created.id;
-      await CallSocketService.joinRoom(consultationId);
-      if (_selectedType != 'OFFLINE') {
-        await CallSocketService.sendInvite(consultationId);
+
+      // Check if request was queued locally (offline) or actually sent to server
+      final isQueued = created.status == 'PENDING_SYNC';
+
+      if (isQueued) {
+        // Show queued message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Request saved locally. Will send when connection restores.'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } else {
+        // After creating consultation, join socket room and send invite if online
+        final String consultationId = created.id;
+        await CallSocketService.joinRoom(consultationId);
+        if (_selectedType != 'OFFLINE') {
+          await CallSocketService.sendInvite(consultationId);
+        }
       }
+
       setState(() => _isSubmitted = true);
       Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) context.pop();

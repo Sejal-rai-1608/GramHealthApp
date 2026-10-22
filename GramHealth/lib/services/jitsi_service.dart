@@ -69,6 +69,18 @@ class JitsiService {
         isAudioOnly: audioOnly,
         isAudioMuted: false,
         isVideoMuted: audioOnly,
+        // Disable Jitsi Meet lobby/password screens so participants join directly
+        featureFlags: {
+          'calendar': {'enabled': false},
+          'callIntegration': {'enabled': false},
+        },
+        configOverrides: {
+          'disableAudioLevels': true,
+          'startWithAudioMuted': true,
+          'startWithVideoMuted': audioOnly,
+          'lobby.enabled': false,
+          'roomPassword': null,
+        },
       );
 
       final response = await JitsiMeetWrapper.joinMeeting(

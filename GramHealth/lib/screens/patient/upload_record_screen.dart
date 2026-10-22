@@ -123,28 +123,42 @@ class _UploadRecordScreenState extends State<UploadRecordScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Camera'),
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _pickImage(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt, size: 20),
+                      label: const Text('Camera'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                      ),
+                    ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Gallery'),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _pickImage(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library, size: 20),
+                      label: const Text('Gallery'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _isUploading ? null : _upload,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isUploading ? null : _upload,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isUploading 
+                    ? const CircularProgressIndicator(color: Colors.white) 
+                    : const Text('Save Record to Vault', style: TextStyle(fontSize: 16)),
                 ),
-                child: _isUploading 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text('Save Record to Vault', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),

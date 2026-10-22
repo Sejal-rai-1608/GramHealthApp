@@ -14,6 +14,7 @@ class ConnectivityService {
 
   NetworkStatus _currentStatus = NetworkStatus.online;
   Timer? _pingTimer;
+  int _consecutiveFailures = 0;
 
   Stream<NetworkStatus> get statusStream => _statusController.stream;
   NetworkStatus get currentStatus => _currentStatus;
@@ -71,29 +72,45 @@ class ConnectivityService {
     final interfaces = await _connectivity.checkConnectivity();
     if (interfaces.contains(ConnectivityResult.none)) {
       _updateStatus(NetworkStatus.offline);
+      _consecutiveFailures = 0;
       return;
     }
 
     try {
       final startTime = DateTime.now();
       final response = await http.get(Uri.parse('${AppConfig.baseUrl}/api/health')).timeout(
-        const Duration(seconds: 8),
+        const Duration(seconds: 30),
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final latency = DateTime.now().difference(startTime).inMilliseconds;
-        if (latency > 1500) {
+        if (latency > 5000) {
           _updateStatus(NetworkStatus.weak);
         } else {
           _updateStatus(NetworkStatus.online);
         }
+        _consecutiveFailures = 0;
       } else {
-        _updateStatus(NetworkStatus.offline);
+        // Don't immediately mark offline - could be temporary
+        if (_currentStatus != NetworkStatus.offline) {
+          _updateStatus(NetworkStatus.weak);
+        }
+        _consecutiveFailures++;
       }
     } on TimeoutException {
-      _updateStatus(NetworkStatus.weak);
+      // Don't immediately mark offline on timeout - could be cold start
+      if (_currentStatus != NetworkStatus.offline) {
+        _updateStatus(NetworkStatus.weak);
+      }
+      _consecutiveFailures++;
     } catch (e) {
-      _updateStatus(NetworkStatus.offline);
+      // Only mark offline after confirming it's not a transient error
+      _consecutiveFailures++;
+      if (_consecutiveFailures >= 3) {
+        _updateStatus(NetworkStatus.offline);
+      } else {
+        _updateStatus(NetworkStatus.weak);
+      }
     }
   }
 

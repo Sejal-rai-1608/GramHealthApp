@@ -48,33 +48,53 @@ class SyncService {
     required String operation,
     required String endpoint,
     required Map<String, dynamic> payload,
+    int maxRetries = 3,
   }) async {
-    final status = ConnectivityService.instance.currentStatus;
-
     if (!ConnectivityService.instance.isOnline) {
       // Offline: Enqueue the mutation.
       final uuid = const Uuid().v4();
       await LocalDatabase.instance.enqueueSync(
         id: uuid,
         entityType: entityType,
-        operation: operation, // 'POST', 'PATCH', 'DELETE'
+        operation: operation,
         endpoint: endpoint,
         payload: payload,
       );
       print('Offline: Queued $operation to $endpoint');
-      return {'status': 'PENDING_SYNC', 'id': uuid};
-    } else {
-      // Online: Try exactly once. If it throws an exception (e.g. backend down), enqueue it.
+      return {'status': 'PENDING_SYNC', 'id': uuid, 'queued': true};
+    }
+
+    // Online: Try with retries and backoff for transient failures
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        dynamic response;
         if (operation == 'POST') {
-          return await ApiClient.post(endpoint, payload);
+          response = await ApiClient.post(endpoint, payload);
         } else if (operation == 'PATCH') {
-          return await ApiClient.patch(endpoint, payload);
+          response = await ApiClient.patch(endpoint, payload);
         } else if (operation == 'DELETE') {
-          return await ApiClient.delete(endpoint);
+          response = await ApiClient.delete(endpoint);
         }
+        print('Online push succeeded on attempt ${attempt + 1}');
+        return response;
       } catch (e) {
-        print('Network error during online push, fallback to queue. $e');
+        final errorStr = e.toString().toLowerCase();
+        final isTransient = errorStr.contains('timeout') ||
+                            errorStr.contains('connection') ||
+                            errorStr.contains('socket') ||
+                            errorStr.contains('503') ||
+                            errorStr.contains('504') ||
+                            errorStr.contains('502');
+
+        if (isTransient && attempt < maxRetries) {
+          final delay = Duration(seconds: (attempt + 1) * 2); // 2s, 4s, 6s
+          print('Transient error (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay.inSeconds}s: $e');
+          await Future.delayed(delay);
+          continue;
+        }
+
+        // Non-transient error or max retries exceeded - queue for later
+        print('Failed after ${attempt + 1} attempts, queuing for sync: $e');
         final uuid = const Uuid().v4();
         await LocalDatabase.instance.enqueueSync(
           id: uuid,
@@ -83,9 +103,12 @@ class SyncService {
           endpoint: endpoint,
           payload: payload,
         );
-        return {'status': 'PENDING_SYNC', 'id': uuid, 'error': e.toString()};
+        return {'status': 'PENDING_SYNC', 'id': uuid, 'error': e.toString(), 'queued': true};
       }
     }
+
+    // Should not reach here
+    throw Exception('Sync push failed unexpectedly');
   }
 
   /// Drains the SQLite sync queue.
