@@ -47,18 +47,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await AuthService.forgotPassword(emailOrPhone: _emailPhoneCtrl.text.trim());
+      print('[ForgotPassword] Calling forgotPassword API with: $emailPhone');
+      await AuthService.forgotPassword(emailOrPhone: emailPhone);
+      print('[ForgotPassword] API call succeeded');
 
       _showNotification('Reset code sent! Please check your email/SMS.', isError: false);
       
       if (mounted) {
+        print('[ForgotPassword] Navigating to /reset-password');
         context.push('/reset-password', extra: {
-          'emailOrPhone': _emailPhoneCtrl.text.trim(),
+          'emailOrPhone': emailPhone,
         });
       }
     } on ApiException catch (e) {
+      print('[ForgotPassword] ApiException: ${e.message} (${e.statusCode})');
       _showNotification(e.message);
     } catch (e) {
+      print('[ForgotPassword] Unexpected error: $e');
       _showNotification('Failed to send reset code. Please check your connection.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
