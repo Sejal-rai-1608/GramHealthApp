@@ -47,9 +47,12 @@ const createPrescription = async (user, { consultationId, medicines, instruction
         );
     }
 
-    if (consultation.status !== "ACTIVE" && consultation.status !== "COMPLETED") {
+    // Allow prescription creation for consultations assigned to this doctor
+    // except for terminal states where the consultation is effectively closed
+    const terminalStatuses = ["CANCELLED", "REJECTED", "MISSED"];
+    if (terminalStatuses.includes(consultation.status)) {
         throw new ApiError(
-            `Prescriptions can only be created for active or completed consultations (current status: ${consultation.status})`,
+            `Cannot create prescription for a ${consultation.status.toLowerCase()} consultation`,
             400,
             "INVALID_CONSULTATION_STATE"
         );

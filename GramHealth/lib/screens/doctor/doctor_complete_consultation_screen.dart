@@ -4,6 +4,7 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/medicine_form_card.dart';
 import '../../services/consultation_service.dart';
 import '../../services/prescription_service.dart';
+import '../../services/api_client.dart';
 
 class DoctorCompleteConsultationScreen extends StatefulWidget {
   final String consultationId;
@@ -74,17 +75,46 @@ class _DoctorCompleteConsultationScreenState
         };
       }).toList();
 
-      await PrescriptionService.createPrescription(
-        consultationId: widget.consultationId,
-        medicines: mappedMedicines,
-        instructions: _notesCtrl.text,
-      );
+      try {
+        await PrescriptionService.createPrescription(
+          consultationId: widget.consultationId,
+          medicines: mappedMedicines,
+          instructions: _notesCtrl.text,
+        );
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create prescription: ${e.message}'), backgroundColor: Colors.red),
+        );
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+        return;
+      }
 
-      await ConsultationService.completeConsultation(
-        widget.consultationId,
-        notes: _diagnosisCtrl.text,
-        riskLevel: 'LOW',
-      );
+      try {
+        await ConsultationService.completeConsultation(
+          widget.consultationId,
+          notes: _diagnosisCtrl.text,
+          riskLevel: 'LOW',
+        );
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to complete consultation: ${e.message}'), backgroundColor: Colors.red),
+        );
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+      
       if (mounted) Navigator.of(context).pop();
     }
   }

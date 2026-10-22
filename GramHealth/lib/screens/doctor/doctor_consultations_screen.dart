@@ -97,7 +97,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await ConsultationService.listDoctorConsultations(status: 'ACTIVE', limit: 50);
+      final data = await ConsultationService.listDoctorConsultations(limit: 50);
       if (mounted) setState(() { _consultations = data; _loading = false; });
       // After loading consultations, join socket rooms and set listeners
       _setupSocket();
@@ -180,7 +180,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
                   ),
                 ),
-                const StatusBadge(status: 'ACTIVE'),
+                const StatusBadge(status: c.status),
               ],
             ),
             if (c.symptoms != null && c.symptoms!.isNotEmpty) ...[
