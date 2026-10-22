@@ -183,22 +183,23 @@ const forgotPassword = async ({ emailOrPhone }) => {
         }
     });
 
-    // Send OTP via email if user has email
+    // Send OTP via email if user has email (fire-and-forget to avoid timeout)
     if (user.email) {
-      try {
-        console.log(`[AuthService] Attempting to send OTP email to ${user.email}`);
-        const emailResult = await sendOtpEmail(user.email, otp, user.name || "User");
-        console.log(`[AuthService] Email send result:`, emailResult);
-        if (emailResult.success) {
-          console.log(`[AuthService] OTP email sent successfully to ${user.email}: ${emailResult.messageId || 'dev mode'}`);
-        } else {
-          console.error(`[AuthService] OTP email failed to send to ${user.email}:`, emailResult.error);
+      // Don't await - send in background
+      sendOtpEmail(user.email, otp, user.name || "User")
+        .then(emailResult => {
+          console.log(`[AuthService] Email send result:`, emailResult);
+          if (emailResult.success) {
+            console.log(`[AuthService] OTP email sent successfully to ${user.email}: ${emailResult.messageId || 'dev mode'}`);
+          } else {
+            console.error(`[AuthService] OTP email failed to send to ${user.email}:`, emailResult.error);
+            console.log(`[AuthService] OTP for ${user.email} (check logs): ${otp}`);
+          }
+        })
+        .catch(emailError => {
+          console.error("[AuthService] Failed to send OTP email:", emailError);
           console.log(`[AuthService] OTP for ${user.email} (check logs): ${otp}`);
-        }
-      } catch (emailError) {
-        console.error("[AuthService] Failed to send OTP email:", emailError);
-        console.log(`[AuthService] OTP for ${user.email} (check logs): ${otp}`);
-      }
+        });
     } else {
       // For phone numbers, log OTP (integrate SMS service in production)
       console.log(`[OTP] Reset code for ${user.phone}: ${otp}`);
