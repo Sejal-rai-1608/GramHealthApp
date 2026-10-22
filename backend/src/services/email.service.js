@@ -6,8 +6,10 @@ const createTransporter = () => {
   const secure = port === 465 || process.env.SMTP_SECURE === "true";
   const user = (process.env.SMTP_USER || "").trim();
   const pass = (process.env.SMTP_PASS || "").trim();
+  // For SendGrid, from email must be a verified sender - use separate env var or fallback
+  const fromEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || "").trim();
 
-  console.log(`[EmailService] ENV CHECK - host: ${host}, port: ${port}, secure: ${secure}, user: ${user ? 'SET' : 'MISSING'}, pass: ${pass ? 'SET' : 'MISSING'}, NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`[EmailService] ENV CHECK - host: ${host}, port: ${port}, secure: ${secure}, user: ${user ? 'SET' : 'MISSING'}, pass: ${pass ? 'SET' : 'MISSING'}, fromEmail: ${fromEmail}, NODE_ENV: ${process.env.NODE_ENV}`);
 
   if (!user || !pass) {
     console.warn("[EmailService] SMTP credentials not configured. Emails will be logged instead of sent.");
@@ -87,9 +89,10 @@ If you didn't request this, please ignore this email or contact support if you h
 
   try {
     console.log(`[EmailService] Sending OTP email to ${email} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+    const fromEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || "").trim();
     
     const info = await transporter.sendMail({
-      from: `"GramHealth" <${process.env.SMTP_USER}>`,
+      from: `"GramHealth" <${fromEmail}>`,
       to: email,
       subject: "GramHealth - Password Reset Verification Code",
       text,
