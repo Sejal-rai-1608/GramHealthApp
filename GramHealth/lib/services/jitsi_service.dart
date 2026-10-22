@@ -78,8 +78,7 @@ class JitsiService {
           'disableAudioLevels': true,
           'startWithAudioMuted': true,
           'startWithVideoMuted': audioOnly,
-          'lobby.enabled': false,
-          'roomPassword': null,
+          'lobby': {'enabled': false},
         },
       );
 
