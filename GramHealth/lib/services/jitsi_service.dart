@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:jitsi_meet_wrapper/jitsi_meet_wrapper.dart';
+import 'package:jitsi_meet/jitsi_meet.dart';
 import '../config/app_config.dart';
 import '../services/api_client.dart';
 
@@ -59,30 +59,25 @@ class JitsiService {
   }) async {
     try {
       debugPrint('[JitsiService] Joining meeting - roomName: $roomName, serverUrl: $serverUrl, userDisplayName: $userDisplayName, audioOnly: $audioOnly');
-      
+
       final options = JitsiMeetingOptions(
-        roomNameOrUrl: roomName,
-        serverUrl: serverUrl,
-        subject: 'GramHealth Consultation',
+        room: roomName,
+        serverURL: serverUrl,
         userDisplayName: userDisplayName,
         userEmail: userEmail,
-        isAudioOnly: audioOnly,
-        isAudioMuted: false,
-        isVideoMuted: audioOnly,
+        audioOnly: audioOnly,
+        audioMuted: false,
+        videoMuted: audioOnly,
         // Disable Jitsi Meet lobby/password screens so participants join directly
         featureFlags: {
-          'calendar': {'enabled': false},
-          'callIntegration': {'enabled': false},
-        },
-        configOverrides: {
-          'disableAudioLevels': true,
-          'startWithAudioMuted': true,
-          'startWithVideoMuted': audioOnly,
-          'lobby': {'enabled': false},
+          FeatureFlagEnum.WELCOME_PAGE_ENABLED: false,
+          FeatureFlagEnum.MEETING_PASSWORD_ENABLED: false,
+          FeatureFlagEnum.CALENDAR_ENABLED: false,
+          FeatureFlagEnum.CALL_INTEGRATION_ENABLED: false,
         },
       );
 
-      final response = await JitsiMeetWrapper.joinMeeting(
+      final response = await JitsiMeet.joinMeeting(
         options: options,
         listener: listener,
       );
@@ -97,7 +92,7 @@ class JitsiService {
   /// Leave the current Jitsi meeting
   static Future<JitsiMeetingResponse> leaveMeeting() async {
     try {
-      final response = await JitsiMeetWrapper.hangUp();
+      final response = await JitsiMeet.closeMeeting();
       debugPrint('[JitsiService] Left meeting, response: $response');
       return response;
     } catch (e) {
@@ -107,11 +102,10 @@ class JitsiService {
   }
 
   /// Toggle audio mute
-  static Future<JitsiMeetingResponse> toggleAudioMute(bool mute) async {
+  static Future<void> toggleAudioMute(bool mute) async {
     try {
-      final response = await JitsiMeetWrapper.setAudioMuted(mute);
-      debugPrint('[JitsiService] Audio mute toggled: $mute, response: $response');
-      return response;
+      await JitsiMeet.executeCommand('toggleAudio', [mute.toString()]);
+      debugPrint('[JitsiService] Audio mute toggled: $mute');
     } catch (e) {
       debugPrint('[JitsiService] Toggle audio mute error: $e');
       rethrow;
@@ -119,16 +113,12 @@ class JitsiService {
   }
 
   /// Toggle video mute - requires native implementation
-  /// Note: The current Jitsi wrapper doesn't expose video mute toggle
   static Future<void> toggleVideoMute(bool mute) async {
     debugPrint('[JitsiService] Video mute toggle requested: $mute (requires native implementation)');
-    // This would need to be implemented in the native plugin
-    // For now, we just log it
   }
 
   /// Switch camera - requires native implementation
   static Future<void> switchCamera() async {
     debugPrint('[JitsiService] Switch camera requested (requires native implementation)');
-    // This would need to be implemented in the native plugin
   }
 }
