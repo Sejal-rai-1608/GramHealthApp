@@ -8,6 +8,7 @@ class CustomInput extends StatefulWidget {
   final String? placeholder;
   final TextEditingController controller;
   final bool obscureText;
+  final bool showPasswordToggle;
   final TextInputType keyboardType;
   final int? maxLines;
   final int? maxLength;
@@ -18,6 +19,7 @@ class CustomInput extends StatefulWidget {
     this.placeholder,
     required this.controller,
     this.obscureText = false,
+    this.showPasswordToggle = false,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
     this.maxLength,
@@ -33,6 +35,7 @@ class _CustomInputState extends State<CustomInput>
   late AnimationController _ctrl;
   late Animation<Color?> _borderColor;
   late Animation<double> _borderWidth;
+  bool _obscureText = true;
 
   @override
   void initState() {
@@ -45,6 +48,7 @@ class _CustomInputState extends State<CustomInput>
       end: AppColors.primaryAccent,
     ).animate(_ctrl);
     _borderWidth = Tween<double>(begin: 1, end: 2).animate(_ctrl);
+    _obscureText = widget.obscureText;
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
         _ctrl.forward();
@@ -59,6 +63,12 @@ class _CustomInputState extends State<CustomInput>
     _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
   }
 
   @override
@@ -91,7 +101,7 @@ class _CustomInputState extends State<CustomInput>
           child: TextField(
             focusNode: _focusNode,
             controller: widget.controller,
-            obscureText: widget.obscureText,
+            obscureText: _obscureText,
             keyboardType: widget.keyboardType,
             maxLines: widget.maxLines,
             maxLength: widget.maxLength,
@@ -106,6 +116,16 @@ class _CustomInputState extends State<CustomInput>
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: InputBorder.none,
+              suffixIcon: widget.showPasswordToggle
+                  ? IconButton(
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.textDark.withValues(alpha: 0.6),
+                        size: 20,
+                      ),
+                      onPressed: _togglePasswordVisibility,
+                    )
+                  : null,
             ),
           ),
         ),

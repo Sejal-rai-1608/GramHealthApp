@@ -80,11 +80,12 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
         final String? room = data['jitsiRoomName'];
         final String? server = data['jitsiServerUrl'];
         final bool audioOnly = (data['consultationType'] ?? 'VIDEO') == 'AUDIO';
-        if (room != null && server != null) {
+        final String? consultationId = data['consultationId']?.toString();
+        if (room != null && server != null && consultationId != null) {
           // Directly start Jitsi call using provided details
           await CallService.startCallWithFallback(
             context: context,
-            consultationId: data['consultationId'],
+            consultationId: consultationId,
             audioOnly: audioOnly,
             doctorId: null,
             doctorName: null,
@@ -94,14 +95,27 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
             roomName: room,
             serverUrl: server,
           );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Call details not available. Please try again.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
         }
       });
       CallSocketService.on('callReject', (data) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Doctor rejected the call')));
       });
       CallSocketService.on('callCancel', (data) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Call was cancelled')));
       });
+    } else if (mounted) {
+      // Socket not ready (e.g. not logged in) – tell the user real-time calls won't work until they log in.
+      debugPrint('Socket not initialized; real-time call notifications disabled.');
     }
     _netSub = ConnectivityService.instance.statusStream.listen((status) {
       if (mounted) {

@@ -22,8 +22,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _confirmPasswordCtrl = TextEditingController();
 
   bool _isLoading = false;
-  final bool _obscurePassword = true;
-  final bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -154,14 +152,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     label: 'New Password',
                     placeholder: 'Enter new password (min 8 chars)',
                     controller: _newPasswordCtrl,
-                    obscureText: _obscurePassword,
+                    obscureText: true,
+                    showPasswordToggle: true,
                   ),
                   const SizedBox(height: 16),
                   CustomInput(
                     label: 'Confirm New Password',
                     placeholder: 'Re-enter new password',
                     controller: _confirmPasswordCtrl,
-                    obscureText: _obscureConfirmPassword,
+                    obscureText: true,
+                    showPasswordToggle: true,
                   ),
                   const SizedBox(height: 24),
 

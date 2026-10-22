@@ -1,4 +1,5 @@
 import "dart:async";
+import "dart:developer" as developer;
 
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
@@ -52,21 +53,20 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
   final String _connectionQuality = "good";
   bool _isNativeViewVisible = false;
 
-  bool _hasInitialized = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Defer context-dependent work until after initState completes and the
+    // widget is fully attached to the tree (avoids
+    // "dependOnInheritedWidgetOfExact called before initState completed").
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initializeFromExtras();
+    });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_hasInitialized) return;
-    _hasInitialized = true;
-
-    // Now context is safe to use for inherited widget lookups
+  Future<void> _initializeFromExtras() async {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
     if (extra != null && extra['roomName'] != null && extra['serverUrl'] != null) {
       _meetingDetails = JitsiMeetingDetails(
@@ -81,7 +81,6 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> with WidgetsBin
       _initializeAndJoin();
     }
   }
-  // Removed stray call
 
   // Directly join meeting using pre-fetched details
   Future<void> _joinMeeting() async {

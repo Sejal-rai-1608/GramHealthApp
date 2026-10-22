@@ -414,6 +414,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           placeholder: context.tr('enter_password'),
                           controller: _passwordCtrl,
                           obscureText: true,
+                          showPasswordToggle: true,
                         ),
                         if (!_isRegistering)
                           Align(
@@ -439,6 +440,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             placeholder: context.tr('repeat_password'),
                             controller: _confirmCtrl,
                             obscureText: true,
+                            showPasswordToggle: true,
                           ),
 
                         const SizedBox(height: 8),
