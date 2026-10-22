@@ -22,6 +22,7 @@ model User {
   doctor       Doctor?
   patient      Patient?
   pharmacy     Pharmacy?
+  deviceTokens DeviceToken[]
 
   @@map("users")
 }
