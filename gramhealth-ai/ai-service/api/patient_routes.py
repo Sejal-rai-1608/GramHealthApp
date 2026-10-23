@@ -4,6 +4,7 @@ import logging
 from patient.models import PatientRecord
 from patient.ingestion import ingest_patient_record
 from patient.rag import PatientRAGService
+from api.security import require_internal_ai_token
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,8 @@ def get_patient_rag_service():
 @router.post("/ingest", summary="Ingest Patient Records", description="Ingest structured patient records into the patient vector store for personalized RAG.")
 async def ingest_patient_records(
     records: List[PatientRecord],
-    service: PatientRAGService = Depends(get_patient_rag_service)
+    service: PatientRAGService = Depends(get_patient_rag_service),
+    _: None = Depends(require_internal_ai_token),
 ):
     if not records:
         return {"status": "success", "chunks_inserted": 0, "message": "No records provided."}

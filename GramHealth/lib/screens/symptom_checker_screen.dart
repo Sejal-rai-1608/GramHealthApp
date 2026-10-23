@@ -85,6 +85,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
           .timeout(const Duration(seconds: 45));
       
       if (mounted) {
+        final responseIsOffline = aiResponse.agent == 'offline_ai_router' ||
+            (aiResponse.routingMethod?.contains('offline') ?? false);
         final conditionText = (aiResponse.intent != null && aiResponse.intent!.isNotEmpty && aiResponse.intent != 'offline_medical')
             ? 'Clinical Assessment (${aiResponse.intent})'
             : 'Clinical Assessment';
@@ -92,14 +94,14 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
         setState(() {
           _isAnalyzing = false;
           _clinicalResult = aiResponse.structuredResponse;
-          _resultSource = 'Online AI';
+          _resultSource = responseIsOffline ? 'Offline AI' : 'Online AI';
           _result = SymptomResult(
             condition: conditionText,
             advice: aiResponse.answer ?? 'No detailed advice available.',
             action: (aiResponse.requiresProfessionalReview == true || aiResponse.urgency == 'emergency') 
                 ? 'Please consult a professional immediately.' 
                 : 'Monitor your symptoms.',
-            source: 'Online AI',
+            source: responseIsOffline ? 'Offline AI' : 'Online AI',
           );
         });
       }
@@ -122,13 +124,10 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
       // Offline fallback
       await OfflineAiService.instance.initialise();
-      final offlineStream = OfflineAiService.instance.queryOffline("I have symptoms: $combinedQuery");
-      final buffer = StringBuffer();
-      await for (final token in offlineStream) {
-        buffer.write(token);
-      }
-      final offlineText = buffer.toString().trim();
-      const ClinicalResponse? structured = null;
+      final offlineResponse = await OfflineAiService.instance.queryOfflineResponse(
+        "I have symptoms: $combinedQuery",
+      );
+      final offlineText = offlineResponse.text.trim();
 
       final repo = OfflineMedicalRepository();
       await repo.initialise();
@@ -138,7 +137,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
-          _clinicalResult = structured;
+          _clinicalResult = offlineResponse.structuredResponse;
           _resultSource = 'Offline AI';
           _result = SymptomResult(
             condition: 'These symptoms can occur with several conditions. The offline assistant cannot determine the exact cause.',

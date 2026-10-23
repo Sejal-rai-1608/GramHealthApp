@@ -38,6 +38,21 @@ class OfflineResponse {
     this.structuredResponse,
   });
 
+  OfflineResponse copyWith({
+    String? text,
+    ClinicalResponse? structuredResponse,
+  }) {
+    return OfflineResponse(
+      text: text ?? this.text,
+      decision: decision,
+      isStreaming: isStreaming,
+      isEmergency: isEmergency,
+      matchedTerms: matchedTerms,
+      diagnosticsJson: diagnosticsJson,
+      structuredResponse: structuredResponse ?? this.structuredResponse,
+    );
+  }
+
   /// Emergency response with deterministic text and 9-section structured model.
   factory OfflineResponse.emergency({
     String? query,

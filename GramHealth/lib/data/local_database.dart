@@ -24,7 +24,10 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -54,6 +57,9 @@ class LocalDatabase {
           data TEXT
         )
       ''');
+    }
+    if (oldVersion < 5) {
+      await _createChatTables(db);
     }
   }
 
@@ -111,6 +117,43 @@ class LocalDatabase {
         id TEXT PRIMARY KEY,
         data TEXT
       )
+    ''');
+
+    await _createChatTables(db);
+  }
+
+  Future<void> _createChatTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_conversations(
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_messages(
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        text TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        is_offline INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY(conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_updated
+      ON chat_conversations(user_id, updated_at DESC)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_timestamp
+      ON chat_messages(conversation_id, timestamp ASC)
     ''');
   }
 

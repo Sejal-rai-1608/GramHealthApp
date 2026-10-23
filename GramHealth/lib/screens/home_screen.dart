@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = '';
   List<DoctorModel> _doctors = [];
   bool _doctorsLoading = true;
+  List<ConsultationModel> _pendingConsultations = [];
   List<ConsultationModel> _activeConsultations = [];
   bool _loadingConsultations = true;
 
@@ -38,24 +39,87 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadDoctors();
     _loadConsultations();
 
-    // Asynchronously initialise Offline AI in the background only after user is authenticated on Home Screen
-    unawaited(OfflineAiService.instance.initialise().then((_) {
-      return OfflineAiService.instance.checkModelOnStartup();
-    }).catchError((_) {}));
+    // Asynchronously initialise Offline AI in the background only after the
+    // user is authenticated on the Home Screen. Keep error handling in an
+    // async function so Future<void> does not receive a mismatched catchError
+    // return type.
+    unawaited(_initialiseOfflineAi());
+  }
+
+  Future<void> _initialiseOfflineAi() async {
+    try {
+      await OfflineAiService.instance.initialise();
+      await OfflineAiService.instance.checkModelOnStartup();
+    } catch (_) {
+      // Offline AI remains available through the bundled lexicon fallback.
+    }
   }
 
   Future<void> _loadConsultations() async {
     setState(() => _loadingConsultations = true);
     try {
-      final activeList = await ConsultationService.listConsultations(status: 'ACTIVE');
+      final all = await ConsultationService.listConsultations(limit: 100);
       if (mounted) {
         setState(() {
-          _activeConsultations = activeList;
+          _pendingConsultations = all.where((c) => c.status.toUpperCase() == 'PENDING').toList();
+          _activeConsultations = all.where((c) => c.status.toUpperCase() == 'ACTIVE').toList();
           _loadingConsultations = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loadingConsultations = false);
+    }
+  }
+
+  Future<void> _joinConsultation(ConsultationModel consultation) async {
+    var carrierAttempted = false;
+    try {
+      final status = await ConnectivityService.instance.refresh();
+      final isOfflineMode = status == NetworkStatus.offline ||
+          consultation.type.toUpperCase() == 'OFFLINE';
+
+      if (isOfflineMode) {
+        final phone = consultation.doctorPhone;
+        if (phone != null && phone.trim().isNotEmpty) {
+          carrierAttempted = true;
+          await CallService.startPhoneCall(phone);
+        } else if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (context) => VoiceNoteDialog(consultationId: consultation.id),
+          );
+        }
+        return;
+      }
+
+      await CallService.startCall(
+        consultationId: consultation.id,
+        audioOnly: consultation.type.toUpperCase() == 'AUDIO',
+      );
+    } on CallServiceException catch (e) {
+      // If Jitsi cannot connect on a weak/unreachable data path, use the
+      // carrier voice path when the doctor's phone number is available.
+      final phone = consultation.doctorPhone;
+      if (!carrierAttempted && phone != null && phone.trim().isNotEmpty) {
+        try {
+          await CallService.startPhoneCall(phone);
+          return;
+        } catch (_) {
+          // Fall through to the visible error below when the device cannot
+          // place a carrier call (for example, on a simulator).
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to join consultation: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
     }
   }
 
@@ -168,9 +232,14 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.secondaryBg,
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 120),
-            child: Column(
+          RefreshIndicator(
+            onRefresh: () async {
+              await Future.wait([_loadDoctors(), _loadConsultations()]);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 120),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
@@ -347,6 +416,71 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: OfflineSetupCard(),
                 ),
 
+                // Upcoming appointment requests waiting for doctor acceptance
+                if (!_loadingConsultations && _pendingConsultations.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Text(
+                      'Upcoming Appointments',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    ),
+                  ),
+                  ..._pendingConsultations.map((c) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orangeAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              c.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam,
+                              color: Colors.orangeAccent,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.reason.isNotEmpty ? c.reason : 'Consultation',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  c.scheduledTime == null
+                                      ? 'Waiting for doctor acceptance'
+                                      : 'Scheduled ${c.scheduledTime} • Waiting for doctor',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                ),
+                                if (c.doctorName != null) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Doctor: ${c.doctorName}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )),
+                  const SizedBox(height: 24),
+                ],
+
                 // Active Consultations
                 if (!_loadingConsultations && _activeConsultations.isNotEmpty) ...[
                   Padding(
@@ -387,47 +521,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Ready to join',
+                                  c.scheduledTime == null
+                                      ? 'Doctor accepted • Ready to join'
+                                      : 'Scheduled ${c.scheduledTime}',
                                   style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
                                 ),
+                                if (c.doctorName != null) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Doctor: ${c.doctorName}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.6)),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () async {
-                              if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => VoiceNoteDialog(consultationId: c.id),
-                                );
-                              } else {
-                                await CallService.startCall(
-                                  consultationId: c.id,
-                                  audioOnly: c.type.toUpperCase() == 'AUDIO',
-                                );
-                                // Automatically hide the consultation from the dashboard once the call loop finishes
-                                if (mounted) {
-                                  setState(() {
-                                    _activeConsultations.removeWhere((item) => item.id == c.id);
-                                  });
-                                }
-                                // Secretly tell backend we completed it so it doesn't reappear
-                                try {
-                                  await ConsultationService.updateStatus(c.id, 'COMPLETED');
-                                } catch (_) {}
-                              }
-                            },
+                            onPressed: () => _joinConsultation(c),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                                  ? Colors.orangeAccent
-                                  : (c.type.toUpperCase() == 'AUDIO' ? Colors.blueAccent : AppColors.primaryAccent),
+                              backgroundColor: c.type.toUpperCase() == 'AUDIO'
+                                  ? Colors.blueAccent
+                                  : AppColors.primaryAccent,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             child: Text(
-                              ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                                  ? 'Record Note'
-                                  : (c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join'),
+                              c.type.toUpperCase() == 'AUDIO' ? 'Audio' : 'Join',
                             ),
                           ),
                         ],
@@ -562,6 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
               ],
+              ),
             ),
           ),
 
@@ -708,7 +828,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     GestureDetector(
                       onTap: () => context.push(
                         '/teleconsultation-request',
-                        extra: {'doctorId': doc.id, 'doctorName': doc.name},
+                        extra: {
+                          'doctorId': doc.id,
+                          'doctorName': doc.name,
+                          'doctorPhone': doc.phone,
+                          'type': 'VIDEO',
+                        },
                       ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),

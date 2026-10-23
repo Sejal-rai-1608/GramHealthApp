@@ -247,9 +247,16 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                                     color: AppColors.textDark),
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () => context
-                                  .push('/teleconsultation-request'),
+                             GestureDetector(
+                               onTap: () => context.push(
+                                 '/teleconsultation-request',
+                                 extra: {
+                                   'doctorId': doc.id,
+                                   'doctorName': doc.name,
+                                   'doctorPhone': doc.phone,
+                                   'type': 'VIDEO',
+                                 },
+                               ),
                               child: Container(
                                 width: 36,
                                 height: 36,
@@ -308,9 +315,16 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () =>
-                    context.push('/teleconsultation-request'),
+               GestureDetector(
+                 onTap: () => context.push(
+                   '/teleconsultation-request',
+                   extra: {
+                     'doctorId': doc.id,
+                     'doctorName': doc.name,
+                     'doctorPhone': doc.phone,
+                     'type': 'VIDEO',
+                   },
+                 ),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12),

@@ -1,3 +1,5 @@
+import 'clinical_response.dart';
+
 class AiResponse {
   final String query;
   final String? intent;
@@ -43,6 +45,9 @@ class AiResponse {
       sources: (json['sources'] as List<dynamic>?)?.map((e) => e as String).toList(),
       routingMethod: json['routing_method'] as String?,
       graphPath: (json['graph_path'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      structuredResponse: json['structured_response'] is Map<String, dynamic>
+          ? ClinicalResponse.fromJson(json['structured_response'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

@@ -118,7 +118,9 @@ class ClinicalAgent:
         # Collect chunk IDs from evidence if available
         available_sources = []
         if medical_evidence:
-            available_sources.extend([e.get("chunk_id") for e in medical_evidence if e.get("chunk_id")])
+            available_sources.extend(
+                [e.get("url") for e in medical_evidence if e.get("url")]
+            )
         if patient_evidence:
             available_sources.extend([e.get("chunk_id") for e in patient_evidence if e.get("chunk_id")])
 

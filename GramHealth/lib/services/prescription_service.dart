@@ -11,6 +11,8 @@ class PrescriptionModel {
   final String date;
   final String diagnosis;
   final List<Map<String, dynamic>> medicines;
+  final String? instructions;
+  final String? followUpDate;
 
   PrescriptionModel({
     required this.id,
@@ -19,6 +21,8 @@ class PrescriptionModel {
     required this.date,
     required this.diagnosis,
     required this.medicines,
+    this.instructions,
+    this.followUpDate,
   });
 
   factory PrescriptionModel.fromJson(Map<String, dynamic> json) {
@@ -31,14 +35,20 @@ class PrescriptionModel {
       return <String, dynamic>{'name': m.toString()};
     }).toList();
 
+    final consultation = json['consultation'] as Map<String, dynamic>?;
+    final rawDiagnosis = json['diagnosis']?.toString() ??
+        consultation?['notes']?.toString();
+
     return PrescriptionModel(
       id: json['id']?.toString() ?? '',
       doctorName: doctorUserObj?['name']?.toString() ?? 'Unknown Doctor',
       specialization:
           doctorObj?['specialization']?.toString() ?? 'General Physician',
       date: _formatDate(json['createdAt']?.toString()),
-      diagnosis: json['diagnosis']?.toString() ?? '—',
+      diagnosis: rawDiagnosis?.trim().isNotEmpty == true ? rawDiagnosis!.trim() : '—',
       medicines: medicines,
+      instructions: json['instructions']?.toString(),
+      followUpDate: _formatDateOrNull(json['followUpDate']?.toString()),
     );
   }
 
@@ -50,6 +60,8 @@ class PrescriptionModel {
         'date': date,
         'diagnosis': diagnosis,
         'medicines': medicines,
+        'instructions': instructions,
+        'followUpDate': followUpDate,
       };
 
   static String _formatDate(String? raw) {
@@ -60,6 +72,12 @@ class PrescriptionModel {
     } catch (_) {
       return raw;
     }
+  }
+
+  static String? _formatDateOrNull(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final formatted = _formatDate(raw);
+    return formatted == '—' ? null : formatted;
   }
 }
 
@@ -129,12 +147,14 @@ class PrescriptionService {
     required String consultationId,
     required List<Map<String, dynamic>> medicines,
     String? instructions,
+    String? followUpDate,
   }) async {
     final body = <String, dynamic>{
       'consultationId': consultationId,
       'medicines': medicines,
     };
     if (instructions != null) body['instructions'] = instructions;
+    if (followUpDate != null) body['followUpDate'] = followUpDate;
 
     final response = await SyncService.instance.push(
       entityType: 'prescription',

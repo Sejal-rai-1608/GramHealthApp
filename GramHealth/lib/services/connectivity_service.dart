@@ -43,14 +43,30 @@ class ConnectivityService {
   /// Starts listening to network interface changes and pings.
   void initialize() {
     _connectivity.onConnectivityChanged.listen((result) {
-      _assessConnectivity(result.first);
+      _assessConnectivity(
+        result.isEmpty ? ConnectivityResult.none : result.first,
+      );
     });
     // Fallback constant ping every 10 seconds to detect "Weak" networks
     // and truly verify internet reachability (prevent false positive Wi-Fi limits)
     _pingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _pingServer());
     
     // Initial check
-    _connectivity.checkConnectivity().then((res) => _assessConnectivity(res.first));
+    _connectivity.checkConnectivity().then((res) => _assessConnectivity(
+          res.isEmpty ? ConnectivityResult.none : res.first,
+        ));
+  }
+
+  /// Performs an immediate interface and reachability check before a
+  /// latency-sensitive action such as joining a consultation.
+  Future<NetworkStatus> refresh() async {
+    // connectivity_plus can briefly report `none` while Android is changing
+    // network state (for example after rotation or a permission prompt). The
+    // backend reachability check is the source of truth for an API/Jitsi
+    // action, so always probe the configured backend here instead of relying
+    // on a possibly stale interface result.
+    await _pingServer();
+    return _currentStatus;
   }
 
   void dispose() {
@@ -67,13 +83,6 @@ class ConnectivityService {
   }
 
   Future<void> _pingServer() async {
-    // If the interface says we're offline, don't ping.
-    final interfaces = await _connectivity.checkConnectivity();
-    if (interfaces.contains(ConnectivityResult.none)) {
-      _updateStatus(NetworkStatus.offline);
-      return;
-    }
-
     try {
       final startTime = DateTime.now();
       final response = await http.get(Uri.parse('${AppConfig.baseUrl}/api/health')).timeout(
@@ -93,7 +102,10 @@ class ConnectivityService {
     } on TimeoutException {
       _updateStatus(NetworkStatus.weak);
     } catch (e) {
-      _updateStatus(NetworkStatus.offline);
+      // An unreachable backend is not the same as a device with no network.
+      // Keep the call path available as a weak connection and let API calls
+      // decide whether they need to be queued for later synchronization.
+      _updateStatus(NetworkStatus.weak);
     }
   }
 
@@ -101,7 +113,7 @@ class ConnectivityService {
     if (_currentStatus != newStatus) {
       _currentStatus = newStatus;
       _statusController.add(_currentStatus);
-      print('Network Status Changed: \${_currentStatus.name.toUpperCase()}');
+      print('Network Status Changed: ${_currentStatus.name.toUpperCase()}');
     }
   }
 }

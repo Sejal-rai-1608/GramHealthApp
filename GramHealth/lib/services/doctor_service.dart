@@ -7,6 +7,7 @@ import '../data/local_database.dart';
 class DoctorModel {
   final String id;
   final String name;
+  final String? phone;
   final String specialization;
   final int experienceYears;
   final double rating;
@@ -19,6 +20,7 @@ class DoctorModel {
   DoctorModel({
     required this.id,
     required this.name,
+    this.phone,
     required this.specialization,
     required this.experienceYears,
     required this.rating,
@@ -34,6 +36,7 @@ class DoctorModel {
     return DoctorModel(
       id: json['id']?.toString() ?? '',
       name: user['name']?.toString() ?? json['name']?.toString() ?? 'Unknown Doctor',
+      phone: user['phone']?.toString() ?? json['phone']?.toString(),
       specialization: json['specialization']?.toString() ?? 'General Physician',
       experienceYears: (json['experienceYears'] as num?)?.toInt() ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,

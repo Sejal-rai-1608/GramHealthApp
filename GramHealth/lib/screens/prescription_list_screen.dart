@@ -146,6 +146,14 @@ class PrescriptionDetailScreen extends StatelessWidget {
             Text('Date: ${prescription['date']}'),
             const SizedBox(height: 8),
             Text('Diagnosis: ${prescription['diagnosis']}'),
+            if ((prescription['followUpDate'] as String?)?.isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text('Follow-up: ${prescription['followUpDate']}'),
+            ],
+            if ((prescription['instructions'] as String?)?.isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text('Doctor\'s instructions: ${prescription['instructions']}'),
+            ],
             const Divider(height: 32),
             const Text('Medicines',
                 style: TextStyle(

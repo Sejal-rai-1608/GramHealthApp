@@ -35,6 +35,23 @@ function getSafeEndpointLog(baseUrl, path) {
   }
 }
 
+function getInternalAiHeaders(requestId) {
+  const internalToken = (process.env.GRAM_AI_INTERNAL_TOKEN || '').trim();
+  if (process.env.NODE_ENV === 'production' && !internalToken) {
+    const error = new Error(
+      '[AiService] Production configuration error: GRAM_AI_INTERNAL_TOKEN is missing.'
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  return {
+    'X-Request-ID': requestId,
+    'Content-Type': 'application/json',
+    ...(internalToken ? { 'X-GramHealth-AI-Token': internalToken } : {})
+  };
+}
+
 class AiService {
   async queryAgent(query, patientId, requestId = 'NO_REQ_ID') {
     const aiBaseUrl = getGramAiUrl();
@@ -61,10 +78,7 @@ class AiService {
           patient_id: patientId
         },
         {
-          headers: {
-            'X-Request-ID': requestId,
-            'Content-Type': 'application/json'
-          },
+          headers: getInternalAiHeaders(requestId),
           timeout: 120000 // 60s to allow for RAG processing & generation
         }
       );
@@ -132,6 +146,7 @@ class AiService {
         `${aiBaseUrl}/patient/ingest`,
         [record],
         {
+          headers: getInternalAiHeaders('PATIENT_SYNC'),
           timeout: 20000
         }
       );

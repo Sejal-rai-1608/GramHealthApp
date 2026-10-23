@@ -184,6 +184,31 @@ def test_temporal_history_query(patient_rag_service):
     found_lab = any(r["record_type"] == "lab_report" for r in results)
     assert found_lab
 
+
+@patch("orchestrator.nodes.router.classify")
+def test_structured_lookup_uses_authenticated_patient_records(mock_classify, patient_rag_service):
+    mock_classify.return_value = RouteClassification(
+        intent="clinical",
+        urgency="normal",
+        requires_patient_context=True,
+        requires_medical_knowledge=False,
+        requires_structured_patient_lookup=True,
+        selected_agent="structured_lookup",
+        routing_method="llm",
+    )
+
+    with patch("orchestrator.nodes.patient_rag", patient_rag_service):
+        state = multi_agent_graph.invoke({
+            "user_query": "Show my CBC report",
+            "patient_context": {"patient_id": "PATIENT_001"},
+        })
+
+    assert "structured_lookup" in state["graph_path"]
+    assert state["grounded"] is True
+    assert state["sources"]
+    assert "PATIENT-REC" not in state["sources"]
+    assert any(ev["source_type"] == "Patient RAG" for ev in state["structured_response"]["evidence"])
+
 @patch("orchestrator.nodes.router.classify")
 def test_unsupported_route(mock_classify):
     mock_classify.return_value = RouteClassification(

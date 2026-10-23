@@ -29,9 +29,11 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   final TextEditingController _symptomsCtrl = TextEditingController();
   String _selectedTime = 'Morning (9 AM - 12 PM)';
   String _selectedType = 'VIDEO'; // VIDEO or AUDIO
+  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   bool _isSubmitted = false;
   bool _isSubmitting = false;
   String? _voiceNoteBase64;
+  String _confirmationMessage = '';
 
   NetworkStatus _networkStatus = NetworkStatus.online;
   StreamSubscription? _netSub;
@@ -39,15 +41,23 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
   // Doctor info passed via GoRouter extras
   String? _doctorId;
   String _doctorName = '';
+  bool _didReadRouteExtra = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_didReadRouteExtra) return;
     final extra = GoRouterState.of(context).extra;
     if (extra is Map<String, dynamic>) {
       _doctorId   = extra['doctorId']   as String?;
       _doctorName = extra['doctorName'] as String? ?? '';
+      final initialType = extra['type'] as String?;
+      if (initialType != null &&
+          (initialType == 'VIDEO' || initialType == 'AUDIO')) {
+        _selectedType = initialType;
+      }
     }
+    _didReadRouteExtra = true;
   }
 
   @override
@@ -77,18 +87,24 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     if (_selectedReason.isEmpty) return;
     setState(() => _isSubmitting = true);
     try {
-      await ConsultationService.createConsultation(
+      final created = await ConsultationService.createConsultation(
         reason: _selectedReason,
         symptoms: _symptomsCtrl.text.trim().isEmpty
             ? null
             : _symptomsCtrl.text.trim(),
         scheduledTime: _selectedTime,
+        scheduledAt: _scheduledAtForSelection().toUtc().toIso8601String(),
         doctorId: _doctorId,
-        type: _networkStatus == NetworkStatus.offline ? 'OFFLINE' : _selectedType,
+        type: _selectedType,
         voiceNoteUrl: _voiceNoteBase64,
       );
       if (!mounted) return;
-      setState(() => _isSubmitted = true);
+      setState(() {
+        _confirmationMessage = created.status == 'PENDING_SYNC'
+            ? 'Your request is saved on this device and will be sent to the doctor when you are back online.'
+            : 'Your appointment request has been sent to the doctor. You will be able to join after the doctor accepts it.';
+        _isSubmitted = true;
+      });
       Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) context.pop();
       });
@@ -113,6 +129,39 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  DateTime _scheduledAtForSelection() {
+    final hour = switch (_selectedTime) {
+      'Afternoon (1 PM - 4 PM)' => 13,
+      'Evening (5 PM - 8 PM)' => 17,
+      _ => 9,
+    };
+
+    return DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      hour,
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  String _dateLabel(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   @override
@@ -150,9 +199,11 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    context.tr('urgent_success_msg'),
-                    style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.7), height: 1.4),
+                   Text(
+                     _confirmationMessage.isNotEmpty
+                         ? _confirmationMessage
+                         : context.tr('urgent_success_msg'),
+                     style: TextStyle(fontSize: 14, color: AppColors.textDark.withValues(alpha: 0.7), height: 1.4),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -368,13 +419,48 @@ class _TeleconsultationRequestScreenState extends State<TeleconsultationRequestS
                     ),
                     const SizedBox(height: 24),
 
-                    // Time slots
-                    Text(
-                      context.tr('preferred_time'),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
-                    ),
-                    const SizedBox(height: 12),
-                    ...List.generate(_timeSlots.length, (i) {
+                     // Time slots
+                     Text(
+                       context.tr('preferred_time'),
+                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
+                     ),
+                     const SizedBox(height: 12),
+                     GestureDetector(
+                       onTap: _pickDate,
+                       child: Container(
+                         margin: const EdgeInsets.only(bottom: 12),
+                         padding: const EdgeInsets.all(16),
+                         decoration: BoxDecoration(
+                           color: Colors.white,
+                           borderRadius: BorderRadius.circular(16),
+                           border: Border.all(color: const Color(0xFFEEEEEE)),
+                           boxShadow: const [
+                             BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2)),
+                           ],
+                         ),
+                         child: Row(
+                           children: [
+                             const Icon(Icons.calendar_today, size: 20, color: AppColors.primaryAccent),
+                             const SizedBox(width: 12),
+                             Expanded(
+                               child: Column(
+                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                 children: [
+                                   const Text('Appointment date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                   const SizedBox(height: 4),
+                                   Text(
+                                     _dateLabel(_selectedDate),
+                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                                   ),
+                                 ],
+                               ),
+                             ),
+                             const Icon(Icons.chevron_right, color: Colors.grey),
+                           ],
+                         ),
+                       ),
+                     ),
+                     ...List.generate(_timeSlots.length, (i) {
                       final slot = _timeSlots[i];
                       final isSel = _selectedTime == slot;
                       return GestureDetector(

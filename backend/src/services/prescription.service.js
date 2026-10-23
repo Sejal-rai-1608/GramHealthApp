@@ -28,7 +28,10 @@ const sanitizeMedicines = (medicines) => {
     });
 };
 
-const createPrescription = async (user, { consultationId, medicines, instructions }) => {
+const createPrescription = async (
+    user,
+    { consultationId, medicines, instructions, followUpDate }
+) => {
     const doctorProfileId = await requireProfile("DOCTOR", user.userId);
 
     const consultation = await prisma.consultation.findUnique({
@@ -47,6 +50,15 @@ const createPrescription = async (user, { consultationId, medicines, instruction
         );
     }
 
+    const existingPrescription = await prisma.prescription.findFirst({
+        where: { consultationId },
+        include: PRESCRIPTION_INCLUDE
+    });
+
+    if (existingPrescription) {
+        return existingPrescription;
+    }
+
     if (consultation.status !== "ACTIVE") {
         throw new ApiError(
             `Prescriptions can only be created for active consultations (current status: ${consultation.status})`,
@@ -61,7 +73,8 @@ const createPrescription = async (user, { consultationId, medicines, instruction
             consultationId,
             doctorId: doctorProfileId,
             medicines: sanitizeMedicines(medicines),
-            instructions
+            instructions,
+            followUpDate
         },
         include: PRESCRIPTION_INCLUDE
     });

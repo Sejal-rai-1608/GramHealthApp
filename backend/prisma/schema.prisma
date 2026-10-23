@@ -78,8 +78,10 @@ model Consultation {
   ashaWorkerId   String?            @map("asha_worker_id") @db.Uuid
   type           ConsultationType
   status         ConsultationStatus
+  reason         String?            @db.VarChar(200)
   symptoms       String?
   notes          String?
+  scheduledAt    DateTime?          @map("scheduled_at")
   voiceNoteUrl   String?            @map("voice_note_url")
   voiceNoteDuration Int?            @map("voice_note_duration")
   riskLevel      String?            @map("risk_level") @db.VarChar(20)
@@ -94,6 +96,7 @@ model Consultation {
   @@index([patientId])
   @@index([doctorId])
   @@index([ashaWorkerId])
+  @@index([scheduledAt])
   @@map("consultations")
 }
 
@@ -126,6 +129,7 @@ model Prescription {
   doctorId       String        @map("doctor_id") @db.Uuid
   medicines      Json
   instructions   String?
+  followUpDate   DateTime?     @map("follow_up_date")
   createdAt      DateTime      @default(now()) @map("created_at")
   consultation   Consultation? @relation(fields: [consultationId], references: [id])
   doctor         Doctor        @relation(fields: [doctorId], references: [id])

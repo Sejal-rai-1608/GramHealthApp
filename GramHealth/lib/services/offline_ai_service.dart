@@ -149,6 +149,26 @@ class OfflineAiService {
     }
   }
 
+  /// Runs the same offline routing decision as [queryOffline] but returns the
+  /// structured response and the fully collected text for screens that need a
+  /// case-analysis card instead of only a streaming chat string.
+  Future<OfflineResponse> queryOfflineResponse(String query) async {
+    _ensureInit();
+    try {
+      final result = await _router.route(query);
+      final buffer = StringBuffer();
+      await for (final token in result.stream) {
+        buffer.write(token);
+      }
+      final text = buffer.toString().trim();
+      return result.response.copyWith(text: text.isNotEmpty ? text : result.response.text);
+    } catch (e) {
+      _log('queryOfflineResponse error: $e');
+      final fallback = OfflineResponse.noInformation(query: query);
+      return fallback.copyWith(text: fallback.text);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Emergency check (synchronous convenience)
   // ---------------------------------------------------------------------------
@@ -166,14 +186,15 @@ class OfflineAiService {
   // Observability
   // ---------------------------------------------------------------------------
 
-  LocalModelStatus get modelStatus => _modelManager.status;
-  double get downloadProgress => _modelManager.downloadProgress;
-  int get downloadedBytes => _modelManager.downloadedBytes;
-  int get expectedBytes => _modelManager.expectedBytes;
-  String? get lastError => _modelManager.lastError;
-  String? get statusReason => _modelManager.statusReason;
-  OfflineModelMetadata? get modelMetadata => _modelManager.metadata;
-  LocalModelCompatibility? get compatibility => _modelManager.compatibility;
+  LocalModelStatus get modelStatus =>
+      _initialised ? _modelManager.status : LocalModelStatus.unavailable;
+  double get downloadProgress => _initialised ? _modelManager.downloadProgress : 0.0;
+  int get downloadedBytes => _initialised ? _modelManager.downloadedBytes : 0;
+  int get expectedBytes => _initialised ? _modelManager.expectedBytes : 0;
+  String? get lastError => _initialised ? _modelManager.lastError : null;
+  String? get statusReason => _initialised ? _modelManager.statusReason : null;
+  OfflineModelMetadata? get modelMetadata => _initialised ? _modelManager.metadata : null;
+  LocalModelCompatibility? get compatibility => _initialised ? _modelManager.compatibility : null;
 
   Stream<LocalModelStatus> get statusStream =>
       _initialised ? _modelManager.statusStream : const Stream.empty();

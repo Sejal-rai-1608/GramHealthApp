@@ -58,7 +58,11 @@ const createPrescription = [
     body("instructions")
         .optional({ values: "falsy" })
         .trim()
-        .isLength({ max: 5000 }).withMessage("instructions must be at most 5000 characters")
+        .isLength({ max: 5000 }).withMessage("instructions must be at most 5000 characters"),
+    body("followUpDate")
+        .optional({ values: "falsy" })
+        .isISO8601().withMessage("followUpDate must be a valid ISO-8601 date")
+        .toDate()
 ];
 
 const prescriptionParam = uuidParam("id");
@@ -76,5 +80,6 @@ module.exports = {
     createPrescription,
     prescriptionParam,
     listMyPrescriptions,
-    listDoctorPrescriptions
+    listDoctorPrescriptions,
+    validateMedicines
 };

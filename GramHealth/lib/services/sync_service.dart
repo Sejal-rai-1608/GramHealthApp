@@ -21,14 +21,22 @@ class SyncService {
     _networkSubscription = ConnectivityService.instance.statusStream.listen((status) {
       if (status == NetworkStatus.online || status == NetworkStatus.weak) {
         processQueue();
-        PharmacyService.syncPharmacies().catchError((e) => print('Failed BG Pharmacy Sync $e'));
+        unawaited(_syncPharmacies('Failed BG Pharmacy Sync'));
       }
     });
 
     // Run an initial check if we start the app online
     if (ConnectivityService.instance.currentStatus != NetworkStatus.offline) {
       processQueue();
-      PharmacyService.syncPharmacies().catchError((e) => print('Failed init Pharmacy Sync $e'));
+      unawaited(_syncPharmacies('Failed init Pharmacy Sync'));
+    }
+  }
+
+  Future<void> _syncPharmacies(String context) async {
+    try {
+      await PharmacyService.syncPharmacies();
+    } catch (e) {
+      print('$context $e');
     }
   }
 
@@ -43,7 +51,10 @@ class SyncService {
     required String endpoint,
     required Map<String, dynamic> payload,
   }) async {
-    final status = ConnectivityService.instance.currentStatus;
+    // Refresh before deciding whether to queue. The cached connectivity
+    // stream can briefly say offline even while the Render backend is
+    // reachable, which would incorrectly queue accept/complete mutations.
+    final status = await ConnectivityService.instance.refresh();
 
     if (status == NetworkStatus.offline) {
       // Offline: Enqueue the mutation.
@@ -67,6 +78,10 @@ class SyncService {
         } else if (operation == 'DELETE') {
           return await ApiClient.delete(endpoint);
         }
+      } on ApiException {
+        // Validation, authorization, and other backend responses are real
+        // application errors. Do not hide them in the offline queue.
+        rethrow;
       } catch (e) {
         print('Network error during online push, fallback to queue. $e');
         final uuid = const Uuid().v4();

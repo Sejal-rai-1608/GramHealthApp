@@ -75,6 +75,56 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     ).then((_) => _load());
   }
 
+  Future<void> _join(ConsultationModel consultation) async {
+    var carrierAttempted = false;
+    try {
+      final status = await ConnectivityService.instance.refresh();
+      final offlineMode = status == NetworkStatus.offline ||
+          consultation.type.toUpperCase() == 'OFFLINE';
+
+      if (offlineMode) {
+        final phone = consultation.patientPhone;
+        if (phone != null && phone.trim().isNotEmpty) {
+          carrierAttempted = true;
+          await CallService.startPhoneCall(phone);
+        } else if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (context) => VoiceNoteDialog(consultationId: consultation.id),
+          );
+        }
+        return;
+      }
+
+      await CallService.startCall(
+        consultationId: consultation.id,
+        audioOnly: consultation.type.toUpperCase() == 'AUDIO',
+      );
+    } on CallServiceException catch (e) {
+      final phone = consultation.patientPhone;
+      if (!carrierAttempted && phone != null && phone.trim().isNotEmpty) {
+        try {
+          await CallService.startPhoneCall(phone);
+          return;
+        } catch (_) {
+          // Fall through to the visible error below when carrier calling is
+          // unavailable on this device.
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to join consultation: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pending = _all.where((c) => c.status.toUpperCase() == 'PENDING').toList();
@@ -140,6 +190,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 const SizedBox(height: 12),
                 ...accepted.map((c) => _ActiveCard(
                   consultation: c,
+                  onJoin: () => _join(c),
                   onComplete: () => _complete(c.id),
                 )),
                 const SizedBox(height: 24),
@@ -250,8 +301,9 @@ class _PendingCard extends StatelessWidget {
 
 class _ActiveCard extends StatelessWidget {
   final ConsultationModel consultation;
+  final VoidCallback onJoin;
   final VoidCallback onComplete;
-  const _ActiveCard({required this.consultation, required this.onComplete});
+  const _ActiveCard({required this.consultation, required this.onJoin, required this.onComplete});
 
   @override
   Widget build(BuildContext context) {
@@ -311,34 +363,16 @@ class _ActiveCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                       if (ConnectivityService.instance.currentStatus == NetworkStatus.offline) {
-                           showDialog(
-                             context: context,
-                             builder: (context) => VoiceNoteDialog(consultationId: consultation.id),
-                           );
-                       } else {
-                           CallService.startCall(
-                             consultationId: consultation.id,
-                             audioOnly: consultation.type.toUpperCase() == 'AUDIO',
-                           );
-                       }
-                    },
+                    onPressed: onJoin,
                     icon: Icon(
-                      ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                          ? Icons.mic
-                          : (consultation.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam),
+                      consultation.type.toUpperCase() == 'AUDIO' ? Icons.call : Icons.videocam,
                       size: 14,
                     ),
                     label: Text(
-                      ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                          ? 'Voice Note'
-                          : (consultation.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call'),
+                      consultation.type.toUpperCase() == 'AUDIO' ? 'Audio Call' : 'Join Call',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: ConnectivityService.instance.currentStatus == NetworkStatus.offline
-                          ? Colors.orangeAccent
-                          : Colors.blueAccent,
+                      backgroundColor: Colors.blueAccent,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),

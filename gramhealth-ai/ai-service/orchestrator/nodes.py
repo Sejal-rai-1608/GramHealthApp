@@ -80,18 +80,26 @@ def execute_medical_rag(state: AgentState) -> AgentState:
     logger.info("NODE START: execute_medical_rag")
     logger.info("Routing to Medical RAG")
     from rag.config.settings import settings
+    from rag.config.sources import is_approved_medical_source_url
     raw_results = medical_rag.vector_store.search_similarity(state["user_query"], top_k=settings.top_k)
     filtered_results = medical_rag.relevance_filter.filter_and_format(raw_results)
-    
+
     evidence = []
     for res in filtered_results:
+        source_url = res.metadata.source_url or ""
+        if not is_approved_medical_source_url(source_url):
+            logger.warning(
+                "Withholding medical evidence with an unapproved or non-HTTPS source URL: %s",
+                source_url or "missing",
+            )
+            continue
         evidence.append({
             "chunk_id": res.chunk_id,
             "text": res.text,
             "source_type": "medical_knowledge",
             "title": res.metadata.title,
             "publisher": res.metadata.publisher,
-            "url": res.metadata.source_url
+            "url": source_url,
         })
         
     logger.info("NODE END: execute_medical_rag")
@@ -119,34 +127,66 @@ def execute_structured_lookup(state: AgentState) -> AgentState:
     logger.info("Routing to Structured Lookup")
     
     query = state["user_query"]
+    patient_context = state.get("patient_context")
+    if not patient_context or not patient_context.get("patient_id"):
+        logger.error("Structured patient lookup requested without trusted patient context")
+        return {
+            **state,
+            "patient_evidence": [],
+            "error": "Missing trusted patient context for structured lookup",
+            "graph_path": state.get("graph_path", []) + ["structured_lookup"],
+        }
+
+    try:
+        ctx = PatientContext(**patient_context)
+        patient_evidence = patient_rag.query(query, ctx)
+    except Exception as exc:
+        logger.error("Structured patient lookup failed: %s", exc)
+        return {
+            **state,
+            "patient_evidence": [],
+            "error": str(exc),
+            "graph_path": state.get("graph_path", []) + ["structured_lookup"],
+        }
+
+    evidence_items = []
+    for record in patient_evidence:
+        record_id = record.get("record_id") or record.get("chunk_id") or "Patient record"
+        record_type = record.get("record_type", "record")
+        evidence_items.append(
+            EvidenceItemSchema(
+                title=f"Patient Record ({record_type})",
+                source_type="Patient RAG",
+                source="GramHealth Patient Health Record",
+                citation=str(record_id),
+                relevance="Retrieved from the authenticated patient's stored health record.",
+            )
+        )
+
     structured_resp = ClinicalResponseSchema(
-        symptom_summary=f"Query regarding structured patient records: {query}",
+        symptom_summary=f"Query regarding your stored health records: {query}",
         assessment=AssessmentSchema(
-            summary="Retrieved historical patient record data for this query.",
-            evidence_basis="Patient electronic medical record database",
-            uncertainty="Only recorded facts are reflected; ongoing symptoms require clinical evaluation."
+            summary=(
+                "The response below reflects matching information in the authenticated patient's stored records."
+                if patient_evidence
+                else "No matching information was found in the authenticated patient's stored records."
+            ),
+            evidence_basis="Authenticated patient health record retrieval",
+            uncertainty="Recorded information may be incomplete and does not replace a clinical evaluation.",
         ),
         possible_conditions=[],
-        risk_level=RiskLevelEnum.low,
+        risk_level=RiskLevelEnum.low if patient_evidence else RiskLevelEnum.insufficientInformation,
         what_you_can_do_now=[
-            "Review your recorded health history.",
-            "Consult your treating physician for interpretation of your lab results or records."
+            "Review the matching entries in your health history.",
+            "Ask a qualified healthcare professional to interpret records or test results.",
         ],
-        warning_signs=["No specific warning signs were identified from the available information."],
-        when_to_see_doctor="Discuss recorded results during your next scheduled consultation.",
-        evidence=[
-            EvidenceItemSchema(
-                title="Structured Patient Record",
-                source_type="Patient RAG",
-                source="GramHealth Patient Record Database",
-                citation="PATIENT-REC",
-                relevance="Direct record lookup."
-            )
-        ],
+        warning_signs=["No specific warning signs were identified from the stored records."],
+        when_to_see_doctor="Discuss recorded results during your next consultation, or sooner if you have active symptoms.",
+        evidence=evidence_items,
         medical_disclaimer="This information is for general health guidance and is not a medical diagnosis. Please consult a qualified healthcare professional for personal medical advice.",
-        source_mode="Patient RAG",
-        requires_professional_review=False,
-        emergency=False
+        source_mode="Patient RAG" if patient_evidence else "None",
+        requires_professional_review=bool(patient_evidence),
+        emergency=False,
     )
     
     logger.info("NODE END: execute_structured_lookup")
@@ -155,9 +195,14 @@ def execute_structured_lookup(state: AgentState) -> AgentState:
         "agent_response": format_clinical_answer(structured_resp),
         "structured_response": structured_resp.model_dump(),
         "confidence": "high",
-        "requires_professional_review": False,
-        "grounded": True,
-        "sources": [],
+        "requires_professional_review": bool(patient_evidence),
+        "grounded": bool(patient_evidence),
+        "patient_evidence": patient_evidence,
+        "sources": [
+            str(record.get("record_id") or record.get("chunk_id"))
+            for record in patient_evidence
+            if record.get("record_id") or record.get("chunk_id")
+        ],
         "graph_path": state.get("graph_path", []) + ["structured_lookup"]
     }
 

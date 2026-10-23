@@ -40,6 +40,18 @@ const createConsultation = async (user, data) => {
 
     assertValidRiskLevel(data.riskLevel);
 
+    if (data.scheduledAt !== undefined) {
+        const scheduledAt = new Date(data.scheduledAt);
+
+        if (Number.isNaN(scheduledAt.getTime())) {
+            throw new ApiError("scheduledAt must be a valid date", 400, "VALIDATION_ERROR");
+        }
+
+        if (scheduledAt.getTime() <= Date.now()) {
+            throw new ApiError("scheduledAt must be in the future", 400, "VALIDATION_ERROR");
+        }
+    }
+
     if (user.role === "PATIENT") {
         patientId = await requireProfile("PATIENT", user.userId);
     } else if (user.role === "ASHA") {
@@ -64,6 +76,34 @@ const createConsultation = async (user, data) => {
         );
     }
 
+    if (data.doctorId) {
+        const doctor = await prisma.doctor.findUnique({
+            where: { id: data.doctorId }
+        });
+
+        if (!doctor) {
+            throw new ApiError("Doctor not found", 404, "NOT_FOUND");
+        }
+
+        if (data.scheduledAt) {
+            const conflictingAppointment = await prisma.consultation.findFirst({
+                where: {
+                    doctorId: data.doctorId,
+                    scheduledAt: data.scheduledAt,
+                    status: { in: ["PENDING", "ACTIVE"] }
+                }
+            });
+
+            if (conflictingAppointment) {
+                throw new ApiError(
+                    "The doctor already has an appointment at this time",
+                    409,
+                    "SCHEDULE_CONFLICT"
+                );
+            }
+        }
+    }
+
     const result = await prisma.consultation.create({
         data: {
             patientId,
@@ -72,8 +112,12 @@ const createConsultation = async (user, data) => {
             // Otherwise the consultation goes into the open pool (doctorId = null).
             ...(data.doctorId ? { doctorId: data.doctorId } : {}),
             type: data.type,
+            reason: data.reason,
             symptoms: data.symptoms,
             notes: data.notes,
+            scheduledAt: data.scheduledAt,
+            voiceNoteUrl: data.voiceNoteUrl,
+            voiceNoteDuration: data.voiceNoteDuration,
             status: "PENDING",
             ...(data.riskLevel !== undefined ? { riskLevel: data.riskLevel } : {})
         },
@@ -86,7 +130,7 @@ const createConsultation = async (user, data) => {
             result.id,
             "consultation",
             result.createdAt,
-            `Symptoms: ${result.symptoms || 'None'}. Notes: ${result.notes || 'None'}`,
+            `Reason: ${result.reason || 'None'}. Symptoms: ${result.symptoms || 'None'}. Notes: ${result.notes || 'None'}`,
             "GramHealth System"
         );
     }
@@ -373,6 +417,17 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
         );
     }
 
+    if (consultation.status === "ACTIVE") {
+        const profileId = await requireProfile("DOCTOR", user.userId);
+
+        if (consultation.doctorId === profileId) {
+            return prisma.consultation.findUnique({
+                where: { id },
+                include: CONSULTATION_INCLUDE
+            });
+        }
+    }
+
     if (consultation.status !== "PENDING") {
         throw new ApiError(
             `Cannot accept a consultation that is ${consultation.status.toLowerCase()}`,
@@ -400,9 +455,55 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
         data.notes = notes;
     }
 
-    const updated = await prisma.consultation.update({
+    if (consultation.scheduledAt) {
+        const conflictingAppointment = await prisma.consultation.findFirst({
+            where: {
+                id: { not: id },
+                doctorId: profileId,
+                scheduledAt: consultation.scheduledAt,
+                status: { in: ["PENDING", "ACTIVE"] }
+            }
+        });
+
+        if (conflictingAppointment) {
+            throw new ApiError(
+                "You already have an appointment scheduled at this time",
+                409,
+                "SCHEDULE_CONFLICT"
+            );
+        }
+    }
+
+    const claimed = await prisma.consultation.updateMany({
+        where: {
+            id,
+            status: "PENDING",
+            ...(consultation.doctorId === null
+                ? { doctorId: null }
+                : { doctorId: profileId })
+        },
+        data
+    });
+
+    if (claimed.count === 0) {
+        const latest = await prisma.consultation.findUnique({ where: { id } });
+
+        if (latest?.status === "ACTIVE" && latest.doctorId === profileId) {
+            return prisma.consultation.findUnique({
+                where: { id },
+                include: CONSULTATION_INCLUDE
+            });
+        }
+
+        throw new ApiError(
+            "This consultation was accepted by another doctor or is no longer pending",
+            409,
+            "CONSULTATION_ALREADY_CLAIMED"
+        );
+    }
+
+    const updated = await prisma.consultation.findUnique({
         where: { id },
-        data,
         include: CONSULTATION_INCLUDE
     });
     
@@ -418,7 +519,33 @@ const acceptConsultation = async (id, user, { notes } = {}) => {
     return updated;
 };
 
-const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
+const sanitizePrescriptionMedicines = (medicines) => medicines.map((medicine) => {
+    const sanitized = {
+        name: medicine.name.trim(),
+        dosage: medicine.dosage.trim(),
+        frequency: medicine.frequency.trim(),
+        duration: medicine.duration.trim()
+    };
+
+    if (medicine.instructions !== undefined && medicine.instructions !== "") {
+        sanitized.instructions = medicine.instructions.trim();
+    }
+
+    return sanitized;
+});
+
+const completeConsultation = async (
+    id,
+    user,
+    {
+        symptoms,
+        notes,
+        riskLevel,
+        medicines,
+        prescriptionInstructions,
+        followUpDate
+    } = {}
+) => {
     const consultation = await getConsultationOr404(id);
 
     if (user.role !== "DOCTOR") {
@@ -429,7 +556,7 @@ const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
         );
     }
 
-    if (consultation.status !== "ACTIVE") {
+    if (consultation.status !== "ACTIVE" && consultation.status !== "COMPLETED") {
         throw new ApiError(
             `Cannot complete a consultation that is ${consultation.status.toLowerCase()}`,
             400,
@@ -447,9 +574,20 @@ const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
         );
     }
 
+    if (consultation.status === "COMPLETED") {
+        return prisma.consultation.findUnique({
+            where: { id },
+            include: CONSULTATION_INCLUDE
+        });
+    }
+
     assertValidRiskLevel(riskLevel);
 
     const data = { status: "COMPLETED" };
+
+    if (symptoms !== undefined) {
+        data.symptoms = symptoms;
+    }
 
     if (notes !== undefined) {
         data.notes = notes;
@@ -459,10 +597,33 @@ const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
         data.riskLevel = riskLevel;
     }
 
-    const updated = await prisma.consultation.update({
-        where: { id },
-        data,
-        include: CONSULTATION_INCLUDE
+    const updated = await prisma.$transaction(async (tx) => {
+        const completed = await tx.consultation.update({
+            where: { id },
+            data,
+            include: CONSULTATION_INCLUDE
+        });
+
+        if (Array.isArray(medicines) && medicines.length > 0) {
+            const existingPrescription = await tx.prescription.findFirst({
+                where: { consultationId: id }
+            });
+
+            if (!existingPrescription) {
+                await tx.prescription.create({
+                    data: {
+                        patientId: consultation.patientId,
+                        consultationId: id,
+                        doctorId: profileId,
+                        medicines: sanitizePrescriptionMedicines(medicines),
+                        instructions: prescriptionInstructions,
+                        followUpDate
+                    }
+                });
+            }
+        }
+
+        return completed;
     });
     
     aiService.syncPatientRecord(
@@ -470,7 +631,7 @@ const completeConsultation = async (id, user, { notes, riskLevel } = {}) => {
         updated.id,
         "consultation",
         updated.updatedAt,
-        `Status: ${updated.status}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
+        `Status: ${updated.status}. Reason: ${updated.reason || 'None'}. Symptoms: ${updated.symptoms || 'None'}. Notes: ${updated.notes || 'None'}. Risk Level: ${updated.riskLevel || 'None'}`,
         "GramHealth System"
     );
     
@@ -495,6 +656,25 @@ const assignDoctor = async (id, user, { doctorId }) => {
 
     if (!doctor) {
         throw new ApiError("Doctor not found", 404, "NOT_FOUND");
+    }
+
+    if (consultation.scheduledAt) {
+        const conflictingAppointment = await prisma.consultation.findFirst({
+            where: {
+                id: { not: id },
+                doctorId,
+                scheduledAt: consultation.scheduledAt,
+                status: { in: ["PENDING", "ACTIVE"] }
+            }
+        });
+
+        if (conflictingAppointment) {
+            throw new ApiError(
+                "The doctor already has an appointment at this time",
+                409,
+                "SCHEDULE_CONFLICT"
+            );
+        }
     }
 
     if (user.role !== "ADMIN") {

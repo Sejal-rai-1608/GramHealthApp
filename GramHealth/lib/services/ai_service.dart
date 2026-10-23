@@ -156,15 +156,10 @@ class AiService {
       try {
         await OfflineAiService.instance.initialise();
 
-        final bool isEmergency = OfflineAiService.instance.isEmergency(queryText);
-        final stream = OfflineAiService.instance.queryOffline(queryText);
-        final buffer = StringBuffer();
-
-        await for (final tokenChunk in stream) {
-          buffer.write(tokenChunk);
-        }
-
-        final offlineText = buffer.toString().trim();
+        final offlineResponse = await OfflineAiService.instance.queryOfflineResponse(queryText);
+        final isEmergency = offlineResponse.isEmergency ||
+            offlineResponse.structuredResponse?.emergency == true;
+        final offlineText = offlineResponse.text.trim();
         if (offlineText.isNotEmpty) {
           return AiResponse(
             query: queryText,
@@ -176,6 +171,11 @@ class AiService {
             urgency: isEmergency ? 'emergency' : 'routine',
             requiresProfessionalReview: true,
             routingMethod: 'offline_ai_safety_and_lexicon',
+            structuredResponse: offlineResponse.structuredResponse,
+            sources: offlineResponse.structuredResponse?.evidence
+                .map((e) => e.citation)
+                .where((citation) => citation.isNotEmpty)
+                .toList(),
           );
         }
       } catch (offlineErr) {

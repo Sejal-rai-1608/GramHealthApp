@@ -8,6 +8,20 @@ class MedicationScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rawInstructions = medication['instructions']?.toString() ?? '';
+    final instructionParts = rawInstructions
+        .split(' - ')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final timing = medication['timing']?.toString().trim().isNotEmpty == true
+        ? medication['timing'].toString()
+        : (instructionParts.isNotEmpty ? instructionParts.first : '');
+    final foodInstruction =
+        medication['foodInstruction']?.toString().trim().isNotEmpty == true
+            ? medication['foodInstruction'].toString()
+            : (instructionParts.length > 1 ? instructionParts[1] : '');
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
@@ -21,9 +35,9 @@ class MedicationScheduleCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Dosage: ${medication['dosage'] ?? ''}'),
             Text('Frequency: ${medication['frequency'] ?? ''}'),
-            Text('Timing: ${medication['timing'] ?? ''}'),
+            Text('Timing: $timing'),
             Text('Duration: ${medication['duration'] ?? ''}'),
-            Text('Food: ${medication['foodInstruction'] ?? ''}'),
+            Text('Food: $foodInstruction'),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

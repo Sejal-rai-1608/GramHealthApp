@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
-
-import 'services/offline_ai_service.dart';
 
 import 'l10n/app_language.dart';
 import 'theme/app_theme.dart';
@@ -21,7 +18,6 @@ import 'screens/notifications_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/teleconsultation_request_screen.dart';
 import 'screens/prescription_list_screen.dart';
-import 'screens/video_call_screen.dart';
 import 'screens/emergency_help_screen.dart';
 import 'screens/doctor_dashboard_screen.dart';
 import 'screens/doctor_requests_screen.dart';
@@ -186,13 +182,6 @@ final _router = GoRouter(
     GoRoute(
         path: '/prescriptions',
         builder: (c, s) => const PrescriptionListScreen()),
-    GoRoute(
-      path: '/video-call/:id',
-      builder: (c, s) {
-        final id = s.pathParameters['id'] ?? '1';
-        return VideoCallScreen(doctorId: id);
-      },
-    ),
     GoRoute(
         path: '/emergency',
         builder: (c, s) => const EmergencyHelpScreen()),

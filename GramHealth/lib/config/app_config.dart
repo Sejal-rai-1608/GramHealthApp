@@ -26,7 +26,18 @@ class AppConfig {
   static String lanBackendUrl = defaultLanBackendUrl;
 
   /// When true, forces connection to live Render deployment.
-  static bool useProduction = false;
+  /// Override per run with --dart-define=USE_PRODUCTION_BACKEND=true.
+  static bool useProduction = const bool.fromEnvironment(
+    'USE_PRODUCTION_BACKEND',
+    defaultValue: false,
+  );
+
+  /// Public Jitsi deployment used by teleconsultations. Override at build time
+  /// with --dart-define=JITSI_SERVER_URL=https://your-jitsi-host.
+  static const String jitsiServerUrl = String.fromEnvironment(
+    'JITSI_SERVER_URL',
+    defaultValue: 'https://meet.ffmuc.net',
+  );
 
   /// Returns the active local backend URL based on mode.
   static String get localBackendUrl {

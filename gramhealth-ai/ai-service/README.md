@@ -516,6 +516,10 @@ LOCAL_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 CHROMA_COLLECTION=gramhealth_medical_rag_local
 
 GEMINI_MODEL=gemini-3.6-flash
+
+# Shared secret used by the Node gateway for /agent/query and /patient/ingest.
+# The same value must be configured on the backend and AI service in production.
+GRAM_AI_INTERNAL_TOKEN="replace-with-a-long-random-token"
 ```
 
 > Never commit the real `GEMINI_API_KEY` to Git.

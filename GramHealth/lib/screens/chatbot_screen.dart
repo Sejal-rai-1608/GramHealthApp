@@ -7,25 +7,11 @@ import '../widgets/glass_card.dart';
 import '../widgets/offline_status_indicator.dart';
 import '../widgets/offline_setup_card.dart';
 import '../models/local_model_status.dart';
+import '../models/chat_message.dart';
 import '../services/connectivity_service.dart';
 import '../services/ai_service.dart';
 import '../services/offline_ai_service.dart';
-
-class Message {
-  final String id;
-  final String text;
-  final String sender; // 'user' or 'ai'
-  final DateTime timestamp;
-  final bool isOffline;
-
-  Message({
-    required this.id,
-    required this.text,
-    required this.sender,
-    required this.timestamp,
-    this.isOffline = false,
-  });
-}
+import '../services/chat_history_service.dart';
 
 class ChatBotScreen extends StatefulWidget {
   const ChatBotScreen({super.key});
@@ -35,38 +21,89 @@ class ChatBotScreen extends StatefulWidget {
 }
 
 class _ChatBotScreenState extends State<ChatBotScreen> {
-  final List<Message> _messages = [];
+  final List<ChatMessage> _messages = [];
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   StreamSubscription<LocalModelStatus>? _modelSub;
   StreamSubscription<NetworkStatus>? _connSub;
   bool _showSetupCard = true;
+  bool _historyLoading = true;
+  bool _isSending = false;
+  String? _conversationId;
 
   @override
   void initState() {
     super.initState();
-    unawaited(OfflineAiService.instance.ensureModelLoaded());
+    unawaited(_initialiseOfflineAi());
+    unawaited(_loadConversation());
 
-    _modelSub = OfflineAiService.instance.statusStream.listen((_) {
-      if (mounted) setState(() {});
-    });
     _connSub = ConnectivityService.instance.statusStream.listen((_) {
       if (mounted) setState(() {});
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_messages.isEmpty) {
-      _messages.add(
-        Message(
-          id: '1',
-          text: "${context.tr('greeting')} ${context.tr('dihati_assistant')}. ${context.tr('ask_health')}",
-          sender: 'ai',
-          timestamp: DateTime.now(),
-        ),
-      );
+  Future<void> _initialiseOfflineAi() async {
+    try {
+      await OfflineAiService.instance.initialise();
+      _modelSub?.cancel();
+      _modelSub = OfflineAiService.instance.statusStream.listen((_) {
+        if (mounted) setState(() {});
+      });
+      await OfflineAiService.instance.ensureModelLoaded();
+      if (mounted) setState(() {});
+    } catch (_) {
+      // The lexicon fallback and online route remain usable if the native
+      // offline model cannot be initialised on this device.
+    }
+  }
+
+  ChatMessage _greetingMessage() {
+    return ChatMessage(
+      id: ChatHistoryService.instance.newMessageId(),
+      text: "${context.tr('greeting')} ${context.tr('dihati_assistant')}. ${context.tr('ask_health')}",
+      sender: 'ai',
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<void> _loadConversation({String? conversationId}) async {
+    try {
+      final history = ChatHistoryService.instance;
+      final conversations = await history.listConversations();
+      final selected = conversationId == null
+          ? (conversations.isNotEmpty ? conversations.first : await history.createConversation())
+          : conversations.firstWhere(
+              (conversation) => conversation.id == conversationId,
+              orElse: () => throw StateError('Chat conversation not found.'),
+            );
+      var messages = await history.loadMessages(selected.id);
+
+      if (messages.isEmpty) {
+        final greeting = _greetingMessage();
+        await history.saveMessage(conversationId: selected.id, message: greeting);
+        messages = [greeting];
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _conversationId = selected.id;
+        _messages
+          ..clear()
+          ..addAll(messages);
+        _historyLoading = false;
+      });
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      // Keep the chat usable even if the local database is temporarily
+      // unavailable; authenticated requests still use the normal AI route.
+      setState(() {
+        _conversationId = null;
+        _messages
+          ..clear()
+          ..add(_greetingMessage());
+        _historyLoading = false;
+      });
     }
   }
 
@@ -120,11 +157,12 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
   }
 
   Future<void> _handleSend() async {
+    if (_historyLoading || _isSending) return;
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
 
-    final userMsg = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final userMsg = ChatMessage(
+      id: ChatHistoryService.instance.newMessageId(),
       text: text,
       sender: 'user',
       timestamp: DateTime.now(),
@@ -133,8 +171,10 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
     setState(() {
       _messages.add(userMsg);
       _inputCtrl.clear();
+      _isSending = true;
     });
 
+    await _persistMessage(userMsg);
     _scrollToBottom();
 
     try {
@@ -152,31 +192,166 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
       final bool isOffline = (aiResponse.agent == 'offline_ai_router') ||
           (aiResponse.routingMethod?.contains('offline') ?? false);
 
-      final aiMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: responseText,
-        sender: 'ai',
-        timestamp: DateTime.now(),
+       final aiMsg = ChatMessage(
+         id: ChatHistoryService.instance.newMessageId(),
+         text: responseText,
+         sender: 'ai',
+         timestamp: DateTime.now(),
         isOffline: isOffline,
       );
       
-      setState(() {
-        _messages.add(aiMsg);
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      final errorMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: "Sorry, I encountered an error: ${e.toString()}",
-        sender: 'ai',
-        timestamp: DateTime.now(),
+       setState(() {
+         _messages.add(aiMsg);
+         _isSending = false;
+       });
+       await _persistMessage(aiMsg);
+       _scrollToBottom();
+     } catch (e) {
+       if (!mounted) return;
+       final errorMsg = ChatMessage(
+         id: ChatHistoryService.instance.newMessageId(),
+         text: "Sorry, I encountered an error: ${e.toString()}",
+         sender: 'ai',
+         timestamp: DateTime.now(),
       );
+       setState(() {
+         _messages.add(errorMsg);
+         _isSending = false;
+       });
+       await _persistMessage(errorMsg);
+       _scrollToBottom();
+     }
+  }
+
+  Future<void> _persistMessage(ChatMessage message) async {
+    final conversationId = _conversationId;
+    if (conversationId == null) return;
+    try {
+      await ChatHistoryService.instance.saveMessage(
+        conversationId: conversationId,
+        message: message,
+      );
+    } catch (_) {
+      // Persistence must not make the clinical request fail. The UI remains
+      // usable and the next app launch will retry from the active history.
+    }
+  }
+
+  Future<void> _startNewConversation() async {
+    if (_isSending) return;
+    try {
+      final conversation = await ChatHistoryService.instance.createConversation();
+      final greeting = _greetingMessage();
+      await ChatHistoryService.instance.saveMessage(
+        conversationId: conversation.id,
+        message: greeting,
+      );
+      if (!mounted) return;
       setState(() {
-        _messages.add(errorMsg);
+        _conversationId = conversation.id;
+        _messages
+          ..clear()
+          ..add(greeting);
       });
       _scrollToBottom();
+    } catch (_) {
+      // Keep the current conversation when a new local history entry cannot
+      // be created.
     }
+  }
+
+  Future<void> _openHistory() async {
+    if (_historyLoading) return;
+    try {
+      final conversations = await ChatHistoryService.instance.listConversations();
+      if (!mounted) return;
+      final selectedId = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.white,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.history, color: AppColors.primaryAccent),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Chat history',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'New chat',
+                        onPressed: () => Navigator.of(sheetContext).pop('__new__'),
+                        icon: const Icon(Icons.add_comment_outlined),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (conversations.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: Text('No saved chats yet.')),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: conversations.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final conversation = conversations[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const CircleAvatar(
+                              backgroundColor: Color(0xFFE8F5E9),
+                              child: Icon(Icons.chat_bubble_outline, color: AppColors.primaryAccent),
+                            ),
+                            title: Text(
+                              conversation.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              '${conversation.messageCount} messages • ${_formatHistoryDate(conversation.updatedAt)}',
+                            ),
+                            onTap: () => Navigator.of(sheetContext).pop(conversation.id),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      if (selectedId == '__new__') {
+        await _startNewConversation();
+      } else if (selectedId != null && selectedId != _conversationId) {
+        setState(() => _historyLoading = true);
+        await _loadConversation(conversationId: selectedId);
+      }
+    } catch (_) {
+      // History remains optional to the live chat request.
+    }
+  }
+
+  String _formatHistoryDate(DateTime date) {
+    final local = date.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
   }
 
   void _scrollToBottom() {
@@ -249,8 +424,18 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  OfflineStatusIndicator(
+                   const Spacer(),
+                   IconButton(
+                     tooltip: 'Chat history',
+                     onPressed: _openHistory,
+                     icon: const Icon(Icons.history, size: 20, color: AppColors.textDark),
+                   ),
+                   IconButton(
+                     tooltip: 'New chat',
+                     onPressed: _startNewConversation,
+                     icon: const Icon(Icons.add_comment_outlined, size: 20, color: AppColors.textDark),
+                   ),
+                   OfflineStatusIndicator(
                     isOnline: ConnectivityService.instance.currentStatus != NetworkStatus.offline,
                   ),
                 ],
@@ -276,7 +461,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  final msg = _messages[index];
+                   final msg = _messages[index];
                   final isUser = msg.sender == 'user';
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -382,13 +567,13 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         ),
-                        onSubmitted: (_) => _handleSend(),
+                         onSubmitted: (_) => _handleSend(),
                       ),
                     ),
                     ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _inputCtrl,
                       builder: (context, value, child) {
-                        final hasText = value.text.trim().isNotEmpty;
+                         final hasText = value.text.trim().isNotEmpty && !_historyLoading && !_isSending;
                         return GestureDetector(
                           onTap: hasText ? _handleSend : null,
                           child: Container(

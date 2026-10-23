@@ -246,8 +246,16 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => context.push('/video-call/${doctor.id}'),
+                   GestureDetector(
+                     onTap: () => context.push(
+                       '/teleconsultation-request',
+                       extra: {
+                         'doctorId': doctor.id,
+                         'doctorName': doctor.name,
+                         'doctorPhone': doctor.phone,
+                         'type': 'VIDEO',
+                       },
+                     ),
                     child: Container(
                       width: 56, height: 56,
                       decoration: BoxDecoration(
@@ -261,10 +269,15 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                   Expanded(
                     child: PrimaryButton(
                       title: context.tr('book_appointment'),
-                      onPress: () => context.push(
-                        '/teleconsultation-request',
-                        extra: {'doctorId': doctor.id, 'doctorName': doctor.name},
-                      ),
+                       onPress: () => context.push(
+                         '/teleconsultation-request',
+                         extra: {
+                           'doctorId': doctor.id,
+                           'doctorName': doctor.name,
+                           'doctorPhone': doctor.phone,
+                           'type': 'VIDEO',
+                         },
+                       ),
                     ),
                   ),
                 ],

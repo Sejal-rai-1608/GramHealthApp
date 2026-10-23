@@ -2,6 +2,7 @@ import '../config/offline_ai_config.dart';
 import '../models/medical_lexicon_entry.dart';
 import '../models/offline_response.dart';
 import '../models/local_model_status.dart';
+import '../models/clinical_response.dart';
 import 'offline_medical_lookup_service.dart';
 import 'offline_safety_service.dart';
 import 'local_model_manager.dart';
@@ -76,7 +77,7 @@ class OfflineAiRouter {
       } catch (e) {
         _log('LLM generation failed: $e');
         // fall through to level 4
-        return _buildLexiconOnlyResult(entries);
+        return _buildLexiconOnlyResult(query, entries);
       }
 
       // Post-process streamed tokens
@@ -89,6 +90,15 @@ class OfflineAiRouter {
           text: '', // filled progressively from stream
           decision: OfflineResponseDecision.medicalLexiconPlusLlm,
           matchedTerms: matchedTerms,
+          structuredResponse: ClinicalResponse.offlineLexicon(
+            query: query,
+            conditionName: entries.first.condition,
+            generalInfo: entries.first.generalInformation,
+            warningSigns: entries.first.warningSigns,
+            whenToSeekCare: entries.first.whenToSeekCare,
+            source: entries.first.source,
+            citation: entries.first.sourceUrl,
+          ),
         ),
         stream: safeStream,
       );
@@ -96,21 +106,21 @@ class OfflineAiRouter {
 
     // --- LEVEL 4: Lexicon only ---
     if (entries.isNotEmpty) {
-      return _buildLexiconOnlyResult(entries);
+      return _buildLexiconOnlyResult(query, entries);
     }
 
     // --- LEVEL 5: Unavailable / unsupported ---
     if (!isModelReady &&
         modelManager.status == LocalModelStatus.unavailable) {
       return OfflineRoutingResult(
-        response: OfflineResponse.unavailable(),
-        stream: Stream.value(OfflineResponse.unavailable().text),
+        response: OfflineResponse.unavailable(query: query),
+        stream: Stream.value(OfflineResponse.unavailable(query: query).text),
       );
     }
 
     return OfflineRoutingResult(
-      response: OfflineResponse.noInformation(),
-      stream: Stream.value(OfflineResponse.noInformation().text),
+      response: OfflineResponse.noInformation(query: query),
+      stream: Stream.value(OfflineResponse.noInformation(query: query).text),
     );
   }
 
@@ -119,6 +129,7 @@ class OfflineAiRouter {
   // ---------------------------------------------------------------------------
 
   OfflineRoutingResult _buildLexiconOnlyResult(
+    String query,
     List<MedicalLexiconEntry> entries,
   ) {
     final sb = StringBuffer();
@@ -140,12 +151,23 @@ class OfflineAiRouter {
     }
     final text = sb.toString().trim();
     final matchedTerms = entries.map((e) => e.condition).toList();
+    final primary = entries.first;
+    final structured = ClinicalResponse.offlineLexicon(
+      query: query,
+      conditionName: primary.condition,
+      generalInfo: primary.generalInformation,
+      warningSigns: primary.warningSigns,
+      whenToSeekCare: primary.whenToSeekCare,
+      source: primary.source,
+      citation: primary.sourceUrl,
+    );
 
     return OfflineRoutingResult(
       response: OfflineResponse(
         text: text,
         decision: OfflineResponseDecision.lexiconOnly,
         matchedTerms: matchedTerms,
+        structuredResponse: structured,
       ),
       stream: Stream.value(text),
     );

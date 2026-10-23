@@ -1,5 +1,6 @@
 const { body, query } = require("express-validator");
 const { paginationQuery, uuidParam } = require("./common.validator");
+const { validateMedicines } = require("./prescription.validator");
 const {
     CONSULTATION_TYPES,
     CONSULTATION_STATUSES,
@@ -12,6 +13,10 @@ const riskLevelValidator = body("riskLevel")
     .withMessage(`riskLevel must be one of: ${CONSULTATION_RISK_LEVELS.join(", ")}`);
 
 const createConsultation = [
+    body("reason")
+        .trim()
+        .isLength({ min: 1, max: 200 })
+        .withMessage("reason is required and must be at most 200 characters"),
     body("patientId")
         .optional({ values: "falsy" })
         .isUUID().withMessage("patientId must be a valid UUID"),
@@ -28,6 +33,18 @@ const createConsultation = [
         .optional({ values: "falsy" })
         .trim()
         .isLength({ max: 5000 }).withMessage("notes must be at most 5000 characters"),
+    body("scheduledAt")
+        .optional({ values: "falsy" })
+        .isISO8601().withMessage("scheduledAt must be a valid ISO-8601 date")
+        .toDate(),
+    body("voiceNoteUrl")
+        .optional({ values: "falsy" })
+        .isString().withMessage("voiceNoteUrl must be a string")
+        .isLength({ max: 20000000 }).withMessage("voiceNoteUrl is too large"),
+    body("voiceNoteDuration")
+        .optional({ values: "falsy" })
+        .isInt({ min: 0, max: 86400 }).withMessage("voiceNoteDuration must be a valid duration")
+        .toInt(),
     riskLevelValidator
 ];
 
@@ -52,10 +69,25 @@ const acceptConsultation = [
 
 const completeConsultation = [
     ...uuidParam("id"),
+    body("symptoms")
+        .optional({ values: "falsy" })
+        .trim()
+        .isLength({ max: 2000 }).withMessage("symptoms must be at most 2000 characters"),
     body("notes")
         .optional({ values: "falsy" })
         .trim()
         .isLength({ max: 5000 }).withMessage("notes must be at most 5000 characters"),
+    body("medicines")
+        .optional({ values: "falsy" })
+        .custom(validateMedicines),
+    body("prescriptionInstructions")
+        .optional({ values: "falsy" })
+        .trim()
+        .isLength({ max: 5000 }).withMessage("prescriptionInstructions must be at most 5000 characters"),
+    body("followUpDate")
+        .optional({ values: "falsy" })
+        .isISO8601().withMessage("followUpDate must be a valid ISO-8601 date")
+        .toDate(),
     riskLevelValidator
 ];
 

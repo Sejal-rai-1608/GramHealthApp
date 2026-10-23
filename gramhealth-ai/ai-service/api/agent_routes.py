@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Any, Dict
 import time
@@ -6,6 +6,7 @@ import logging
 from orchestrator import multi_agent_graph
 from rag.models.schemas import Citation
 from models.clinical_response import ClinicalResponseSchema
+from api.security import require_internal_ai_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/agent", tags=["Agent"])
@@ -35,7 +36,11 @@ class AgentQueryResponse(BaseModel):
     error: Optional[str] = None
 
 @router.post("/query", response_model=AgentQueryResponse, description="Process a medical query through the multi-agent AI orchestrator.")
-def query_agent(request: AgentQueryRequest, x_request_id: Optional[str] = Header(None)):
+def query_agent(
+    request: AgentQueryRequest,
+    x_request_id: Optional[str] = Header(None),
+    _: None = Depends(require_internal_ai_token),
+):
     start_time = time.time()
     req_id = x_request_id or "NO_REQ_ID"
     q_len = len(request.query) if request.query else 0
